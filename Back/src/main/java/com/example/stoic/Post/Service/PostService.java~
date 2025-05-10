@@ -1,0 +1,4 @@
+package com.example.stoic.Post.Service;
+
+public interface PostService {
+}

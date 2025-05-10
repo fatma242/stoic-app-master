@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "stoic-app",
+    "slug": "stoic-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-localization"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "chatbotApiKey": "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"
+    }
+  }
+}
