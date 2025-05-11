@@ -1,229 +1,288 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, StyleSheet, useColorScheme } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Video, ResizeMode } from 'expo-av';
 
-export default function Community() {
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
+type UserRole = 'admin' | 'moderator' | 'user';
 
-  const [stories, setStories] = useState([]);
-  const [groups, setGroups] = useState([]);
-  const [discussions, setDiscussions] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function Home() {
+  const router = useRouter();
+  const [userRole, setUserRole] = useState<UserRole>('admin'); // Replace with actual auth logic
+  const [rooms, setRooms] = useState([
+    { id: '1', name: 'Anxiety Support', members: 238 },
+    { id: '2', name: 'Stress Relief', members: 195 },
+  ]);
 
-  // Fetch community data
-  useEffect(() => {
-    const fetchCommunityData = async () => {
-      try {
-        // Replace with your API endpoints
-        const storiesResponse = await fetch('https://your-api.com/stories');
-        const groupsResponse = await fetch('https://your-api.com/groups');
-        const discussionsResponse = await fetch('https://your-api.com/discussions');
+  const isAdmin = userRole === 'admin' || userRole === 'moderator';
 
-        const storiesData = await storiesResponse.json();
-        const groupsData = await groupsResponse.json();
-        const discussionsData = await discussionsResponse.json();
-
-        setStories(storiesData);
-        setGroups(groupsData);
-        setDiscussions(discussionsData);
-      } catch (error) {
-        console.error('Error fetching community data:', error);
-      } finally {
-        setLoading(false);
+  // Room Management Functions
+  const handleCreateRoom = () => {
+    Alert.prompt('Create New Room', 'Enter room name:', (text) => {
+      if (text) {
+        setRooms([...rooms, { id: Date.now().toString(), name: text, members: 0 }]);
       }
-    };
+    });
+  };
 
-    fetchCommunityData();
-  }, []);
+  const handleDeleteRoom = (roomId: string) => {
+    setRooms(rooms.filter(room => room.id !== roomId));
+  };
 
-  if (loading) {
-    return (
-      <View style={[styles.container, isDarkMode && styles.darkContainer]}>
-        <ActivityIndicator size="large" color="#4CAF50" />
-      </View>
-    );
-  }
+  const handleUpdateRoom = (roomId: string) => {
+    Alert.prompt('Update Room', 'Enter new name:', (text) => {
+      if (text) {
+        setRooms(rooms.map(room => 
+          room.id === roomId ? { ...room, name: text } : room
+        ));
+      }
+    });
+  };
 
   return (
-    <View style={[styles.container, isDarkMode && styles.darkContainer]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.title, isDarkMode && styles.darkText]}>Community</Text>
-        <View style={styles.headerIcons}>
-          <Ionicons name="notifications-outline" size={24} color={isDarkMode ? 'white' : 'black'} />
-          <Ionicons name="chatbubble-ellipses-outline" size={24} color={isDarkMode ? 'white' : 'black'} style={styles.iconSpacing} />
-        </View>
-      </View>
-
-      {/* Stories Section */}
-      <FlatList
-        data={stories}
-        horizontal
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.storyItem}>
-            <Image source={{ uri: item.avatar }} style={styles.storyImage} />
-            <Text style={[styles.storyText, isDarkMode && styles.darkText]}>{item.name}</Text>
-          </TouchableOpacity>
-        )}
-        contentContainerStyle={styles.storyList}
-        showsHorizontalScrollIndicator={false}
+    <View style={styles.container}>
+      {/* Background Video */}
+      <Video
+        source={require("../../assets/background.mp4")}
+        style={styles.backgroundVideo}
+        rate={1.0}
+        volume={1.0}
+        isMuted={true}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
       />
 
-      {/* Support Groups */}
-      <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>Support Groups</Text>
-      <View style={styles.groupsContainer}>
-        {groups.map((group) => (
-          <TouchableOpacity key={group.id} style={styles.groupItem}>
-            <Ionicons name={group.icon} size={20} color="#4CAF50" />
-            <View>
-              <Text style={[styles.groupTitle, isDarkMode && styles.darkText]}>{group.name}</Text>
-              <Text style={styles.groupMembers}>{group.members} members</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Overlay */}
+      <View style={styles.overlay} />
 
-      {/* Recent Discussions */}
-      <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>Recent Discussions</Text>
-      <FlatList
-        data={discussions}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={[styles.postItem, isDarkMode && styles.darkPost]}>
-            <Text style={[styles.postUser, isDarkMode && styles.darkText]}>{item.user}</Text>
-            <Text style={styles.postTime}>{item.time}</Text>
-            <Text style={[styles.postText, isDarkMode && styles.darkText]}>{item.text}</Text>
-            <View style={styles.postActions}>
-              <TouchableOpacity style={styles.actionButton}>
-                <Ionicons name="heart-outline" size={16} color="#4CAF50" />
-                <Text style={styles.actionText}>{item.likes}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
-                <Ionicons name="chatbubble-outline" size={16} color="#4CAF50" />
-                <Text style={styles.actionText}>{item.comments}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
-                <Ionicons name="share-outline" size={16} color="#4CAF50" />
-                <Text style={styles.actionText}>Share</Text>
-              </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Header with Admin Controls */}
+        <View style={styles.header}>
+          <Image source={require("../../assets/logo.png")} style={styles.logo} />
+          <Text style={styles.greeting}>Welcome Back!</Text>
+          
+          {isAdmin && (
+            <TouchableOpacity 
+              style={styles.adminButton}
+              onPress={handleCreateRoom}
+            >
+              <Ionicons name="add-circle" size={24} color="#16A34A" />
+              <Text style={styles.adminButtonText}>Create Room</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Room Management Section */}
+        {isAdmin && (
+          <LinearGradient
+            colors={['#16A34A30', '#0d421530']}
+            style={styles.adminSection}
+          >
+            <Text style={styles.sectionTitle}>Manage Rooms</Text>
+            {rooms.map(room => (
+              <View key={room.id} style={styles.roomItem}>
+                <View>
+                  <Text style={styles.roomName}>{room.name}</Text>
+                  <Text style={styles.roomMembers}>{room.members} members</Text>
+                </View>
+                <View style={styles.roomActions}>
+                  <TouchableOpacity onPress={() => handleUpdateRoom(room.id)}>
+                    <Ionicons name="pencil" size={20} color="#16A34A" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    onPress={() => handleDeleteRoom(room.id)}
+                    style={{ marginLeft: 15 }}
+                  >
+                    <Ionicons name="trash" size={20} color="#ff4444" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </LinearGradient>
+        )}
+
+        {/* Existing Components... */}
+
+        {/* Modified Recent Activity with Mod Controls */}
+        <LinearGradient
+          colors={['#16A34A20', '#0d421520']}
+          style={styles.card}
+        >
+          <Text style={styles.cardTitle}>Recent Activity</Text>
+          <View style={styles.activityItem}>
+            <Ionicons name="checkmark-circle" size={24} color="#7CFC00" />
+            <View style={styles.activityContent}>
+              <Text style={styles.activityText}>Completed mindfulness exercise</Text>
+              {isAdmin && (
+                <TouchableOpacity style={styles.modControl}>
+                  <Ionicons name="remove-circle" size={18} color="#ff4444" />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
-        )}
-      />
+        </LinearGradient>
+      </ScrollView>
     </View>
   );
 }
 
+// Add these new styles to existing StyleSheet
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
+  adminButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 15,
   },
-  darkContainer: {
-    backgroundColor: '#0f402c',
+  adminButtonText: {
+    color: '#16A34A',
+    marginLeft: 8,
+    fontWeight: '600',
   },
-  header: {
+  adminSection: {
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 20,
+  },
+  roomItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 10,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  roomName: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
   },
-  darkText: {
-    color: 'white',
-  },
-  headerIcons: {
-    flexDirection: 'row',
-  },
-  iconSpacing: {
-    marginLeft: 10,
-  },
-  storyList: {
-    paddingVertical: 10,
-  },
-  storyItem: {
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  storyImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-  },
-  storyText: {
-    marginTop: 5,
+  roomMembers: {
+    color: '#ffffff80',
     fontSize: 12,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginVertical: 10,
+  roomActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  groupsContainer: {
+  activityContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  modControl: {
+    marginLeft: 10,
+    padding: 5,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  backgroundVideo: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+  },
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+  },
+  content: {
+    padding: 20,
+    paddingTop: 50,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    marginBottom: 15,
+  },
+  greeting: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  card: {
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+  },
+  cardTitle: {
+    fontSize: 20,
+    color: '#fff',
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  cardText: {
+    color: '#fff',
+    opacity: 0.8,
+    marginBottom: 15,
+  },
+  checkinButton: {
+    backgroundColor: '#7CFC00',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#000',
+    fontWeight: '600',
+  },
+  section: {
+    marginBottom: 25,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    color: '#fff',
+    fontWeight: '600',
+    marginBottom: 15,
+  },
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  groupItem: {
+  gridItem: {
     width: '48%',
-    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 20,
     alignItems: 'center',
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: '#f5f5f5',
-    marginBottom: 10,
+    marginBottom: 15,
   },
-  groupTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  groupMembers: {
-    fontSize: 12,
-    color: '#777',
-    marginLeft: 8,
-  },
-  postItem: {
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: '#f5f5f5',
-    marginBottom: 10,
-  },
-  darkPost: {
-    backgroundColor: '#1b2d24',
-  },
-  postUser: {
-    fontWeight: 'bold',
-  },
-  postTime: {
-    fontSize: 12,
-    color: '#777',
-  },
-  postText: {
-    marginTop: 5,
-    fontSize: 14,
-  },
-  postActions: {
-    flexDirection: 'row',
+  gridText: {
+    color: '#fff',
     marginTop: 10,
+    fontWeight: '500',
   },
-  actionButton: {
+  activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffffff20',
   },
-  actionText: {
-    marginLeft: 5,
-    fontSize: 12,
-    color: '#4CAF50',
+  activityText: {
+    color: '#fff',
+    marginLeft: 10,
+    flex: 1,
   },
 });
-
-  
