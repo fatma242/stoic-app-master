@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { Video, ResizeMode } from 'expo-av';
 import { useRouter } from 'expo-router';
 import i18n from '../constants/i18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -9,36 +10,65 @@ import { onboardingFlow, handleEmergencyCall, AnswerKey } from '../components/On
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     padding: 20,
-    justifyContent: 'center'
+    justifyContent: 'center',
+    backgroundColor: 'transparent', // Changed from white to transparent
+  },
+  backgroundVideo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Dark overlay for better text readability
   },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center'
+    justifyContent: 'center',
   },
   questionText: {
     fontSize: 20,
     textAlign: 'center',
-    color: '#000000',
+    color: '#FFFFFF', // Changed to white for better contrast
     marginBottom: 40,
     lineHeight: 28,
-    writingDirection: i18n.locale.startsWith('ar') ? 'rtl' : 'ltr'
+    writingDirection: i18n.locale.startsWith('ar') ? 'rtl' : 'ltr',
   },
   resourceText: {
     fontSize: 18,
     textAlign: 'center',
-    color: '#000000',
+    color: '#FFFFFF', // Changed to white for better contrast
     marginBottom: 20,
     lineHeight: 24,
-    writingDirection: i18n.locale.startsWith('ar') ? 'rtl' : 'ltr'
+    writingDirection: i18n.locale.startsWith('ar') ? 'rtl' : 'ltr',
   },
   emergencyText: {
-    color: 'red',
+    color: '#FF4444', // Brighter red for better visibility
     fontWeight: 'bold',
     textDecorationLine: 'underline',
     fontSize: 16,
-    marginTop: 15
+    marginTop: 15,
+  }
+});
+
+// Update extraStyles
+const extraStyles = StyleSheet.create({
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    backgroundColor: 'transparent', // Added transparent background
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 30,
+    textAlign: 'center',
+    color: '#FFFFFF', // Changed to white for better contrast
   }
 });
 
@@ -46,10 +76,23 @@ export default function Onboarding() {
   const router = useRouter();
   const [currentNode, setCurrentNode] = useState<AnswerKey>('initial');
   const [assessmentResults, setAssessmentResults] = useState<Record<string, string>>({});
+  const [key, setKey] = useState(0);
+
+  useEffect(() => {
+    global.reloadApp = () => setKey(prev => prev + 1);
+    return () => {
+      global.reloadApp = undefined;
+    };
+  }, []);
 
   const handleAnswer = (answer: string) => {
     const node = onboardingFlow[currentNode];
     const nextNode = node.answers[answer];
+
+    setAssessmentResults(prev => ({
+      ...prev,
+      [currentNode]: answer
+    }));
 
     if (nextNode === 'RESOURCES') {
       showResources();
@@ -60,12 +103,7 @@ export default function Onboarding() {
       setCurrentNode(nextNode);
     }
 
-    setAssessmentResults(prev => ({
-      ...prev,
-      [currentNode]: answer
-    }));
-
-    if (onboardingFlow[nextNode].resourcesKey) {
+    if (onboardingFlow[nextNode as AnswerKey]?.resourcesKey) {
       router.push('/home');
     }
   };
@@ -105,24 +143,46 @@ export default function Onboarding() {
     }
 
     return (
-      <>
+      <View style={{ alignItems: 'center' }}>
         <Text style={styles.questionText}>
           {i18n.t(node.questionKey)}
         </Text>
-        <AnswerButtons 
-          onAnswer={handleAnswer}
+        <AnswerButtons
           answers={Object.keys(node.answers)}
+          onAnswer={handleAnswer}
         />
-      </>
+      </View>
     );
   };
 
-   return (
-    <View style={styles.container}>
-      <LanguageSwitcher />
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {renderQuestion()}
-      </ScrollView>
+  return (
+    <View style={{ flex: 1 }}>
+      <Video
+        source={require("../assets/background.mp4")}
+        style={styles.backgroundVideo}
+        rate={1.0}
+        volume={1.0}
+        isMuted={true}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+      />
+      <View style={styles.overlay}>
+        <View style={styles.container} key={key}>
+          <View style={{ marginTop: 20 }}>
+            <LanguageSwitcher />
+          </View>
+
+          <ScrollView contentContainerStyle={styles.scrollContainer}>
+            <View style={extraStyles.contentContainer}>
+              <Text style={extraStyles.welcomeText}>
+                {i18n.t('onboarding.welcome')}
+              </Text>
+              {renderQuestion()}
+            </View>
+          </ScrollView>
+        </View>
+      </View>
     </View>
   );
 }

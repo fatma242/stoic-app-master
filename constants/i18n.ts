@@ -52,15 +52,19 @@ const translations = {
         sometimes: 'Sometimes'
       },
       resources: {
-        overwhelmed: 'Overwhelm Support:\n- Priority management tools\n- Mindfulness exercises\n- Stress reduction podcasts',
-        disconnected: 'Connection Resources:\n- Social anxiety guides\n- Community support groups\n- Communication exercises',
-        low_energy: 'Energy Boosters:\n- Sleep hygiene tips\n- Motivation strategies\n- Energy management plans',
-        hopeless: `Crisis Support (Egypt):
-- Mental Health Hotline: 0800 888 0700
-- Hope Helpline: 0800 708 0700
-- Emotional Support: 022 081 6831
-- Immediate Counselor Matching`
+        overwhelmed: "It sounds like you're feeling overwhelmed. Try using tools that help you prioritize tasks, take short breaks during the day, and practice simple breathing or mindfulness exercises to stay grounded.",
+        
+        disconnected: "Feeling disconnected is tough. You might benefit from talking to someone you trust, joining a support community, or trying out activities that help you reconnect with others and yourself.",
+        
+        low_energy: "Low energy can be a sign that your body or mind needs rest. Focus on getting enough quality sleep, staying hydrated, and adding small positive habits to your daily routine.",
+        
+        hopeless: `If you're feeling hopeless, please know you're not alone. In Egypt, you can call the Mental Health Hotline at 16328 for support. There are professionals ready to help you. Reaching out is a strong and brave step.`,
+        
+        needsSupport: "You're going through a challenging time, and it's okay to ask for help. Try reaching out to a trusted person or a mental health professional. You're not alone—there is support available, and healing is possible.",
+
+        general: "Thank you for opening up. Taking this first step to check in with yourself is powerful. We're here to support you with resources, tools, and guidance to help you feel better and move forward."
       }
+
     }
   },
   ar: {
@@ -113,14 +117,17 @@ const translations = {
         sometimes: 'أحياناً'
       },
       resources: {
-        overwhelmed: 'دعم الإرهاق:\n- أدوات إدارة الأولويات\n- تمارين الوعي\n- بودكاست تخفيف التوتر',
-        disconnected: 'موارد التواصل:\n- أدلة القلق الاجتماعي\n- مجموعات الدعم المجتمعي\n- تمارين التواصل',
-        low_energy: 'معززات الطاقة:\n- نصائح نظافة النوم\n- استراتيجيات التحفيز\n- خطط إدارة الطاقة',
-        hopeless: `الدعم الطارئ (مصر):
-- الخط الساخن للصحة النفسية: ٠٨٠٠ ٨٨٨ ٠٧٠٠
-- خط الأمل: ٠٨٠٠ ٧٠٨ ٠٧٠٠
-- الدعم العاطفي: ٠٢٢ ٠٨١ ٦٨٣١
-- مطابقة مع مستشار فوري`
+        overwhelmed: "يبدو أن هناك شعورًا بالإرهاق. جرّب استخدام أدوات تساعد على ترتيب الأولويات، وخذ فترات راحة قصيرة خلال اليوم، وجرب تمارين التنفس أو التأمل لتخفيف التوتر.",
+        
+        disconnected: "الشعور بالانفصال ليس سهلًا. قد يكون من المفيد التحدث مع شخص موثوق، أو الانضمام إلى مجموعة دعم، أو تجربة أنشطة تساعد على استعادة التواصل مع النفس والآخرين.",
+        
+        low_energy: "انخفاض الطاقة قد يكون إشارة إلى حاجة الجسد أو العقل للراحة. احرص على نوم جيد، واشرب كمية كافية من الماء، وابدأ بإضافة عادات بسيطة وإيجابية إلى روتينك اليومي.",
+        
+        hopeless: "إذا كان هناك شعور باليأس، فتذكر أنك لست وحدك. في مصر، يمكن الاتصال بخط الدعم النفسي على الرقم 16328. هناك مختصون مستعدون للاستماع والمساعدة. طلب الدعم خطوة قوية وشجاعة.",
+        
+        needsSupport: "قد تمرّ بوقت صعب، ومن الطبيعي أن تحتاج إلى دعم. التحدث مع شخص موثوق أو مختص نفسي يمكن أن يساعد. لست وحدك—الدعم متاح، والتعافي ممكن.",
+        
+        general: "شكرًا لمشاركة ما تشعر به. اتخاذ خطوة لفهم الحالة النفسية أمر قوي. نحن هنا لتقديم الدعم والموارد والإرشادات التي تساعد على التحسّن والمضي قدمًا."
       }
     }
   }
@@ -128,14 +135,19 @@ const translations = {
 
 const i18n = new I18n(translations);
 
-const normalizeLocale = (locale: string) => {
-  if (locale.startsWith('ar')) return 'ar';
-  if (locale.startsWith('en')) return 'en'; // Handle all English variants
-  return 'en';
-};
-
-i18n.locale = normalizeLocale(Localization.locale);
+// Simplify locale handling
 i18n.enableFallback = true;
 i18n.defaultLocale = 'en';
+
+// Set initial locale
+const setLocale = (locale: string) => {
+  i18n.locale = locale.startsWith('ar') ? 'ar' : 'en';
+};
+
+setLocale(Localization.locale);
+
+export const changeLanguage = (locale: 'en' | 'ar') => {
+  i18n.locale = locale;
+};
 
 export default i18n;
