@@ -11,8 +11,8 @@ export type AnswerKey =
   | 'overwhelmed_q1' | 'overwhelmed_q2' | 'overwhelmed_q3' | 'overwhelmed_q4' | 'overwhelmed_q5' | 'overwhelmed_resources'
   | 'disconnected_q1' | 'disconnected_q2' | 'disconnected_q3' | 'disconnected_q4' | 'disconnected_q5' | 'disconnected_resources'
   | 'low_energy_q1' | 'low_energy_q2' | 'low_energy_q3' | 'low_energy_q4' | 'low_energy_q5' | 'low_energy_resources'
-  | 'hopeless_q1' | 'hopeless_q2' | 'hopeless_q3' | 'hopeless_q4' | 'hopeless_q5' | 'crisis_resources';
-
+  | 'hopeless_q1' | 'hopeless_q2' | 'hopeless_q3' | 'hopeless_q4' | 'hopeless_q5' | 'crisis_resources'
+  | 'normal_q1' | 'normal_q2' | 'normal_q3' | 'normal_q4' | 'normal_q5' | 'normal_resources';
 
 export const onboardingFlow: Record<AnswerKey, FlowNode> = {
   initial: {
@@ -21,7 +21,8 @@ export const onboardingFlow: Record<AnswerKey, FlowNode> = {
       overwhelmed: 'overwhelmed_q1',
       disconnected: 'disconnected_q1',
       low_energy: 'low_energy_q1',
-      hopeless: 'hopeless_q1'
+      hopeless: 'hopeless_q1',
+      normal: 'normal_q1'
     }
   },
 
@@ -106,7 +107,7 @@ export const onboardingFlow: Record<AnswerKey, FlowNode> = {
     answers: {}
   },
 
-  // Crisis flow
+  // Hopeless flow
   hopeless_q1: {
     questionKey: 'onboarding.questions.hopeless.q1',
     answers: { yes: 'hopeless_q2', no: 'initial' }
@@ -131,6 +132,33 @@ export const onboardingFlow: Record<AnswerKey, FlowNode> = {
     questionKey: 'onboarding.questions.crisis_resources',
     resourcesKey: 'onboarding.resources.hopeless',
     answers: {}
+  },
+
+  // Normal flow
+  normal_q1: {
+    questionKey: 'onboarding.questions.normal.q1',
+    answers: { yes: 'normal_q2', no: 'normal_q2' }
+  },
+  normal_q2: {
+    questionKey: 'onboarding.questions.normal.q2',
+    answers: { yes: 'normal_q3', no: 'normal_q3' }
+  },
+  normal_q3: {
+    questionKey: 'onboarding.questions.normal.q3',
+    answers: { yes: 'normal_q4', no: 'normal_q4' }
+  },
+  normal_q4: {
+    questionKey: 'onboarding.questions.normal.q4',
+    answers: { yes: 'normal_q5', no: 'normal_q5' }
+  },
+  normal_q5: {
+    questionKey: 'onboarding.questions.normal.q5',
+    answers: { yes: 'normal_resources', no: 'normal_resources' }
+  },
+  normal_resources: {
+    questionKey: '',
+    resourcesKey: 'onboarding.resources.general',
+    answers: {}
   }
 };
 
@@ -142,4 +170,5 @@ export type ResourceKey =
   'onboarding.resources.overwhelmed' |
   'onboarding.resources.disconnected' |
   'onboarding.resources.low_energy' |
-  'onboarding.resources.hopeless';
+  'onboarding.resources.hopeless' |
+  'onboarding.resources.general';

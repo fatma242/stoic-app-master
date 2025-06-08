@@ -9,13 +9,21 @@ const translations = {
       back: 'Back',
       select_option: 'Please select an option:',
       moodOptions: {
-        overwhelmed: 'I feel overwhelmed',
-        disconnected: 'I feel disconnected',
-        low_energy: 'I have low energy',
-        hopeless: 'I feel hopeless about life'
+        overwhelmed: "I’m finding it hard to cope with life",
+        disconnected: "I feel distant from people or myself",
+        low_energy: "I’m tired and unmotivated most of the time",
+        hopeless: "I feel like nothing will ever get better",
+        normal: "I feel generally okay and just checking in"
       },
       questions: {
         initial_mood: 'How have you been feeling lately?',
+        normal: {
+          q1: 'Have you been feeling mostly balanced and able to cope with daily life?',
+          q2: 'Are you generally sleeping, eating, and functioning well?',
+          q3: 'Do you feel mostly positive or neutral emotions throughout your days?',
+          q4: 'Do you feel connected and in control of your emotions?',
+          q5: 'Do you find yourself enjoying or engaging with your daily activities?'
+        },
         overwhelmed: {
           q1: 'Have you been facing situations that feel beyond your capacity?',
           q2: 'Do you feel like you have too much to handle?',
@@ -74,13 +82,21 @@ const translations = {
       back: 'رجوع',
       select_option: 'الرجاء اختيار خيار:',
       moodOptions: {
-        overwhelmed: 'أشعر بالإرهاق',
-        disconnected: 'أشعر بالانفصال',
-        low_energy: 'أشعر بانخفاض الطاقة',
-        hopeless: 'أشعر باليأس تجاه الحياة'
+        overwhelmed: 'أشعر أنني غير قادر على التعامل مع الحياة',
+        disconnected: 'أشعر أنني بعيد عن الناس أو عن نفسي',
+        low_energy: 'أشعر بالتعب وانعدام الحافز معظم الوقت',
+        hopeless: 'أشعر أن لا شيء سيتحسن أبدًا',
+        normal: 'أشعر أنني بخير بشكل عام وأقوم فقط بالتحقق من حالتي'
       },
       questions: {
         initial_mood: 'كيف تشعر في الفترة الأخيرة؟',
+        normal: {
+          q1: 'هل تشعر أنك متوازن وقادر على التعامل مع الحياة اليومية؟',
+          q2: 'هل تنام وتتناول الطعام وتؤدي وظائفك بشكل جيد؟',
+          q3: 'هل تشعر بمشاعر إيجابية أو محايدة بشكل عام خلال يومك؟',
+          q4: 'هل تشعر أنك متصل ومتحكم في عواطفك؟',
+          q5: 'هل تجد نفسك تستمتع أو تتفاعل مع أنشطتك اليومية؟'
+        },
         overwhelmed: {
           q1: 'هل تواجه مواقف تشعر أنها تفوق طاقتك؟',
           q2: 'هل تشعر أن لديك الكثير مما يمكنك تحمله؟',

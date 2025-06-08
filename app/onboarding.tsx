@@ -150,7 +150,9 @@ export default function Onboarding() {
         <AnswerButtons
           answers={Object.keys(node.answers)}
           onAnswer={handleAnswer}
+          translationPrefix={currentNode === 'initial' ? 'onboarding.moodOptions' : 'onboarding.answers'}
         />
+
       </View>
     );
   };
