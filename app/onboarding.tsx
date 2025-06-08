@@ -12,7 +12,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
-    backgroundColor: 'transparent', // Changed from white to transparent
+    backgroundColor: 'transparent',
   },
   backgroundVideo: {
     position: 'absolute',
@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Dark overlay for better text readability
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
   questionText: {
     fontSize: 20,
     textAlign: 'center',
-    color: '#FFFFFF', // Changed to white for better contrast
+    color: '#FFFFFF',
     marginBottom: 40,
     lineHeight: 28,
     writingDirection: i18n.locale.startsWith('ar') ? 'rtl' : 'ltr',
@@ -40,35 +40,61 @@ const styles = StyleSheet.create({
   resourceText: {
     fontSize: 18,
     textAlign: 'center',
-    color: '#FFFFFF', // Changed to white for better contrast
+    color: '#FFFFFF',
     marginBottom: 20,
     lineHeight: 24,
     writingDirection: i18n.locale.startsWith('ar') ? 'rtl' : 'ltr',
   },
   emergencyText: {
-    color: '#FF4444', // Brighter red for better visibility
+    color: '#FF4444',
     fontWeight: 'bold',
     textDecorationLine: 'underline',
     fontSize: 16,
     marginTop: 15,
+  },
+  navigationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 30,
+  },
+  navButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  navButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  skipButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  },
+  skipButtonText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    textDecorationLine: 'underline',
   }
 });
 
-// Update extraStyles
 const extraStyles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    backgroundColor: 'transparent', // Added transparent background
+    backgroundColor: 'transparent',
   },
   welcomeText: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 30,
     textAlign: 'center',
-    color: '#FFFFFF', // Changed to white for better contrast
+    color: '#FFFFFF',
   }
 });
 
@@ -77,6 +103,7 @@ export default function Onboarding() {
   const [currentNode, setCurrentNode] = useState<AnswerKey>('initial');
   const [assessmentResults, setAssessmentResults] = useState<Record<string, string>>({});
   const [key, setKey] = useState(0);
+  const [history, setHistory] = useState<AnswerKey[]>([]);
 
   useEffect(() => {
     global.reloadApp = () => setKey(prev => prev + 1);
@@ -94,17 +121,40 @@ export default function Onboarding() {
       [currentNode]: answer
     }));
 
+    // Add current node to history before moving forward
+    setHistory(prev => [...prev, currentNode]);
+
     if (nextNode === 'RESOURCES') {
       showResources();
       return;
     }
 
     if (typeof nextNode === 'string') {
-      setCurrentNode(nextNode);
+      setCurrentNode(nextNode as AnswerKey);
     }
 
     if (onboardingFlow[nextNode as AnswerKey]?.resourcesKey) {
       router.push('/home');
+    }
+  };
+
+  const handleBack = () => {
+    if (history.length > 0) {
+      const previousNode = history[history.length - 1];
+      setHistory(prev => prev.slice(0, -1)); // Remove current node from history
+      setCurrentNode(previousNode);
+    }
+  };
+
+  const handleSkip = () => {
+    // Skip to next question in the flow
+    const node = onboardingFlow[currentNode];
+    const firstAnswerKey = Object.keys(node.answers)[0];
+    const nextNode = node.answers[firstAnswerKey];
+    
+    if (typeof nextNode === 'string') {
+      setHistory(prev => [...prev, currentNode]);
+      setCurrentNode(nextNode as AnswerKey);
     }
   };
 
@@ -143,7 +193,7 @@ export default function Onboarding() {
     }
 
     return (
-      <View style={{ alignItems: 'center' }}>
+      <View style={{ alignItems: 'center', width: '100%' }}>
         <Text style={styles.questionText}>
           {i18n.t(node.questionKey)}
         </Text>
@@ -152,7 +202,32 @@ export default function Onboarding() {
           onAnswer={handleAnswer}
           translationPrefix={currentNode === 'initial' ? 'onboarding.moodOptions' : 'onboarding.answers'}
         />
-
+        
+        <View style={styles.navigationContainer}>
+          {/* Show Back button only if not on initial screen and has history */}
+          {(currentNode !== 'initial' && history.length > 0) ? (
+            <TouchableOpacity 
+              style={styles.navButton}
+              onPress={handleBack}
+            >
+              <Text style={styles.navButtonText}>
+                {i18n.t('onboarding.back')}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.navButton} /> // Empty spacer to maintain layout
+          )}
+          
+          {/* Skip button - shows different text on initial screen */}
+          <TouchableOpacity 
+            style={[styles.navButton, styles.skipButton]}
+            onPress={handleSkip}
+          >
+            <Text style={[styles.navButtonText, styles.skipButtonText]}>
+              {currentNode === 'initial' ? i18n.t('onboarding.skip') : i18n.t('onboarding.continue')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };

@@ -4,6 +4,7 @@ import { I18n } from 'i18n-js';
 const translations = {
   en: {
     onboarding: {
+      skip: 'Skip',
       welcome: 'Welcome to Stoic!',
       continue: 'Continue',
       back: 'Back',
@@ -77,8 +78,8 @@ const translations = {
   },
   ar: {
     onboarding: {
+      skip: 'تخطى',
       welcome: 'مرحبًا بك في تطبيق ستويك!',
-      continue: 'استمر',
       back: 'رجوع',
       select_option: 'الرجاء اختيار خيار:',
       moodOptions: {
