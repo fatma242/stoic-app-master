@@ -74,7 +74,52 @@ const translations = {
         general: "Thank you for opening up. Taking this first step to check in with yourself is powerful. We're here to support you with resources, tools, and guidance to help you feel better and move forward."
       }
 
+    },
+    weeklyCheckIn: {
+      questions: {
+        initial: "How are you feeling this week?",
+        stress: {
+          q1: "Have you felt under pressure or overwhelmed recently?",
+          q2: "Have you struggled to manage daily responsibilities?",
+          q3: "Have you had physical symptoms like tension or headaches due to stress?",
+          q4: "Have you found it difficult to take breaks or relax?",
+          q5: "Have you been constantly worried about tasks or time?",
+        },
+        anxiety: {
+          q1: "Have you felt unusually anxious or nervous this week?",
+          q2: "Have you experienced racing thoughts or difficulty focusing?",
+          q3: "Have you felt restless or on edge without clear reasons?",
+          q4: "Have you avoided activities due to worry or fear?",
+          q5: "Have you noticed physical symptoms like rapid heartbeat or sweating when anxious?",
+        },
+        depression: {
+          q1: "Have you felt persistently down, sad, or empty?",
+          q2: "Have you lost interest in activities you usually enjoy?",
+          q3: "Have you experienced changes in sleep or appetite?",
+          q4: "Have you had trouble concentrating or making decisions?",
+          q5: "Have you felt worthless or guilty without reason?",
+        },
+        normal: {
+          q1: "Have you been feeling emotionally stable this week?",
+          q2: "Are you maintaining your sleep, nutrition, and energy levels?",
+          q3: "Have you been enjoying your daily activities?",
+          q4: "Have you felt generally productive and focused?",
+          q5: "Do you feel connected to others and yourself?",
+        }
+      },
+      resources: {
+        stress: "Try stress-relief techniques like deep breathing, short walks, and managing your time with breaks.",
+        anxiety: "Try calming techniques like journaling your thoughts, mindful breathing, and light exercise.",
+        depression: "Focus on self-compassion, routine, and consider reaching out to someone or a professional.",
+        normal: "Keep up the healthy habits! You're doing well, and we’re here to support you."
+      },
+      answers: {
+        yes: 'Yes',
+        no: 'No',
+        sometimes: 'Sometimes'
+      }
     }
+
   },
   ar: {
     onboarding: {
@@ -146,7 +191,52 @@ const translations = {
         
         general: "شكرًا لمشاركة ما تشعر به. اتخاذ خطوة لفهم الحالة النفسية أمر قوي. نحن هنا لتقديم الدعم والموارد والإرشادات التي تساعد على التحسّن والمضي قدمًا."
       }
+    },
+    weeklyCheckIn: {
+      questions: {
+        initial: "كيف تشعر هذا الأسبوع؟",
+        stress: {
+          q1: "هل شعرت بالضغط أو الإرهاق مؤخرًا؟",
+          q2: "هل واجهت صعوبة في التعامل مع مسؤولياتك اليومية؟",
+          q3: "هل عانيت من أعراض جسدية مثل التوتر أو الصداع بسبب التوتر؟",
+          q4: "هل وجدت صعوبة في أخذ فترات راحة أو الاسترخاء؟",
+          q5: "هل كنت قلقًا باستمرار بشأن المهام أو الوقت؟",
+        },
+        anxiety: {
+          q1: "هل شعرت بقلق أو توتر غير معتاد هذا الأسبوع؟",
+          q2: "هل واجهت أفكارًا متسارعة أو صعوبة في التركيز؟",
+          q3: "هل شعرت بالتوتر أو القلق دون سبب واضح؟",
+          q4: "هل تجنبت أنشطة معينة بسبب القلق أو الخوف؟",
+          q5: "هل لاحظت أعراضًا جسدية مثل تسارع ضربات القلب أو التعرق عند القلق؟",
+        },
+        depression: {
+          q1: "هل شعرت بالحزن أو الفراغ المستمر؟",
+          q2: "هل فقدت الاهتمام بالأنشطة التي تستمتع بها عادة؟",
+          q3: "هل لاحظت تغيرات في النوم أو الشهية؟",
+          q4: "هل واجهت صعوبة في التركيز أو اتخاذ القرارات؟",
+          q5: "هل شعرت بانعدام القيمة أو الذنب دون سبب واضح؟",
+        },
+        normal: {
+          q1: "هل شعرت بالاستقرار العاطفي هذا الأسبوع؟",
+          q2: "هل تحافظ على نمط نوم وتغذية ومستوى طاقة جيد؟",
+          q3: "هل تستمتع بأنشطتك اليومية؟",
+          q4: "هل شعرت بأنك منتج ومركز بشكل عام؟",
+          q5: "هل تشعر بالترابط مع الآخرين ومع نفسك؟",
+        }
+      },
+      resources: {
+        stress: "جرّب تمارين التنفس العميق، فترات راحة قصيرة، وتنظيم وقتك لتقليل التوتر.",
+        anxiety: "دوّن أفكارك، تنفّس بعمق، وجرب تمارين خفيفة لتخفيف القلق.",
+        depression: "اهتم بروتينك اليومي، كن لطيفًا مع نفسك، ولا تتردد في طلب المساعدة.",
+        normal: "حافظ على عاداتك الصحية! أنت بخير، ونحن هنا لدعمك."
+      },
+      answers: {
+        yes: 'نعم',
+        no: 'لا',
+        sometimes: 'أحياناً'
+      }
     }
+
   }
 };
 

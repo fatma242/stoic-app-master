@@ -32,16 +32,16 @@ export default function Home() {
           <Text style={styles.greeting}>Welcome Back!</Text>
         </View>
 
-        {/* Daily Check-in */}
+        {/* Weekly Check-in */}
         <LinearGradient
           colors={['#16A34A', '#0d4215']}
           style={styles.card}
         >
-          <Text style={styles.cardTitle}>Daily Check-in</Text>
-          <Text style={styles.cardText}>How are you feeling today?</Text>
+          <Text style={styles.cardTitle}>ًWeekly Check-in</Text>
+          <Text style={styles.cardText}>How are you feeling now?</Text>
           <TouchableOpacity 
             style={styles.checkinButton}
-            onPress={() => router.push('/progress')}
+            onPress={() => router.push('/weekly_check-in')}
           >
             <Text style={styles.buttonText}>Start Check-in</Text>
           </TouchableOpacity>
