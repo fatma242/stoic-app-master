@@ -10,11 +10,11 @@ const translations = {
       back: 'Back',
       select_option: 'Please select an option:',
       moodOptions: {
-        overwhelmed: "I’m finding it hard to cope with life",
-        disconnected: "I feel distant from people or myself",
-        low_energy: "I’m tired and unmotivated most of the time",
-        hopeless: "I feel like nothing will ever get better",
-        normal: "I feel generally okay and just checking in"
+        overwhelmed: "I’m finding it hard to cope with life",                   //Stress
+        disconnected: "I feel distant from people or myself",               //Anxiety
+        low_energy: "I’m tired and unmotivated most of the time",        //Depression Mild to Moderate
+        hopeless: "I feel like nothing will ever get better",            //Severe Depression / Suicidal Ideation	
+        normal: "I feel generally okay and just checking in"          //Normal / Mentally Well
       },
       questions: {
         initial_mood: 'How have you been feeling lately?',

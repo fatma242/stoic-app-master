@@ -33,7 +33,7 @@ export const onboardingFlow: Record<AnswerKey, FlowNode> = {
   },
   overwhelmed_q2: {
     questionKey: 'onboarding.questions.overwhelmed.q2',
-    answers: { yes: 'overwhelmed_q3', no: 'overwhelmed_q3' }
+    answers: { yes: 'overwhelmed_q3', no: 'disconnected_q1' }
   },
   overwhelmed_q3: {
     questionKey: 'onboarding.questions.overwhelmed.q3',
@@ -60,7 +60,7 @@ export const onboardingFlow: Record<AnswerKey, FlowNode> = {
   },
   disconnected_q2: {
     questionKey: 'onboarding.questions.disconnected.q2',
-    answers: { yes: 'disconnected_q3', no: 'disconnected_q3' }
+    answers: { yes: 'disconnected_q3', no: 'normal_q1' }
   },
   disconnected_q3: {
     questionKey: 'onboarding.questions.disconnected.q3',
@@ -87,7 +87,7 @@ export const onboardingFlow: Record<AnswerKey, FlowNode> = {
   },
   low_energy_q2: {
     questionKey: 'onboarding.questions.low_energy.q2',
-    answers: { yes: 'low_energy_q3', no: 'low_energy_q3' }
+    answers: { yes: 'low_energy_q3', no: 'disconnected_q1' }
   },
   low_energy_q3: {
     questionKey: 'onboarding.questions.low_energy.q3',
@@ -110,11 +110,11 @@ export const onboardingFlow: Record<AnswerKey, FlowNode> = {
   // Hopeless flow
   hopeless_q1: {
     questionKey: 'onboarding.questions.hopeless.q1',
-    answers: { yes: 'hopeless_q2', no: 'initial' }
+    answers: { yes: 'hopeless_q2', no: 'hopeless_q2' }
   },
   hopeless_q2: {
     questionKey: 'onboarding.questions.hopeless.q2',
-    answers: { yes: 'hopeless_q3', no: 'initial' }
+    answers: { yes: 'hopeless_q3', no: 'normal_q1' }
   },
   hopeless_q3: {
     questionKey: 'onboarding.questions.hopeless.q3',
@@ -141,7 +141,7 @@ export const onboardingFlow: Record<AnswerKey, FlowNode> = {
   },
   normal_q2: {
     questionKey: 'onboarding.questions.normal.q2',
-    answers: { yes: 'normal_q3', no: 'normal_q3' }
+    answers: { yes: 'normal_q3', no: 'low_energy_q1' }
   },
   normal_q3: {
     questionKey: 'onboarding.questions.normal.q3',
@@ -163,7 +163,7 @@ export const onboardingFlow: Record<AnswerKey, FlowNode> = {
 };
 
 export const handleEmergencyCall = () => {
-  Linking.openURL('tel:08008880700');
+  Linking.openURL('hotline:16328');
 };
 
 export type ResourceKey = 
