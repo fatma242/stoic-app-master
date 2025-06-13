@@ -72,7 +72,7 @@ export default function Landing() {
 
       <Text style={styles.loginText}>
         Already have an account?
-        <Text style={styles.loginLink} onPress={() => router.replace("/onboarding")}>
+        <Text style={styles.loginLink} onPress={() => router.replace("/login")}>
           {" "}Log in
         </Text>
       </Text>

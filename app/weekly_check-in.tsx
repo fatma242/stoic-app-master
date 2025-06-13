@@ -41,7 +41,6 @@ const WeeklyCheckInScreen = () => {
     const node = weeklyCheckInFlow[currentNode];
     const nextKey = node.answers[answer];
 
-    // ✅ Update score if valid
     if (scoreMap[answer] !== undefined) {
       setScore(prev => prev + scoreMap[answer]);
     }
@@ -53,7 +52,6 @@ const WeeklyCheckInScreen = () => {
       nextKey in weeklyCheckInFlow &&
       weeklyCheckInFlow[nextKey as WeeklyFlowKey]?.resourcesKey
     ) {
-      // ✅ Final score can be used here
       console.log('Final score:', score + (scoreMap[answer] ?? 0));
       router.push('/progress');
     } else if (typeof nextKey === 'string' && nextKey in weeklyCheckInFlow) {

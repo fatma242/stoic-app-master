@@ -17,6 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Login() {
   const router = useRouter();
@@ -64,35 +65,29 @@ export default function Login() {
     return valid;
   };
 
+  const API_BASE_URL = "http://192.168.1.6:8100";
+
   const handleLogin = async () => {
     if (!validateForm()) return;
-
     setLoading(true);
-    
+
     try {
-      const response = await fetch("http://localhost:8100/api/users/login", {
+      const response = await fetch(`${API_BASE_URL}/api/users/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          password: formData.password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.username, password: formData.password }),
       });
 
-      const data = await response.json();
+      const text = await response.text();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed");
-      }
+      if (!response.ok) throw new Error(text || "Login failed");
 
-      // Redirect to home on success
+      await AsyncStorage.setItem("isLoggedIn", "true");
+      await AsyncStorage.setItem("userEmail", formData.username);
       router.replace("/home");
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Invalid credentials";
-      Alert.alert("Login Error", errorMessage);
-      console.error("Login error:", error);
+      const message = error instanceof Error ? error.message : "Login failed";
+      Alert.alert("Login Error", message);
     } finally {
       setLoading(false);
     }

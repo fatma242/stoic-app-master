@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@CrossOrigin(origins = "http://192.168.1.6:8081") 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -57,6 +58,7 @@ public class UserController {
         User updatedUser = userService.update(user);
         return new ResponseEntity<>(updatedUser, HttpStatus.OK);
     }
+
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody User user) {
         try {
