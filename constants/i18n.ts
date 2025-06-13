@@ -116,7 +116,11 @@ const translations = {
       answers: {
         yes: 'Yes',
         no: 'No',
-        sometimes: 'Sometimes'
+        sometimes: 'Sometimes',
+        fear: "Fear",
+        sadness: "Sadness",
+        worry: "Worry",
+        justCheckingIn: "Just checking in"
       }
     }
 
@@ -125,6 +129,7 @@ const translations = {
     onboarding: {
       skip: 'تخطى',
       welcome: 'مرحبًا بك في تطبيق ستويك!',
+      continue: 'استمرار',
       back: 'رجوع',
       select_option: 'الرجاء اختيار خيار:',
       moodOptions: {
@@ -233,10 +238,13 @@ const translations = {
       answers: {
         yes: 'نعم',
         no: 'لا',
-        sometimes: 'أحياناً'
+        sometimes: 'أحياناً',
+        fear: "خوف ",
+        sadness: "حزن",
+        worry: "قلق",
+        justCheckingIn: "فقط أتحقق من حالتي"
       }
     }
-
   }
 };
 

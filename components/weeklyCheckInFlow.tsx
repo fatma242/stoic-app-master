@@ -21,10 +21,10 @@ export const weeklyCheckInFlow: Record<WeeklyFlowKey, WeeklyFlowNode> = {
   initial: {
     questionKey: 'weeklyCheckIn.questions.initial',
     answers: {
-      "Just checking in": 'normal_q1', 
-      "Fear": 'stress_q1',
-      "Worry": 'anxiety_q1',
-      "Sadness": 'depression_q1',
+      fear: 'stress_q1',
+      sadness: 'depression_q1',
+      worry: 'anxiety_q1',
+      justCheckingIn: 'normal_q1'
     }
   },
 

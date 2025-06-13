@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,27 @@ import { Video, ResizeMode } from 'expo-av';
 import { weeklyCheckInFlow, WeeklyFlowKey } from '../components/weeklyCheckInFlow';
 import i18n from '../constants/i18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import { useNavigation } from '@react-navigation/native';
 
 const WeeklyCheckInScreen = () => {
+  const navigation = useNavigation();
+  const router = useRouter();
+  const locale = i18n.locale;
+
   const [currentNode, setCurrentNode] = useState<WeeklyFlowKey>('initial');
   const [history, setHistory] = useState<WeeklyFlowKey[]>([]);
   const [refresh, setRefresh] = useState(0);
+  const [score, setScore] = useState(0); 
 
-  const router = useRouter();
-  const locale = i18n.locale;
+  const scoreMap: Record<string, number> = {
+    no: 1,
+    sometimes: 2,
+    yes: 3,
+  };
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   global.reloadApp = () => {
     setRefresh(prev => prev + 1);
@@ -28,6 +41,11 @@ const WeeklyCheckInScreen = () => {
     const node = weeklyCheckInFlow[currentNode];
     const nextKey = node.answers[answer];
 
+    // ✅ Update score if valid
+    if (scoreMap[answer] !== undefined) {
+      setScore(prev => prev + scoreMap[answer]);
+    }
+
     setHistory(prev => [...prev, currentNode]);
 
     if (
@@ -35,6 +53,8 @@ const WeeklyCheckInScreen = () => {
       nextKey in weeklyCheckInFlow &&
       weeklyCheckInFlow[nextKey as WeeklyFlowKey]?.resourcesKey
     ) {
+      // ✅ Final score can be used here
+      console.log('Final score:', score + (scoreMap[answer] ?? 0));
       router.push('/progress');
     } else if (typeof nextKey === 'string' && nextKey in weeklyCheckInFlow) {
       setCurrentNode(nextKey as WeeklyFlowKey);
@@ -100,7 +120,9 @@ const WeeklyCheckInScreen = () => {
       <View style={styles.overlay}>
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.contentContainer}>
-            <LanguageSwitcher />
+            <View style={styles.languageSwitcherContainer}>
+              <LanguageSwitcher />
+            </View>
             <Text style={styles.welcomeText}>
               {locale === 'ar' ? 'مرحبًا بك في التقييم الأسبوعي' : 'Welcome to your Weekly Check-In'}
             </Text>
@@ -155,6 +177,11 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  languageSwitcherContainer: {
+    position: 'absolute',
+    bottom: 580,
+    left: 350,
   },
   welcomeText: {
     fontSize: 20,
