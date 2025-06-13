@@ -140,7 +140,7 @@ export default function Login() {
               <MaterialIcons name="person" size={24} color="#16A34A" style={styles.icon} />
               <TextInput
                 style={styles.input}
-                placeholder="Username"
+                placeholder="Email"
                 placeholderTextColor="#aaa"
                 value={formData.username}
                 onChangeText={(text) => handleChange("username", text)}

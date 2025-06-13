@@ -55,6 +55,7 @@ public class UserController {
         user.setUsername(userDetails.getUsername());
         user.setEmail(userDetails.getEmail());
         user.setUserRole(userDetails.getUserRole());
+        user.setPassword(userDetails.getPassword());
         User updatedUser = userService.update(user);
         return new ResponseEntity<>(updatedUser, HttpStatus.OK);
     }

@@ -23,7 +23,13 @@ export default function Settings() {
         const response = await fetch(`${API_BASE_URL}/api/users`);
         const users = await response.json();
         const user = users.find((u: any) => u.email === email);
-        if (user) setUserId(user.id);
+
+        if (user && user.userId !== undefined) {
+          console.log('✅ Fetched userId:', user.userId);
+          setUserId(user.userId);
+        } else {
+          console.log('❌ userId not found in user object');
+        }
       } catch (error) {
         console.error('Failed to fetch user ID', error);
       }
@@ -53,10 +59,7 @@ export default function Settings() {
     }
 
     Alert.alert('Confirm', 'Are you sure you want to delete your account?', [
-      {
-        text: 'Cancel',
-        style: 'cancel'
-      },
+      { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
@@ -100,12 +103,6 @@ export default function Settings() {
           <TouchableOpacity style={styles.settingItem} onPress={() => router.push('../editProfile')}>
             <Ionicons name="person" size={24} color="#7CFC00" />
             <Text style={styles.settingText}>Edit Profile</Text>
-            <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.settingItem} onPress={() => router.push('../changePassword')}>
-            <Ionicons name="lock-closed" size={24} color="#7CFC00" />
-            <Text style={styles.settingText}>Change Password</Text>
             <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
           </TouchableOpacity>
         </LinearGradient>
