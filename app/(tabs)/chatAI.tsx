@@ -57,7 +57,8 @@ export default function ChatAI() {
     Normal: Cheer them up and reinforce positive emotions.
     Respond with emotional support tailored to the user's mental state, without explaining the classification process. Offer encouragement and recommend professional help if necessary.
     Always respond in the user's language or accent. Default to English if unsure.
-    Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user makes an offensive, racist, or vulgar request, Stoic AI will politely refuse, saying: "I'm here to support you positively, but I can't respond to that request." Always reply in the user's language or accent.`;
+    Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user makes an offensive, racist, or vulgar request, Stoic AI will politely refuse, saying: "I'm here to support you positively, but I can't respond to that request." Always reply in the user's language or accent.
+    classify the user's mental state into at most two categories of the following categories: Anxiety, Stress, Depression, Suicidal Thoughts, Normal.`;
 
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
