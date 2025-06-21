@@ -11,7 +11,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins = "http://192.168.1.6:8081") 
+@CrossOrigin(origins = {
+    "http://192.168.1.6:8081",
+    "exp://192.168.210.193:8081"
+}, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -86,9 +89,21 @@ public class UserController {
     public ResponseEntity<?> getSessionUser(HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (user != null) {
-            return ResponseEntity.ok("Logged in as: " + user.getUsername());
+            return ResponseEntity.ok(
+                new UserSessionResponse(user.getUsername(), user.getUserRole().name())
+            );
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No active session");
+        }
+    }
+
+    static class UserSessionResponse {
+        public String username;
+        public String role;
+
+        public UserSessionResponse(String username, String role) {
+            this.username = username;
+            this.role = role;
         }
     }
 

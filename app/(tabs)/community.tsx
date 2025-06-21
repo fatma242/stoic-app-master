@@ -25,21 +25,21 @@ export default function Community() {
   const [loading, setLoading] = useState(true);
 
   const isAdmin = userRole === 'admin' || userRole === 'moderator';
-  const BACKEND_URL = 'http://192.168.1.6:8100'; // Replace with your backend IP
+  const BACKEND_URL = 'http://192.168.210.193:8100'; 
 
   // Get user role
   useEffect(() => {
-    fetch(`${BACKEND_URL}/api/users/session`, {
-      credentials: 'include',
+  fetch(`${BACKEND_URL}/api/users/session`, {
+    credentials: 'include',
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.role === 'ADMIN') setUserRole('admin');
+      else if (data.role === 'MOD') setUserRole('moderator');
+      else setUserRole('user');
     })
-      .then(res => res.text())
-      .then(text => {
-        if (text.includes('admin')) setUserRole('admin');
-        else if (text.includes('moderator')) setUserRole('moderator');
-        else setUserRole('user');
-      })
-      .catch(() => setUserRole('user'));
-  }, []);
+    .catch(() => setUserRole('user'));
+}, []);
 
   // Fetch rooms visible to user
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function Community() {
   const handleCreateRoom = () => {
     Alert.prompt('Create Room', 'Enter room name:', (roomName) => {
       if (!roomName) return;
-      fetch(`${BACKEND_URL}/rooms/create`, {
+      fetch(`${BACKEND_URL}/rooms`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

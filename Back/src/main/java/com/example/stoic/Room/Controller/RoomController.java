@@ -7,27 +7,30 @@ import com.example.stoic.User.Model.User;
 import com.example.stoic.User.Model.UserRole;
 
 import jakarta.servlet.http.HttpSession;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
 import java.util.List;
 
-@CrossOrigin(origins = "http://192.168.1.6:8081")
+@CrossOrigin(origins = {
+    "http://192.168.1.6:8081",
+    "exp://192.168.210.193:8081"
+}, allowCredentials = "true")
 @RestController
-@RequestMapping("/rooms") // localhost:8080/rooms
+@RequestMapping("/rooms")
 public class RoomController {
 
     private final RoomService roomService;
 
+    public RoomController(RoomService roomService) {
+        this.roomService = roomService;
+    }
+
     @GetMapping("/")
     public String index() {
         return "redirect:/index.html";
-    }
-
-    public RoomController(RoomService roomService) {
-        this.roomService = roomService;
     }
 
     @GetMapping("/data")
@@ -43,9 +46,20 @@ public class RoomController {
     }
 
     @PostMapping
-    public ResponseEntity<Room> createRoom(@RequestBody Room room) {
-        Room newRoom = roomService.createRoom(room);
-        return new ResponseEntity<>(newRoom, HttpStatus.CREATED);
+    public ResponseEntity<?> createRoom(@RequestBody Room room, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        // Debug logging
+        System.out.println("POST rooms: user=" + user + ", payload=" + room);
+
+        if (user == null) return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
+        if (user.getUserRole() != UserRole.ADMIN && user.getUserRole() != UserRole.MOD)
+            return new ResponseEntity<>("Forbidden", HttpStatus.FORBIDDEN);
+
+        // Default missing fields
+        room.setOwnerId(user.getUserId()); // ensure ID
+        room.setCreatedAt(new Date());
+        Room saved = roomService.createRoom(room);
+        return new ResponseEntity<>(saved, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
@@ -85,5 +99,4 @@ public class RoomController {
 
         return new ResponseEntity<>(visibleRooms, HttpStatus.OK);
     }
-
 }
