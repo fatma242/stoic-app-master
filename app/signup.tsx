@@ -10,7 +10,7 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = "http://192.168.1.6:8100";
+const API_BASE_URL = 'http://192.168.1.6:8100';
 
 export default function SignUp() {
   const router = useRouter();
@@ -67,15 +67,27 @@ export default function SignUp() {
       const response = await fetch(`${API_BASE_URL}/api/users/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: formData.username, email: formData.email, password: formData.password }),
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password
+        }),
+        credentials: 'include',
       });
-      const data = await response.text();
 
-      if (!response.ok) throw new Error(data || "Registration failed");
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || "Registration failed");
 
       await AsyncStorage.setItem("isLoggedIn", "true");
       await AsyncStorage.setItem("userEmail", formData.email);
+      if (data.userId !== undefined) {
+        await AsyncStorage.setItem("userId", String(data.userId));
+        console.log("✅ Stored userId:", data.userId);
+      }
+
       router.replace("/onboarding");
+
     } catch (error) {
       Alert.alert("Registration Error", error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -94,7 +106,7 @@ export default function SignUp() {
           <Text style={styles.subtitle}>Join our wellness community</Text>
 
           <View style={styles.formContainer}>
-            {["username", "email", "password", "confirmPassword"].map((field, i) => (
+            {["username", "email", "password", "confirmPassword"].map((field) => (
               <View key={field}>
                 <View style={[styles.inputContainer, errors[field as keyof typeof errors] && styles.inputError]}>
                   <MaterialIcons name={field.includes("email") ? "email" : "lock"} size={24} color="#16A34A" style={styles.icon} />

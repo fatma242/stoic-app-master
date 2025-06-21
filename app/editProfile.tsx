@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { Video, ResizeMode } from 'expo-av';
 import { useNavigation } from '@react-navigation/native';
 
-const API_BASE_URL = 'http://192.168.210.193:8100';
+const API_BASE_URL = 'http://192.168.1.6:8100';
 
 export default function EditProfile() {
   const navigation = useNavigation();
@@ -31,12 +31,15 @@ export default function EditProfile() {
     const fetchUser = async () => {
       try {
         const storedEmail = await AsyncStorage.getItem('userEmail');
+        const userID = await AsyncStorage.getItem('userId');
         if (!storedEmail) return;
 
-        const response = await fetch(`${API_BASE_URL}/api/users`);
+        const response = await fetch(`${API_BASE_URL}/api/users`, {
+          credentials: 'include' // ✅ send session cookie
+        });
         const users = await response.json();
-        const currentUser = users.find((u: any) => u.email === storedEmail);
-
+        const currentUser = users.find((u: any) => u.id === userID);
+        console.log('Fetched user:', currentUser.username, currentUser.email);
         if (currentUser) {
           setUser(currentUser);
           setName(currentUser.username);

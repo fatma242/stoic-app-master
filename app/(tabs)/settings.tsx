@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Alert
+  View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.210.193:8100';
+const API_BASE_URL = 'http://192.168.1.6:8100';
 
 export default function Settings() {
   const router = useRouter();
@@ -20,18 +20,18 @@ export default function Settings() {
         const email = await AsyncStorage.getItem('userEmail');
         if (!email) return;
 
-        const response = await fetch(`${API_BASE_URL}/api/users`);
-        const users = await response.json();
-        const user = users.find((u: any) => u.email === email);
+        const response = await fetch(`${API_BASE_URL}/api/users`, {
+          credentials: 'include' // ✅ send session cookie
+        });
 
-        if (user && user.userId !== undefined) {
-          console.log('✅ Fetched userId:', user.userId);
-          setUserId(user.userId);
-        } else {
-          console.log('❌ userId not found in user object');
-        }
+
+        const text = await response.text();
+        const userID = await AsyncStorage.getItem('userId');
+        console.log(userID);
+        console.log(email);
+
       } catch (error) {
-        console.error('Failed to fetch user ID', error);
+        console.error('❌ Failed to fetch user ID:', error);
       }
     };
 
@@ -42,9 +42,8 @@ export default function Settings() {
     try {
       await fetch(`${API_BASE_URL}/api/users/logout`, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
       });
-
       await AsyncStorage.clear();
       router.replace('/login');
     } catch (error) {
@@ -65,24 +64,21 @@ export default function Settings() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await fetch(`${API_BASE_URL}/api/users/${userId}`, {
-              method: 'DELETE',
-            });
-
+            await fetch(`${API_BASE_URL}/api/users/${userId}`, { method: 'DELETE' });
             await AsyncStorage.clear();
             router.replace('/login');
           } catch (error) {
             Alert.alert('Error', 'Failed to delete account.');
           }
-        }
-      }
+        },
+      },
     ]);
   };
 
   return (
     <View style={styles.container}>
       <Video
-        source={require("../../assets/background.mp4")}
+        source={require('../../assets/background.mp4')}
         style={styles.backgroundVideo}
         isMuted
         resizeMode={ResizeMode.COVER}
@@ -90,38 +86,17 @@ export default function Settings() {
         isLooping
       />
       <View style={styles.overlay} />
-
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Image source={require("../../assets/logo.png")} style={styles.logo} />
+          <Image source={require('../../assets/logo.png')} style={styles.logo} />
           <Text style={styles.greeting}>Settings</Text>
         </View>
 
         <LinearGradient colors={['#16A34A', '#0d4215']} style={styles.card}>
           <Text style={styles.cardTitle}>Account Settings</Text>
-
           <TouchableOpacity style={styles.settingItem} onPress={() => router.push('../editProfile')}>
             <Ionicons name="person" size={24} color="#7CFC00" />
             <Text style={styles.settingText}>Edit Profile</Text>
-            <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
-          </TouchableOpacity>
-        </LinearGradient>
-
-        <LinearGradient colors={['#16A34A', '#0d4215']} style={styles.card}>
-          <Text style={styles.cardTitle}>App Information</Text>
-
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Version</Text>
-            <Text style={styles.infoValue}>1.0.0</Text>
-          </View>
-
-          <TouchableOpacity style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Privacy Policy</Text>
-            <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Terms of Service</Text>
             <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
           </TouchableOpacity>
         </LinearGradient>
@@ -131,7 +106,6 @@ export default function Settings() {
             <Ionicons name="log-out" size={24} color="#FFF" />
             <Text style={styles.dangerText}>Log Out</Text>
           </TouchableOpacity>
-
           <TouchableOpacity style={styles.dangerItem} onPress={handleDeleteAccount}>
             <Ionicons name="trash" size={24} color="#FFF" />
             <Text style={styles.dangerText}>Delete Account</Text>
@@ -143,32 +117,17 @@ export default function Settings() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  backgroundVideo: { position: "absolute", top: 0, left: 0, bottom: 0, right: 0 },
-  overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.4)" },
+  container: { flex: 1 },
+  backgroundVideo: { ...StyleSheet.absoluteFillObject },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
   content: { padding: 20, paddingTop: 60 },
   header: { alignItems: 'center', marginBottom: 30 },
   logo: { width: 100, height: 100, marginBottom: 15 },
-  greeting: {
-    fontSize: 24, color: '#fff', fontWeight: '600',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3,
-  },
+  greeting: { fontSize: 24, color: '#fff', fontWeight: '600' },
   card: { borderRadius: 15, padding: 20, marginBottom: 20 },
   cardTitle: { fontSize: 20, color: '#fff', fontWeight: '600', marginBottom: 15 },
-  settingItem: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#ffffff20',
-  },
+  settingItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 15 },
   settingText: { color: '#fff', flex: 1, marginLeft: 15, fontSize: 16 },
-  infoItem: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#ffffff20',
-  },
-  infoLabel: { color: '#fff', fontSize: 16 },
-  infoValue: { color: '#7CFC00', fontSize: 16 },
-  dangerItem: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#ffffff20',
-  },
+  dangerItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15 },
   dangerText: { color: '#FFF', marginLeft: 15, fontSize: 16, fontWeight: '500' },
 });

@@ -2,18 +2,20 @@ package com.example.stoic.User.Controller;
 
 import com.example.stoic.User.Model.User;
 import com.example.stoic.User.DTO.LoginRequest;
+import com.example.stoic.User.DTO.RegisterResponse;
 import com.example.stoic.User.Model.UserRole;
 import com.example.stoic.User.Service.UserServiceImpl;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+
 
 @CrossOrigin(origins = {
     "http://192.168.1.6:8081",
-    "exp://192.168.210.193:8081"
+    "exp://192.168.210.193:8081",
+    "http://localhost:8081",
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/users")
@@ -63,17 +65,21 @@ public class UserController {
         return new ResponseEntity<>(updatedUser, HttpStatus.OK);
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody User user) {
+   @PostMapping("/register")
+    public ResponseEntity<RegisterResponse> register(@RequestBody User user) {
         try {
-            user.setUserRole(UserRole.REG); // default role
-            userService.register(user);
-            return ResponseEntity.ok("Registered successfully");
+            user.setUserRole(UserRole.REG);
+            User savedUser = userService.register(user);
+
+            RegisterResponse response = new RegisterResponse("User registered successfully", savedUser.getUserId());
+            return ResponseEntity.ok(response);
+
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity
+                    .badRequest()
+                    .body(new RegisterResponse("Error: " + e.getMessage(), -1));
         }
     }
-
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest, HttpSession session) {
         try {

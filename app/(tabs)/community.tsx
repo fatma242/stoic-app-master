@@ -25,7 +25,7 @@ export default function Community() {
   const [loading, setLoading] = useState(true);
 
   const isAdmin = userRole === 'admin' || userRole === 'moderator';
-  const BACKEND_URL = 'http://192.168.210.193:8100'; 
+  const BACKEND_URL = 'http://192.168.1.6:8100'; 
 
   // Get user role
   useEffect(() => {

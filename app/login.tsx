@@ -65,7 +65,7 @@ export default function Login() {
     return valid;
   };
 
-  const API_BASE_URL = "http://192.168.210.193:8100";
+  const API_BASE_URL = "http://192.168.1.6:8100";
 
   const handleLogin = async () => {
     if (!validateForm()) return;
