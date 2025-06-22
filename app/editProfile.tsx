@@ -42,9 +42,14 @@ export default function EditProfile() {
         console.log('🛑 Missing storedEmail or userID:', { storedEmail, userID });
         return;
       }
-
+// Convert to integer and guard against NaN
+    const userIdint = parseInt(userID, 10);
+    if (isNaN(userIdint)) {
+      Alert.alert('Error', 'Stored user ID is not a valid number');
+      return;
+    }
       // Fetch *only* the current user
-      const res = await fetch(`${API_BASE_URL}/api/users/${userID}`, {
+      const res = await fetch(`${API_BASE_URL}/api/users/${userIdint}`, {
         credentials: 'include',
       });
       if (!res.ok) {

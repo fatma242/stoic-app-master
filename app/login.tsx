@@ -68,31 +68,38 @@ export default function Login() {
   const API_BASE_URL = "http://192.168.1.6:8100";
 
   const handleLogin = async () => {
-    if (!validateForm()) return;
-    setLoading(true);
+  if (!validateForm()) return;
+  setLoading(true);
+  // ← add this line
+  const { username: email, password } = formData;
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/users/login`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email, password }),
+});
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/users/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.username, password: formData.password }),
-        credentials: 'include',
-      });
+if (!response.ok) {
+  const err = await response.text();
+  throw new Error(err);
+}
 
-      const text = await response.text();
+const data: { userId: string; email: string } = await response.json();
 
-      if (!response.ok) throw new Error(text || "Login failed");
+// store exactly what you got
+await AsyncStorage.setItem("userId", String(data.userId));
+await AsyncStorage.setItem("userEmail", data.email);
 
-      await AsyncStorage.setItem("isLoggedIn", "true");
-      await AsyncStorage.setItem("userEmail", formData.username);
-      router.replace("/home");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Login failed";
-      Alert.alert("Login Error", message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Now both Settings and EditProfile will see a non-null userId
+    router.replace("/home");
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Login failed";
+    Alert.alert("Login Error", message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));

@@ -2,6 +2,7 @@ package com.example.stoic.User.Controller;
 
 import com.example.stoic.User.Model.User;
 import com.example.stoic.User.DTO.LoginRequest;
+import com.example.stoic.User.DTO.LoginResponse;
 import com.example.stoic.User.DTO.RegisterResponse;
 import com.example.stoic.User.Model.UserRole;
 import com.example.stoic.User.Service.UserServiceImpl;
@@ -83,14 +84,15 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest, HttpSession session) {
-        try {
-            User user = userService.login(loginRequest.getEmail(), loginRequest.getPassword());
-            session.setAttribute("user", user); // Store user in session
-            return ResponseEntity.ok("Login successful");
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
-        }
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
+        // authenticate or throw
+        User user = userService.login(loginRequest.getEmail(), loginRequest.getPassword());
+
+        // return just the fields you need
+        var body = new LoginResponse(
+                String.valueOf(user.getUserId()),
+                user.getEmail());
+        return ResponseEntity.ok(body);
     }
 
     @GetMapping("/session")
