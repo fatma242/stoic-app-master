@@ -14,5 +14,8 @@ import com.example.stoic.Notification.Model.Notification;
 public interface RoomRepo extends JpaRepository<Room, Integer>, JpaSpecificationExecutor<Room> {
     // @Query("SELECT * FROM notification, User WHERE id = ?1")
     // List<Notification> findNotificationsByUserId(int userId);
+    @Query("SELECT * FROM Room WHERE type = 'PUBLIC'")
+    List<Room> findAllPubRooms();
+    
 
 }

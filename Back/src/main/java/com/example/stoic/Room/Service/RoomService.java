@@ -7,6 +7,7 @@ import java.util.List;
 public interface RoomService {
 
     List<Room> findAllRooms();
+    List<Room> findAllPubRooms();
 
     Room findRoomById(int id);
 

@@ -44,7 +44,11 @@ public class RoomController {
         Room room = roomService.findRoomById(id);
         return new ResponseEntity<>(room, HttpStatus.OK);
     }
-
+    @GetMapping("/getPub")
+    public ResponseEntity<List<Room>> getpubRoom() {
+        List<Room> rooms = roomService.findAllPubRooms();
+        return new ResponseEntity<>(rooms, HttpStatus.OK);
+    }
     @PostMapping
     public ResponseEntity<?> createRoom(@RequestBody Room room, HttpSession session) {
         User user = (User) session.getAttribute("user");

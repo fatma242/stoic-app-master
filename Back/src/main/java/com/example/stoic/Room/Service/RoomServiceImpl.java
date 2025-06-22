@@ -24,6 +24,14 @@ public class RoomServiceImpl implements RoomService {
             throw new RuntimeException("Failed to fetch all rooms", e);
         }
     }
+    @Override
+    public List<Room> findAllPubRooms() {
+        try {
+            return roomRepo.findAllPubRooms();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch all rooms", e);
+        }
+    }
 
     @Override
     public Room findRoomById(int id) {

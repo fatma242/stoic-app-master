@@ -32,20 +32,20 @@ public class MessageController {
 
     // REST: room history
     @GetMapping("/rooms/{roomId}/history")
-    public List<Message> getRoomHistory(@PathVariable String roomId) {
+    public List<Message> getRoomHistory(@PathVariable int roomId) {
         return service.getRoomHistory(roomId);
     }
 
     // REST: by sender
     @GetMapping("/sender/{senderId}")
-    public List<Message> getBySender(@PathVariable String senderId) {
+    public List<Message> getBySender(@PathVariable int senderId) {
         return service.getBySender(senderId);
     }
 
     // REST: between dates
     @GetMapping("/between")
     public List<Message> getBetween(@RequestParam LocalDateTime from,
-                                    @RequestParam LocalDateTime to) {
+            @RequestParam LocalDateTime to) {
         return service.getBetween(from, to);
     }
 }

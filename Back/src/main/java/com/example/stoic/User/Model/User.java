@@ -1,6 +1,8 @@
 package com.example.stoic.User.Model;
 
 import com.example.stoic.Language.Language;
+import com.example.stoic.Room.Model.Room;
+
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -29,14 +31,12 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "userRole", columnDefinition = "ENUM('REG','ADMIN','MOD') DEFAULT 'REG'")
+    @Column(name = "userRole", columnDefinition = "ENUM('REG','ADMIN') DEFAULT 'REG'")
     private UserRole userRole;
+    
 
-    @OneToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "room_connected_users", joinColumns = @JoinColumn(name = "room_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
-    private List<User> currentlyConnected;
+    @ManyToMany(mappedBy = "rooms")
 
-    @OneToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "room_users", joinColumns = @JoinColumn(name = "room_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
-    private List<User> Users;
+    private List<Room> rooms;
+
 }

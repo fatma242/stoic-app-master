@@ -27,15 +27,10 @@ public class Room {
     @Column(name = "type")
     private RoomType type;
 
-    @OneToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "room_connected_users", joinColumns = @JoinColumn(name = "room_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
-    private List<User> currentlyConnected;
-
-    @OneToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "room_users", joinColumns = @JoinColumn(name = "room_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
-    private List<User> Users;
-
     @Column(name = "created_at")
     private Date createdAt;
 
+    @ManyToMany
+    @JoinTable(name = "user_rooms", joinColumns = @JoinColumn(name = "room_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
+    private List<User> Users;
 }
