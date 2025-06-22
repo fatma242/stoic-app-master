@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
+import {
+  View, Text, TouchableOpacity, ScrollView, StyleSheet,
+  Image, Alert, ActivityIndicator,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type UserRole = 'admin' | 'moderator' | 'user';
+type UserRole = 'ADMIN' | 'REG';
 
 type Room = {
   roomId: number;
@@ -20,55 +24,81 @@ type Room = {
 
 export default function Community() {
   const router = useRouter();
-  const [userRole, setUserRole] = useState<UserRole>('user');
+  const [userRole, setUserRole] = useState<UserRole>('REG');
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [loadingRooms, setLoadingRooms] = useState(true);
 
-  const isAdmin = userRole === 'admin' || userRole === 'moderator';
-  const BACKEND_URL = 'http://192.168.1.6:8100'; 
+  const BACKEND_URL = 'http://192.168.1.6:8100';
 
-  // Get user role
   useEffect(() => {
-  fetch(`${BACKEND_URL}/api/users/session`, {
-    credentials: 'include',
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.role === 'ADMIN') setUserRole('admin');
-      else if (data.role === 'MOD') setUserRole('moderator');
-      else setUserRole('user');
-    })
-    .catch(() => setUserRole('user'));
-}, []);
+    const loadUser = async () => {
+      try {
+        const idString = await AsyncStorage.getItem('userId');
+        if (!idString) throw new Error('No user ID stored');
+        const userId = Number(idString);
 
-  // Fetch rooms visible to user
+        const res = await fetch(`${BACKEND_URL}/api/users/${userId}`, {
+          credentials: 'include',
+        });
+        if (!res.ok) throw new Error('Failed to fetch user');
+        const data = await res.json();
+        setUserRole(data.userRole as UserRole);
+      } catch (err: any) {
+        Alert.alert('Error', err.message);
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    loadUser();
+  }, []);
+
   useEffect(() => {
     fetch(`${BACKEND_URL}/rooms/visible`, {
       credentials: 'include',
     })
-      .then(res => res.json())
-      .then(data => setRooms(data))
-      .catch(() => Alert.alert("Error", "Failed to load rooms"))
-      .finally(() => setLoading(false));
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch rooms');
+        return res.json();
+      })
+      .then((data: Room[]) => setRooms(data))
+      .catch(err => Alert.alert('Error', err.message))
+      .finally(() => setLoadingRooms(false));
   }, []);
 
-  // Create room (admins/mods only)
+  const loading = loadingUser || loadingRooms;
+
   const handleCreateRoom = () => {
-    Alert.prompt('Create Room', 'Enter room name:', (roomName) => {
-      if (!roomName) return;
-      fetch(`${BACKEND_URL}/rooms`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          roomName: roomName,
-          type: 'PUBLIC', // You could add an option to choose PRIVATE
-        }),
-      })
-        .then(res => res.json())
-        .then(newRoom => setRooms(prev => [...prev, newRoom]))
-        .catch(() => Alert.alert('Error', 'Failed to create room'));
-    });
+    const defaultType = userRole === 'ADMIN' ? 'PUBLIC' : 'PRIVATE';
+    const buttonLabel = userRole === 'ADMIN' ? 'Create Public Room' : 'Create Private Room';
+
+    Alert.prompt(
+      buttonLabel,
+      'Enter room name:',
+      roomName => {
+        if (!roomName) return;
+        fetch(`${BACKEND_URL}/rooms`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            roomName,
+            type: defaultType,
+          }),
+        })
+          .then(async res => {
+            if (!res.ok) {
+              const text = await res.text();
+              throw new Error(text || 'Failed to create room');
+            }
+            return res.json();
+          })
+          .then(newRoom => setRooms(prev => [...prev, newRoom]))
+          .catch(err => Alert.alert('Error', err.message));
+      },
+      'plain-text'
+    );
   };
 
   return (
@@ -84,35 +114,41 @@ export default function Community() {
         isLooping
       />
       <View style={styles.overlay} />
+
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Image source={require('../../assets/logo.png')} style={styles.logo} />
           <Text style={styles.greeting}>Welcome to the Community!</Text>
-          {isAdmin && (
-            <TouchableOpacity style={styles.adminButton} onPress={handleCreateRoom}>
-              <Ionicons name="add-circle" size={24} color="#16A34A" />
-              <Text style={styles.adminButtonText}>Create Room</Text>
-            </TouchableOpacity>
+
+          {loading ? (
+            <ActivityIndicator color="#fff" size="large" />
+          ) : (
+            <>
+              <TouchableOpacity style={styles.createButton} onPress={handleCreateRoom}>
+                <Ionicons
+                  name={userRole === 'ADMIN' ? 'earth' : 'lock-closed'}
+                  size={24}
+                  color="#fff"
+                />
+                <Text style={styles.createButtonText}>
+                  {userRole === 'ADMIN' ? 'Create Public Room' : 'Create Private Room'}
+                </Text>
+              </TouchableOpacity>
+
+              <LinearGradient colors={['#16A34A30', '#0d421530']} style={styles.roomsSection}>
+                <Text style={styles.sectionTitle}>Available Rooms</Text>
+                {rooms.map(room => (
+                  <View key={room.roomId} style={styles.roomItem}>
+                    <Text style={styles.roomName}>{room.roomName}</Text>
+                    <Text style={styles.roomDetails}>
+                      {room.type} • by {room.owner?.username ?? 'Unknown'}
+                    </Text>
+                  </View>
+                ))}
+              </LinearGradient>
+            </>
           )}
         </View>
-
-        {loading ? (
-          <ActivityIndicator color="#fff" size="large" />
-        ) : (
-          <LinearGradient colors={['#16A34A30', '#0d421530']} style={styles.adminSection}>
-            <Text style={styles.sectionTitle}>Available Rooms</Text>
-            {rooms.map(room => (
-              <View key={room.roomId} style={styles.roomItem}>
-                <View>
-                  <Text style={styles.roomName}>{room.roomName}</Text>
-                  <Text style={styles.roomMembers}>
-                    {room.type} • Created by {room.owner?.username || 'Unknown'}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </LinearGradient>
-        )}
       </ScrollView>
     </View>
   );
@@ -125,29 +161,28 @@ const styles = StyleSheet.create({
   },
   overlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   content: { padding: 20, paddingTop: 50 },
   header: { alignItems: 'center', marginBottom: 30 },
   logo: { width: 100, height: 100, marginBottom: 15 },
   greeting: { fontSize: 24, color: '#fff', fontWeight: '600' },
-  adminButton: {
+  createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#16A34A',
     padding: 10,
     borderRadius: 8,
     marginTop: 15,
   },
-  adminButtonText: {
-    color: '#16A34A',
+  createButtonText: {
+    color: '#fff',
     marginLeft: 8,
     fontWeight: '600',
   },
-  adminSection: {
+  roomsSection: {
     borderRadius: 15,
     padding: 15,
-    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
@@ -156,7 +191,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   roomItem: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     padding: 12,
     borderRadius: 8,
     marginBottom: 10,
@@ -166,7 +201,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  roomMembers: {
+  roomDetails: {
     color: '#ffffff80',
     fontSize: 12,
   },

@@ -1,18 +1,18 @@
-package com.example.stoic.Post.Model;
+package com.example.stoic.Comment.Model;
+import com.example.stoic.Post.Model.Post;
 
 import com.example.stoic.User.Model.User;
 import jakarta.persistence.Entity;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "post")
-public class Post {
+@Table(name = "comment")
+public class Comment {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(unique = true, nullable = false, name = "id")
@@ -31,6 +31,9 @@ public class Post {
     @Column(name = "like", nullable = true)
     private int like;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "post_id", nullable = false)
+    private Post post;
     
 
 

@@ -89,18 +89,30 @@ public class RoomController {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
 
-        List<Room> allRooms = roomService.findAllRooms();
+        int userId = user.getUserId();
+        UserRole role = user.getUserRole();
 
-        // Admins and moderators see all rooms
-        if (user.getUserRole() == UserRole.ADMIN || user.getUserRole() == UserRole.MOD) {
+        // ADMIN: return all rooms (no filtering)
+        if (role == UserRole.ADMIN) {
+            List<Room> allRooms = roomService.findAllRooms();
             return new ResponseEntity<>(allRooms, HttpStatus.OK);
         }
 
-        // Regular users see only PUBLIC rooms
+        // REG user
+        List<Room> allRooms = roomService.findAllRooms();
         List<Room> visibleRooms = allRooms.stream()
-            .filter(room -> room.getType() == RoomType.PUBLIC)
+            .filter(room ->
+                // Public rooms
+                room.getType() == RoomType.PUBLIC ||
+                // Private rooms where user is the owner
+                (room.getType() == RoomType.PRIVATE && room.getOwnerId() == userId) ||
+                // Private rooms where user is invited (in room.Users list)
+                (room.getType() == RoomType.PRIVATE &&
+                    room.getUsers().stream().anyMatch(u -> u.getUserId() == userId))
+            )
             .toList();
 
         return new ResponseEntity<>(visibleRooms, HttpStatus.OK);
     }
+
 }
