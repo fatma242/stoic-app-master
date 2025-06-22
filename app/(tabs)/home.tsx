@@ -4,9 +4,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
+import { BackHandler } from 'react-native';
+import { useEffect } from 'react';
 
 export default function Home() {
   const router = useRouter();
+
+// useEffect(() => {
+//     const onBackPress = () => {
+//       // Prevent going back to login
+//       return true;
+//     };
+//     BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+//     return () => BackHandler.removeEventListener("hardwareBackPress", onBackPress);
+//   }, []);
 
   return (
     <View style={styles.container}>

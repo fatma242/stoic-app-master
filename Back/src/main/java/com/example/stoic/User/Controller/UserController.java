@@ -3,7 +3,6 @@ package com.example.stoic.User.Controller;
 import com.example.stoic.User.Model.User;
 import com.example.stoic.User.DTO.LoginRequest;
 import com.example.stoic.User.DTO.LoginResponse;
-import com.example.stoic.User.DTO.RegisterResponse;
 import com.example.stoic.User.Model.UserRole;
 import com.example.stoic.User.Service.UserServiceImpl;
 import jakarta.servlet.http.HttpSession;
@@ -68,18 +67,21 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<RegisterResponse> register(@RequestBody User user) {
+    public ResponseEntity<?> register(@RequestBody User user, HttpSession session) {
         try {
-            user.setUserRole(UserRole.REG);
-            User savedUser = userService.register(user);
+            user.setUserRole(UserRole.REG); // default role
+            User registeredUser = userService.register(user);
+            // Create session immediately after registration
+            session.setAttribute("user", registeredUser);
 
-            RegisterResponse response = new RegisterResponse("User registered successfully", savedUser.getUserId());
-            return ResponseEntity.ok(response);
-
+            return ResponseEntity.ok(new RegisterResponse(
+                    "Registered successfully",
+                    registeredUser.getUserId(),
+                    registeredUser.getUsername(),
+                    registeredUser.getEmail(),
+                    registeredUser.getUserRole().name()));
         } catch (RuntimeException e) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(new RegisterResponse("Error: " + e.getMessage(), -1));
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
 
@@ -109,6 +111,30 @@ public class UserController {
 
         public UserSessionResponse(String username, String role) {
             this.username = username;
+            this.role = role;
+        }
+    }
+
+    static class ErrorResponse {
+        public String error;
+
+        public ErrorResponse(String error) {
+            this.error = error;
+        }
+    }
+
+    static class RegisterResponse {
+        public String message;
+        public int userId;
+        public String username;
+        public String email;
+        public String role;
+
+        public RegisterResponse(String message, int userId, String username, String email, String role) {
+            this.message = message;
+            this.userId = userId;
+            this.username = username;
+            this.email = email;
             this.role = role;
         }
     }

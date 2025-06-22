@@ -32,6 +32,17 @@ export default function Login() {
   });
   const [showPassword, setShowPassword] = useState(false);
 
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkLoggedIn = async () => {
+      const userId = await AsyncStorage.getItem("userId");
+      if (userId) {
+        router.replace("/home");
+      }
+    };
+    checkLoggedIn();
+  }, []);
+
   // Handle back button
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(

@@ -35,7 +35,8 @@ export default function Settings() {
         method: 'POST',
         credentials: 'include',
       });
-      await AsyncStorage.clear();
+ await AsyncStorage.removeItem('userId');
+    await AsyncStorage.removeItem('userEmail');    
       router.replace('/login');
     } catch (error) {
       Alert.alert('Logout Error', 'Failed to log out.');

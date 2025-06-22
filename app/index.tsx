@@ -4,6 +4,8 @@ import { AntDesign, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Video, ResizeMode, /* Audio */ } from "expo-av"; // Audio commented out
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BackHandler } from "react-native";
 
 export default function Landing() {
   const router = useRouter();
@@ -26,6 +28,26 @@ export default function Landing() {
     // return () => {
     //   sound.current.unloadAsync();
     // };
+  }, []);
+
+    useEffect(() => {
+    const checkLoggedIn = async () => {
+      const userId = await AsyncStorage.getItem("userId");
+      if (userId) {
+        router.replace("/home");
+      }
+    };
+    checkLoggedIn();
+  }, []);
+
+useEffect(() => {
+    const onBackPress = () => {
+      // Prevent going back to login
+      return true;
+    };
+    BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+    return () => BackHandler.removeEventListener("hardwareBackPress", onBackPress);
   }, []);
 
   useEffect(() => {
