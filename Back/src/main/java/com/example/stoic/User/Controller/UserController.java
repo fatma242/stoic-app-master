@@ -84,15 +84,12 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
-        // authenticate or throw
-        User user = userService.login(loginRequest.getEmail(), loginRequest.getPassword());
-
-        // return just the fields you need
-        var body = new LoginResponse(
-                String.valueOf(user.getUserId()),
-                user.getEmail());
-        return ResponseEntity.ok(body);
+    public ResponseEntity<LoginResponse> login(
+            @RequestBody LoginRequest req,
+            HttpSession session) {
+        User u = userService.login(req.getEmail(), req.getPassword());
+        session.setAttribute("user", u);
+        return ResponseEntity.ok(new LoginResponse(String.valueOf(u.getUserId()), u.getEmail()));
     }
 
     @GetMapping("/session")
