@@ -35,7 +35,7 @@ public class User {
     private UserRole userRole;
     
 
-    @ManyToMany(mappedBy = "rooms")
+    @ManyToMany(mappedBy = "Users")
 
     private List<Room> rooms;
 
