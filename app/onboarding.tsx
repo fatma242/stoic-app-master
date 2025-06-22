@@ -134,7 +134,7 @@ export default function Onboarding() {
     }
 
     if (onboardingFlow[nextNode as AnswerKey]?.resourcesKey) {
-      router.replace('/home');
+      router.replace('/login');
     }
   };
 

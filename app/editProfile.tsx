@@ -1,24 +1,30 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  StyleSheet,
-  Image,
+  View, Text, TextInput, TouchableOpacity, Alert,
+  StyleSheet, Image
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Video, ResizeMode } from 'expo-av';
 import { useNavigation } from '@react-navigation/native';
 
+// Define the User type
+type User = {
+  id: string;
+  userId?: string;
+  username: string;
+  email: string;
+  password: string;
+  userRole: string;
+};
+
 const API_BASE_URL = 'http://192.168.1.6:8100';
 
 export default function EditProfile() {
   const navigation = useNavigation();
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+
+  const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -27,36 +33,43 @@ export default function EditProfile() {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const storedEmail = await AsyncStorage.getItem('userEmail');
-        const userID = await AsyncStorage.getItem('userId');
-        if (!storedEmail) return;
-
-        const response = await fetch(`${API_BASE_URL}/api/users`, {
-          credentials: 'include' // ✅ send session cookie
-        });
-        const users = await response.json();
-        const currentUser = users.find((u: any) => u.id === userID);
-        console.log('Fetched user:', currentUser.username, currentUser.email);
-        if (currentUser) {
-          setUser(currentUser);
-          setName(currentUser.username);
-          setEmail(currentUser.email);
-
-          if (currentUser.userId !== undefined) {
-            console.log('✅ Storing userId:', currentUser.userId);
-            await AsyncStorage.setItem('userId', String(currentUser.userId));
-          } else {
-            console.log('❌ userId is missing in currentUser');
-            Alert.alert('Error', 'User ID is missing in fetched data.');
-          }
-        }
-      } catch (error) {
-        Alert.alert('Error', 'Failed to fetch user data.');
+ useEffect(() => {
+  const fetchUser = async () => {
+    try {
+      const storedEmail = await AsyncStorage.getItem('userEmail');
+      const userID = await AsyncStorage.getItem('userId');
+      if (!storedEmail || !userID) {
+        console.log('🛑 Missing storedEmail or userID:', { storedEmail, userID });
+        return;
       }
-    };
+
+      // Fetch *only* the current user
+      const res = await fetch(`${API_BASE_URL}/api/users/${userID}`, {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+
+      const currentUser: User = await res.json();
+      console.log('Fetched user:', currentUser);
+
+      setUser(currentUser);
+      setName(currentUser.username);
+      setEmail(currentUser.email);
+
+      // ensure we keep the ID in AsyncStorage too
+      if (currentUser.userId) {
+        await AsyncStorage.setItem('userId', String(currentUser.userId));
+      } else {
+        console.warn('⚠️ userId missing on payload:', currentUser);
+      }
+
+    } catch (error) {
+      console.error('❌ fetchUser failed:', error);
+      Alert.alert('Error', 'Failed to fetch user data. See console for details.');
+    }
+  };
 
     fetchUser();
   }, []);
@@ -67,18 +80,16 @@ export default function EditProfile() {
       return;
     }
 
-    const allowedDomains = ['.com', '.org', '.edu']; // add more if needed
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
-
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const allowedDomains = ['.com', '.org', '.edu'];
     const domain = email.slice(email.lastIndexOf('.'));
 
-    // Check format and allowed domain
     if (!emailRegex.test(email) || !allowedDomains.includes(domain)) {
-      Alert.alert('Validation', 'Please enter a valid email ending with .com, .org, or .edu');
+      Alert.alert('Validation', 'Email must end with .com, .org, or .edu');
       return;
     }
 
-    if (newPassword.trim() && newPassword.length < 6) {
+    if (newPassword && newPassword.length < 6) {
       Alert.alert('Validation', 'Password must be at least 6 characters.');
       return;
     }
@@ -90,17 +101,17 @@ export default function EditProfile() {
         return;
       }
 
-      const body: any = {
+      const updatedUser = {
         username: name,
         email,
+        password: newPassword || user?.password || '',
         userRole: user?.userRole || 'REG',
-        password: newPassword.trim() ? newPassword : user?.password,
       };
 
       const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(updatedUser),
       });
 
       if (!response.ok) throw new Error();
@@ -109,6 +120,7 @@ export default function EditProfile() {
       Alert.alert('Success', 'Profile updated successfully.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
+
     } catch (error) {
       Alert.alert('Error', 'Failed to update profile.');
     }

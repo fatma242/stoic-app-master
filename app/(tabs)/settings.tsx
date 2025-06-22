@@ -12,26 +12,17 @@ const API_BASE_URL = 'http://192.168.1.6:8100';
 
 export default function Settings() {
   const router = useRouter();
-  const [userId, setUserId] = useState<number | null>(null);
+ const [userId, setUserId] = useState<string | null>(null);
+
 
   useEffect(() => {
     const fetchUserId = async () => {
       try {
-        const email = await AsyncStorage.getItem('userEmail');
-        if (!email) return;
-
-        const response = await fetch(`${API_BASE_URL}/api/users`, {
-          credentials: 'include' // ✅ send session cookie
-        });
-
-
-        const text = await response.text();
-        const userID = await AsyncStorage.getItem('userId');
-        console.log(userID);
-        console.log(email);
-
+        const idStr = await AsyncStorage.getItem('userId');
+        if (idStr) setUserId(idStr);
+        console.log('User ID:', idStr);
       } catch (error) {
-        console.error('❌ Failed to fetch user ID:', error);
+        console.error('❌ Failed to load userId:', error);
       }
     };
 

@@ -11,11 +11,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
-
 @CrossOrigin(origins = {
-    "http://192.168.1.6:8081",
-    "exp://192.168.210.193:8081",
-    "http://localhost:8081",
+        "http://192.168.1.6:8081",
+        "exp://192.168.210.193:8081",
+        "http://localhost:8081",
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/users")
@@ -45,14 +44,16 @@ public class UserController {
         return new ResponseEntity<>("User with ID " + id + " deleted.", HttpStatus.NO_CONTENT);
     }
 
-    @PostMapping
-    public ResponseEntity<User> saveUser(@RequestBody User user) {
-        if (user.getUserRole() == null) {
-            user.setUserRole(UserRole.REG);
-        }
-        User savedUser = userService.save(user);
-        return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
-    }
+    /*
+     * @PostMapping
+     * public ResponseEntity<User> saveUser(@RequestBody User user) {
+     * if (user.getUserRole() == null) {
+     * user.setUserRole(UserRole.REG);
+     * }
+     * User savedUser = userService.save(user);
+     * return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
+     * }
+     */
 
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(@PathVariable int id, @RequestBody User userDetails) {
@@ -65,7 +66,7 @@ public class UserController {
         return new ResponseEntity<>(updatedUser, HttpStatus.OK);
     }
 
-   @PostMapping("/register")
+    @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(@RequestBody User user) {
         try {
             user.setUserRole(UserRole.REG);
@@ -80,6 +81,7 @@ public class UserController {
                     .body(new RegisterResponse("Error: " + e.getMessage(), -1));
         }
     }
+
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest, HttpSession session) {
         try {
@@ -96,8 +98,7 @@ public class UserController {
         User user = (User) session.getAttribute("user");
         if (user != null) {
             return ResponseEntity.ok(
-                new UserSessionResponse(user.getUsername(), user.getUserRole().name())
-            );
+                    new UserSessionResponse(user.getUsername(), user.getUserRole().name()));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No active session");
         }
