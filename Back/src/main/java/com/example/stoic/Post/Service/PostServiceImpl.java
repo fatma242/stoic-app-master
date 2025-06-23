@@ -28,6 +28,12 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public List<Post> findByRoomId(int roomId) {
+        List<Post> post = postRepo.findByRoomRoomId(roomId);
+        return post;
+    }
+
+    @Override
     public Post savePost(Post post) {
         return postRepo.save(post);
     }
@@ -46,5 +52,4 @@ public class PostServiceImpl implements PostService {
         }
     }
 
-    
 }

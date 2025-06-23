@@ -1,10 +1,17 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, Dimensions, ScrollView, ActivityIndicator, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  Dimensions,
+  ScrollView,
+  ActivityIndicator,
+  StyleSheet,
+} from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Video } from "expo-av";
-import moment from 'moment'; // Add moment for date formatting
+import moment from "moment"; // Add moment for date formatting
 
 const ProgressScreen = () => {
   const [moodData, setMoodData] = useState<MoodLog[]>([]);
@@ -15,12 +22,14 @@ const ProgressScreen = () => {
   useEffect(() => {
     const fetchMoodData = async () => {
       try {
-        const userId = await AsyncStorage.getItem('userId');
+        const userId = await AsyncStorage.getItem("userId");
         if (!userId) {
-          throw new Error('User not found. Please log in again.');
+          throw new Error("User not found. Please log in again.");
         }
-        
-        const response = await axios.get(`http://192.168.1.6:8100/api/mood-logs/${userId}`);
+
+        const response = await axios.get(
+          `http://localhost:8100/api/mood-logs/${userId}`
+        );
         setMoodData(response.data);
         setLoading(false);
       } catch (err) {
@@ -34,7 +43,7 @@ const ProgressScreen = () => {
     };
 
     fetchMoodData();
-    
+
     if (videoRef.current) {
       videoRef.current.playAsync();
     }
@@ -49,24 +58,27 @@ const ProgressScreen = () => {
   // Format dates intelligently to avoid duplicates and show time when needed
   const formatChartLabels = (logs: MoodLog[]) => {
     const formattedLabels: string[] = [];
-    
+
     logs.forEach((log, index) => {
       const currentDate = new Date(log.timestamp);
-      const previousDate = index > 0 ? new Date(logs[index - 1].timestamp) : null;
-      
+      const previousDate =
+        index > 0 ? new Date(logs[index - 1].timestamp) : null;
+
       // If previous entry exists and is on the same day, show time
-      if (previousDate && 
-          currentDate.getDate() === previousDate.getDate() &&
-          currentDate.getMonth() === previousDate.getMonth() &&
-          currentDate.getFullYear() === previousDate.getFullYear()) {
-        formattedLabels.push(moment(log.timestamp).format('HH:mm'));
-      } 
+      if (
+        previousDate &&
+        currentDate.getDate() === previousDate.getDate() &&
+        currentDate.getMonth() === previousDate.getMonth() &&
+        currentDate.getFullYear() === previousDate.getFullYear()
+      ) {
+        formattedLabels.push(moment(log.timestamp).format("HH:mm"));
+      }
       // Otherwise show date only
       else {
-        formattedLabels.push(moment(log.timestamp).format('DD/MM'));
+        formattedLabels.push(moment(log.timestamp).format("DD/MM"));
       }
     });
-    
+
     return formattedLabels;
   };
 
@@ -86,7 +98,7 @@ const ProgressScreen = () => {
       <View style={styles.container}>
         <VideoBackground videoRef={videoRef} />
         <View style={styles.overlay}>
-          <Text style={{ color: 'red' }}>{error}</Text>
+          <Text style={{ color: "red" }}>{error}</Text>
         </View>
       </View>
     );
@@ -108,7 +120,7 @@ const ProgressScreen = () => {
     labels: formatChartLabels(moodData),
     datasets: [
       {
-        data: moodData.map(item => item.moodScore),
+        data: moodData.map((item) => item.moodScore),
       },
     ],
   };
@@ -136,8 +148,8 @@ const ProgressScreen = () => {
               propsForDots: {
                 r: "4", // Smaller dots for dense data
                 strokeWidth: "1",
-                stroke: "#166534"
-              }
+                stroke: "#166534",
+              },
             }}
             style={{ marginVertical: 20, borderRadius: 16 }}
             bezier
@@ -151,12 +163,15 @@ const ProgressScreen = () => {
   );
 };
 
-
 // Video Background Component
-const VideoBackground = ({ videoRef }: { videoRef: React.RefObject<Video> }) => (
+const VideoBackground = ({
+  videoRef,
+}: {
+  videoRef: React.RefObject<Video>;
+}) => (
   <Video
     ref={videoRef}
-    source={require('../../assets/background.mp4')} // Update with your video path
+    source={require("../../assets/background.mp4")} // Update with your video path
     style={StyleSheet.absoluteFill}
     resizeMode="cover"
     shouldPlay
@@ -170,11 +185,11 @@ const VideoBackground = ({ videoRef }: { videoRef: React.RefObject<Video> }) => 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-dark overlay
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-dark overlay
   },
   scrollContainer: {
     flex: 1,
@@ -182,18 +197,18 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
     marginTop: 20,
-    color: 'white',
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    color: "white",
+    textShadowColor: "rgba(0,0,0,0.5)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
   noDataText: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 20,
   },
 });

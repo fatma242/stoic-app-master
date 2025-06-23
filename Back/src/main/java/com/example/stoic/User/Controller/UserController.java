@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @CrossOrigin(origins = {
-        "http://192.168.1.6:8081",
+        "http://localhost:8081",
         "exp://192.168.210.193:8081",
         "http://localhost:8081",
 }, allowCredentials = "true")
@@ -93,8 +93,6 @@ public class UserController {
         session.setAttribute("user", u);
         return ResponseEntity.ok(new LoginResponse(String.valueOf(u.getUserId()), u.getEmail()));
     }
-
-    
 
     static class UserSessionResponse {
         public String username;

@@ -16,8 +16,8 @@ import java.util.Date;
 import java.util.List;
 
 @CrossOrigin(origins = {
-    "http://192.168.1.6:8081",
-    "exp://192.168.210.193:8081"
+        "http://localhost:8081",
+        "exp://192.168.210.193:8081"
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/rooms")
@@ -45,18 +45,21 @@ public class RoomController {
         Room room = roomService.findRoomById(id);
         return new ResponseEntity<>(room, HttpStatus.OK);
     }
+
     @GetMapping("/getPub")
     public ResponseEntity<List<Room>> getpubRoom() {
         List<Room> rooms = roomService.findAllPubRooms();
         return new ResponseEntity<>(rooms, HttpStatus.OK);
     }
+
     @PostMapping
     public ResponseEntity<?> createRoom(@RequestBody Room room, HttpSession session) {
         User user = (User) session.getAttribute("user");
         // Debug logging
         System.out.println("POST rooms: user=" + user + ", payload=" + room);
 
-        if (user == null) return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
+        if (user == null)
+            return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
         if (user.getUserRole() != UserRole.ADMIN)
             return new ResponseEntity<>("Forbidden", HttpStatus.FORBIDDEN);
 
@@ -68,13 +71,13 @@ public class RoomController {
         return new ResponseEntity<>(saved, HttpStatus.CREATED);
     }
 
-
     @PostMapping("/createPR")
     public ResponseEntity<?> createPrivateRoom(@RequestBody Room room, HttpSession session) {
         User user = (User) session.getAttribute("user");
 
-        if (user == null) return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
-        if (user.getUserRole() != UserRole.REG) 
+        if (user == null)
+            return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
+        if (user.getUserRole() != UserRole.REG)
             return new ResponseEntity<>("Forbidden", HttpStatus.FORBIDDEN);
 
         // Default missing fields

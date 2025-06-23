@@ -1,27 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Alert, 
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
-  ScrollView
-} from 'react-native';
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
-import { Video, ResizeMode } from 'expo-av';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Stack } from 'expo-router';
+  ScrollView,
+} from "react-native";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
+import { Video, ResizeMode } from "expo-av";
+import { LinearGradient } from "expo-linear-gradient";
+import { Stack } from "expo-router";
 
 const moods = [
-  { emoji: '😢', score: 1 },
-  { emoji: '😔', score: 2 },
-  { emoji: '😐', score: 3 },
-  { emoji: '😊', score: 4 },
-  { emoji: '😄', score: 5 },
+  { emoji: "😢", score: 1 },
+  { emoji: "😔", score: 2 },
+  { emoji: "😐", score: 3 },
+  { emoji: "😊", score: 4 },
+  { emoji: "😄", score: 5 },
 ];
 
 // Helper function to get ISO week number
@@ -29,7 +29,9 @@ function getWeekNumber(d: Date): { year: number; week: number } {
   d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  const weekNo = Math.ceil(
+    ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+  );
   return { year: d.getUTCFullYear(), week: weekNo };
 }
 
@@ -42,17 +44,17 @@ export default function WeeklyCheckIn() {
   useEffect(() => {
     const checkUser = async () => {
       try {
-        const userId = await AsyncStorage.getItem('userId');
+        const userId = await AsyncStorage.getItem("userId");
         if (!userId) {
           Alert.alert("Error", "User not found. Please log in again.");
-          router.replace('/login');
+          router.replace("/login");
           return;
         }
-        
+
         // WEEKLY CHECK TEMPORARILY DISABLED FOR TESTING
         // Commented out to allow multiple submissions during testing
         /*
-        const response = await axios.get(`http://192.168.1.6:8100/api/mood-logs/${userId}`);
+        const response = await axios.get(`http://localhost:8100/api/mood-logs/${userId}`);
         const logs = response.data;
 
         const now = new Date();
@@ -74,10 +76,9 @@ export default function WeeklyCheckIn() {
           setLoading(false);
         }
         */
-        
+
         // Bypass the weekly check and always show the form
         setLoading(false);
-        
       } catch (error) {
         console.error(error);
         Alert.alert("Error", "Failed to initialize check-in");
@@ -95,22 +96,22 @@ export default function WeeklyCheckIn() {
     }
 
     setSubmitting(true);
-    
+
     try {
-      const userId = await AsyncStorage.getItem('userId');
+      const userId = await AsyncStorage.getItem("userId");
       if (!userId) {
         Alert.alert("Error", "User not found. Please log in again.");
         return;
       }
 
-      await axios.post('http://192.168.1.6:8100/api/mood-logs', {
+      await axios.post("http://localhost:8100/api/mood-logs", {
         userId: userId,
         moodScore: selectedMood,
         timestamp: new Date().toISOString(),
       });
 
       Alert.alert("Success", "Your mood has been recorded!", [
-        { text: 'OK', onPress: () => router.replace('/progress') }
+        { text: "OK", onPress: () => router.replace("/progress") },
       ]);
     } catch (err) {
       console.error(err);
@@ -131,7 +132,7 @@ export default function WeeklyCheckIn() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      
+
       <Video
         ref={videoRef}
         source={require("../assets/background.mp4")}
@@ -143,44 +144,43 @@ export default function WeeklyCheckIn() {
         shouldPlay
         isLooping
       />
-      
+
       <View style={styles.overlay} />
-      
-      <KeyboardAvoidingView
-        behavior="padding"
-        style={styles.contentContainer}
-      >
-        <ScrollView 
+
+      <KeyboardAvoidingView behavior="padding" style={styles.contentContainer}>
+        <ScrollView
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.card}>
             <Text style={styles.title}>How are you feeling today?</Text>
-            
+
             <View style={styles.moods}>
               {moods.map((m) => (
-                <TouchableOpacity 
-                  key={m.score} 
+                <TouchableOpacity
+                  key={m.score}
                   onPress={() => setSelectedMood(m.score)}
                   disabled={submitting}
                 >
-                  <Text style={[
-                    styles.emoji, 
-                    selectedMood === m.score && styles.selected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.emoji,
+                      selectedMood === m.score && styles.selected,
+                    ]}
+                  >
                     {m.emoji}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
-            
-            <TouchableOpacity 
-              onPress={handleSubmit} 
+
+            <TouchableOpacity
+              onPress={handleSubmit}
               style={styles.submitButton}
               disabled={submitting}
             >
-              <LinearGradient 
-                colors={["#16A34A", "#0d4215"]} 
+              <LinearGradient
+                colors={["#16A34A", "#0d4215"]}
                 style={styles.buttonGradient}
               >
                 {submitting ? (
@@ -200,7 +200,7 @@ export default function WeeklyCheckIn() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   backgroundVideo: {
     position: "absolute",
@@ -221,74 +221,74 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
   },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
     borderRadius: 20,
     padding: 30,
-    width: '90%',
+    width: "90%",
     maxWidth: 350,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  title: { 
-    fontSize: 24, 
+  title: {
+    fontSize: 24,
     marginBottom: 10,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#fff",
+    textAlign: "center",
   },
   testNote: {
     fontSize: 14,
     marginBottom: 25,
-    color: '#E53935',
-    fontWeight: '600',
-    textAlign: 'center',
+    color: "#E53935",
+    fontWeight: "600",
+    textAlign: "center",
   },
-  moods: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+  moods: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     gap: 15,
     marginBottom: 30,
   },
-  emoji: { 
-    fontSize: 40, 
+  emoji: {
+    fontSize: 40,
     margin: 10,
   },
-  selected: { 
-    borderBottomWidth: 3, 
-    borderColor: '#16A34A',
+  selected: {
+    borderBottomWidth: 3,
+    borderColor: "#16A34A",
     borderRadius: 4,
     transform: [{ scale: 1.2 }],
   },
   submitButton: {
-    width: '100%',
+    width: "100%",
     marginTop: 10,
     borderRadius: 10,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   buttonGradient: {
     padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   buttonText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
   },
 });

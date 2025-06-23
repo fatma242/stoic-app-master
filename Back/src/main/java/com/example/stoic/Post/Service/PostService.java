@@ -8,6 +8,8 @@ public interface PostService {
 
     List<Post> findAllPosts();
 
+    List<Post> findByRoomId(int roomId);
+
     Post findPostById(int id);
 
     Post savePost(Post post);

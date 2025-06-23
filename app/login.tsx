@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Image, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  BackHandler
+  BackHandler,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -46,9 +46,9 @@ export default function Login() {
   // Handle back button
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
+      "hardwareBackPress",
       () => {
-        router.replace('/');
+        router.replace("/");
         return true;
       }
     );
@@ -76,47 +76,46 @@ export default function Login() {
     return valid;
   };
 
-  const API_BASE_URL = "http://192.168.1.6:8100";
+  const API_BASE_URL = "http://localhost:8100";
 
   const handleLogin = async () => {
-  if (!validateForm()) return;
-  setLoading(true);
-  // ← add this line
-  const { username: email, password } = formData;
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/users/login`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email, password }),
-  credentials: 'include',
-});
+    if (!validateForm()) return;
+    setLoading(true);
+    // ← add this line
+    const { username: email, password } = formData;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      });
 
-if (!response.ok) {
-  const err = await response.text();
-  throw new Error(err);
-}
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(err);
+      }
 
-const data: { userId: string; email: string } = await response.json();
+      const data: { userId: string; email: string } = await response.json();
 
-// store exactly what you got
-await AsyncStorage.setItem("userId", String(data.userId));
-await AsyncStorage.setItem("userEmail", data.email);
+      // store exactly what you got
+      await AsyncStorage.setItem("userId", String(data.userId));
+      await AsyncStorage.setItem("userEmail", data.email);
 
-    // Now both Settings and EditProfile will see a non-null userId
-    router.replace("/home");
-
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Login failed";
-    Alert.alert("Login Error", message);
-  } finally {
-    setLoading(false);
-  }
-};
+      // Now both Settings and EditProfile will see a non-null userId
+      router.replace("/home");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Login failed";
+      Alert.alert("Login Error", message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name as keyof typeof errors]) {
-      setErrors(prev => ({ ...prev, [name]: "" }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
@@ -141,7 +140,7 @@ await AsyncStorage.setItem("userEmail", data.email);
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.contentContainer}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
         >
@@ -153,11 +152,18 @@ await AsyncStorage.setItem("userEmail", data.email);
           {/* Form Fields */}
           <View style={styles.formContainer}>
             {/* Username Field */}
-            <View style={[
-              styles.inputContainer,
-              errors.username ? styles.inputError : null
-            ]}>
-              <MaterialIcons name="person" size={24} color="#16A34A" style={styles.icon} />
+            <View
+              style={[
+                styles.inputContainer,
+                errors.username ? styles.inputError : null,
+              ]}
+            >
+              <MaterialIcons
+                name="person"
+                size={24}
+                color="#16A34A"
+                style={styles.icon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Email"
@@ -168,14 +174,23 @@ await AsyncStorage.setItem("userEmail", data.email);
                 autoCorrect={false}
               />
             </View>
-            {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
+            {errors.username && (
+              <Text style={styles.errorText}>{errors.username}</Text>
+            )}
 
             {/* Password Field */}
-            <View style={[
-              styles.inputContainer,
-              errors.password ? styles.inputError : null
-            ]}>
-              <MaterialIcons name="lock" size={24} color="#16A34A" style={styles.icon} />
+            <View
+              style={[
+                styles.inputContainer,
+                errors.password ? styles.inputError : null,
+              ]}
+            >
+              <MaterialIcons
+                name="lock"
+                size={24}
+                color="#16A34A"
+                style={styles.icon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Password"
@@ -184,28 +199,33 @@ await AsyncStorage.setItem("userEmail", data.email);
                 onChangeText={(text) => handleChange("password", text)}
                 secureTextEntry={!showPassword}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeIcon}
               >
-                <Ionicons 
-                  name={showPassword ? "eye-off" : "eye"} 
-                  size={20} 
-                  color="#666" 
+                <Ionicons
+                  name={showPassword ? "eye-off" : "eye"}
+                  size={20}
+                  color="#666"
                 />
               </TouchableOpacity>
             </View>
-            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            {errors.password && (
+              <Text style={styles.errorText}>{errors.password}</Text>
+            )}
 
             {/* Login Button */}
-            <TouchableOpacity 
-              style={styles.button} 
+            <TouchableOpacity
+              style={styles.button}
               onPress={handleLogin}
               disabled={loading}
             >
-              <LinearGradient 
-                colors={["#16A34A", "#0d4215"]} 
-                style={[styles.buttonGradient, loading ? styles.buttonDisabled : null]}
+              <LinearGradient
+                colors={["#16A34A", "#0d4215"]}
+                style={[
+                  styles.buttonGradient,
+                  loading ? styles.buttonDisabled : null,
+                ]}
               >
                 {loading ? (
                   <ActivityIndicator size="small" color="white" />
@@ -220,8 +240,8 @@ await AsyncStorage.setItem("userEmail", data.email);
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>
               Don't have an account?{" "}
-              <Text 
-                style={styles.loginLink} 
+              <Text
+                style={styles.loginLink}
                 onPress={() => router.replace("/signup")}
               >
                 Sign up
@@ -237,7 +257,7 @@ await AsyncStorage.setItem("userEmail", data.email);
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   backgroundVideo: {
     position: "absolute",
@@ -256,7 +276,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    width: '100%',
+    width: "100%",
   },
   scrollContainer: {
     flexGrow: 1,

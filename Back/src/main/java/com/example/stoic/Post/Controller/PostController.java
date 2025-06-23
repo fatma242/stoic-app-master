@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @CrossOrigin(origins = {
-    "http://192.168.1.6:8081",
-    "exp://192.168.210.193:8081"
+        "http://localhost:8081",
+        "exp://192.168.210.193:8081"
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/posts")
@@ -53,5 +53,11 @@ public class PostController {
     public ResponseEntity<String> deletePost(@PathVariable int id) {
         postService.deletePostById(id);
         return new ResponseEntity<>("Post with ID " + id + " deleted.", HttpStatus.NO_CONTENT);
+    }
+
+    @GetMapping("/roomId")
+    public ResponseEntity<List<Post>> getUserByIdQuery(@RequestParam int roomId) {
+        List<Post> posts = postService.findByRoomId(roomId);
+        return new ResponseEntity<>(posts, HttpStatus.OK);
     }
 }
