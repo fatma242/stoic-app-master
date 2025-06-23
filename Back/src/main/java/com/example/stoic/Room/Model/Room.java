@@ -1,6 +1,8 @@
 package com.example.stoic.Room.Model;
 
 import com.example.stoic.User.Model.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -30,7 +32,10 @@ public class Room {
     @Column(name = "created_at")
     private Date createdAt;
 
+    @JsonIgnore
     @ManyToMany
-    @JoinTable(name = "user_rooms", joinColumns = @JoinColumn(name = "room_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
+    @JoinTable(name = "user_rooms", 
+               joinColumns = @JoinColumn(name = "room_id"), 
+               inverseJoinColumns = @JoinColumn(name = "user_id"))
     private List<User> Users;
 }

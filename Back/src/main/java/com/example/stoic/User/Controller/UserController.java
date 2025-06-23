@@ -94,16 +94,7 @@ public class UserController {
         return ResponseEntity.ok(new LoginResponse(String.valueOf(u.getUserId()), u.getEmail()));
     }
 
-    @GetMapping("/session")
-    public ResponseEntity<?> getSessionUser(HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user != null) {
-            return ResponseEntity.ok(
-                    new UserSessionResponse(user.getUsername(), user.getUserRole().name()));
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No active session");
-        }
-    }
+    
 
     static class UserSessionResponse {
         public String username;

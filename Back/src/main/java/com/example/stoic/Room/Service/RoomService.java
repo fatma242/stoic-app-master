@@ -1,6 +1,7 @@
 package com.example.stoic.Room.Service;
 
 import com.example.stoic.Room.Model.Room;
+import com.example.stoic.Room.dto.RoomDTO;
 
 import java.util.List;
 
@@ -16,6 +17,9 @@ public interface RoomService {
     void deleteRoomById(int id);
 
     void SendRequest(int userId);
+
+    List<RoomDTO> findVisibleRoomsForUser(int userId);
+    List<RoomDTO> findAllPublicRoomsWithUsers();
 
     // void HandleReq();
 }

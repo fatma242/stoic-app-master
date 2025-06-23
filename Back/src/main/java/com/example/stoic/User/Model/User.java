@@ -2,10 +2,9 @@ package com.example.stoic.User.Model;
 
 import com.example.stoic.Language.Language;
 import com.example.stoic.Room.Model.Room;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
-import lombok.Data;
-
 import lombok.*;
 
 import java.util.List;
@@ -34,9 +33,8 @@ public class User {
     @Column(name = "userRole", columnDefinition = "ENUM('REG','ADMIN') DEFAULT 'REG'")
     private UserRole userRole;
     
-
+    @JsonIgnore
     @ManyToMany(mappedBy = "Users")
-
     private List<Room> rooms;
 
 }

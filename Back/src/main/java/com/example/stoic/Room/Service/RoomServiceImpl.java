@@ -2,10 +2,13 @@ package com.example.stoic.Room.Service;
 
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.Room.Repo.RoomRepo;
+import com.example.stoic.Room.dto.RoomDTO;
+
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class RoomServiceImpl implements RoomService {
@@ -72,6 +75,28 @@ public class RoomServiceImpl implements RoomService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to send request for user id: " + userId, e);
         }
+    }
+
+    @Override
+    public List<RoomDTO> findVisibleRoomsForUser(int userId) {
+        List<Room> rooms = roomRepo.findVisibleRoomsForUser(userId);
+        return rooms.stream().map(this::convertToDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<RoomDTO> findAllPublicRoomsWithUsers() {
+        List<Room> rooms = roomRepo.findAllPublicRoomsWithUsers();
+        return rooms.stream().map(this::convertToDTO).collect(Collectors.toList());
+    }
+
+    private RoomDTO convertToDTO(Room room) {
+        RoomDTO dto = new RoomDTO();
+        dto.setRoomId(room.getRoomId());
+        dto.setOwnerId(room.getOwnerId());
+        dto.setRoomName(room.getRoomName());
+        dto.setType(room.getType());
+        dto.setCreatedAt(room.getCreatedAt());
+        return dto;
     }
 
     // @Override

@@ -3,6 +3,7 @@ package com.example.stoic.Room.Controller;
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.Room.Model.RoomType;
 import com.example.stoic.Room.Service.RoomService;
+import com.example.stoic.Room.dto.RoomDTO;
 import com.example.stoic.User.Model.User;
 import com.example.stoic.User.Model.UserRole;
 
@@ -56,12 +57,30 @@ public class RoomController {
         System.out.println("POST rooms: user=" + user + ", payload=" + room);
 
         if (user == null) return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
-        if (user.getUserRole() != UserRole.ADMIN && user.getUserRole() != UserRole.MOD)
+        if (user.getUserRole() != UserRole.ADMIN)
             return new ResponseEntity<>("Forbidden", HttpStatus.FORBIDDEN);
 
         // Default missing fields
         room.setOwnerId(user.getUserId()); // ensure ID
         room.setCreatedAt(new Date());
+        room.setType(RoomType.PUBLIC);
+        Room saved = roomService.createRoom(room);
+        return new ResponseEntity<>(saved, HttpStatus.CREATED);
+    }
+
+
+    @PostMapping("/createPR")
+    public ResponseEntity<?> createPrivateRoom(@RequestBody Room room, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+
+        if (user == null) return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
+        if (user.getUserRole() != UserRole.REG) 
+            return new ResponseEntity<>("Forbidden", HttpStatus.FORBIDDEN);
+
+        // Default missing fields
+        room.setOwnerId(user.getUserId()); // ensure ID
+        room.setCreatedAt(new Date());
+        room.setType(RoomType.PRIVATE);
         Room saved = roomService.createRoom(room);
         return new ResponseEntity<>(saved, HttpStatus.CREATED);
     }
@@ -82,37 +101,23 @@ public class RoomController {
     }
 
     @GetMapping("/visible")
-    public ResponseEntity<List<Room>> getVisibleRooms(HttpSession session) {
+    public ResponseEntity<List<RoomDTO>> getVisibleRooms(HttpSession session) {
         User user = (User) session.getAttribute("user");
-
         if (user == null) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
 
-        int userId = user.getUserId();
-        UserRole role = user.getUserRole();
-
-        // ADMIN: return all rooms (no filtering)
-        if (role == UserRole.ADMIN) {
-            List<Room> allRooms = roomService.findAllRooms();
-            return new ResponseEntity<>(allRooms, HttpStatus.OK);
+        try {
+            if (user.getUserRole() == UserRole.ADMIN) {
+                List<RoomDTO> rooms = roomService.findAllPublicRoomsWithUsers();
+                return new ResponseEntity<>(rooms, HttpStatus.OK);
+            } else {
+                List<RoomDTO> rooms = roomService.findVisibleRoomsForUser(user.getUserId());
+                return new ResponseEntity<>(rooms, HttpStatus.OK);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
-        // REG user
-        List<Room> allRooms = roomService.findAllRooms();
-        List<Room> visibleRooms = allRooms.stream()
-            .filter(room ->
-                // Public rooms
-                room.getType() == RoomType.PUBLIC ||
-                // Private rooms where user is the owner
-                (room.getType() == RoomType.PRIVATE && room.getOwnerId() == userId) ||
-                // Private rooms where user is invited (in room.Users list)
-                (room.getType() == RoomType.PRIVATE &&
-                    room.getUsers().stream().anyMatch(u -> u.getUserId() == userId))
-            )
-            .toList();
-
-        return new ResponseEntity<>(visibleRooms, HttpStatus.OK);
     }
 
 }
