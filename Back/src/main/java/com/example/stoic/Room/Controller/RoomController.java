@@ -1,19 +1,27 @@
 package com.example.stoic.Room.Controller;
 
+import com.example.stoic.Post.Model.Post;
+import com.example.stoic.Post.Service.PostServiceImpl;
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.Room.Model.RoomType;
 import com.example.stoic.Room.Service.RoomService;
+import com.example.stoic.Room.Service.RoomServiceImpl;
 import com.example.stoic.Room.dto.RoomDTO;
 import com.example.stoic.User.Model.User;
 import com.example.stoic.User.Model.UserRole;
+import com.example.stoic.User.Service.UserServiceImpl;
 
 import jakarta.servlet.http.HttpSession;
+
+import org.checkerframework.checker.units.qual.s;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @CrossOrigin(origins = {
         "http://localhost:8081",
@@ -74,7 +82,6 @@ public class RoomController {
     @PostMapping("/createPR")
     public ResponseEntity<?> createPrivateRoom(@RequestBody Room room, HttpSession session) {
         User user = (User) session.getAttribute("user");
-
         if (user == null)
             return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
         if (user.getUserRole() != UserRole.REG)
@@ -120,6 +127,103 @@ public class RoomController {
             }
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // --- POSTS CONTROLLER LOGIC SHARING SAME CORS AND BASE PATH ---
+
+    @RestController
+    @RequestMapping("/rooms") // Shares the same CORS and base path as RoomController
+    @CrossOrigin(origins = {
+            "http://localhost:8081",
+            "exp://192.168.210.193:8081"
+    }, allowCredentials = "true")
+    class PostsController {
+
+        private final PostServiceImpl postService;
+        private final RoomServiceImpl roomServiceImpl;
+        private final UserServiceImpl userServiceImpl;
+
+        public PostsController(PostServiceImpl postService, RoomServiceImpl roomServiceImpl,
+                UserServiceImpl userServiceImpl) {
+            this.postService = postService;
+            this.roomServiceImpl = roomServiceImpl;
+            this.userServiceImpl = userServiceImpl;
+        }
+
+        @GetMapping("/posts")
+        public ResponseEntity<List<Post>> getAllPosts() {
+            List<Post> posts = postService.findAllPosts();
+            return new ResponseEntity<>(posts, HttpStatus.OK);
+        }
+
+        @GetMapping("/posts/{id}")
+        public ResponseEntity<Post> getPostById(@PathVariable int id) {
+            Post post = postService.findPostById(id);
+            return new ResponseEntity<>(post, HttpStatus.OK);
+        }
+
+        @GetMapping("/posts/room/{roomId}")
+        public ResponseEntity<List<Post>> getPostsByRoom(@PathVariable int roomId) {
+            var posts = postService.findByRoomId(roomId);
+            return posts.isEmpty()
+                    ? ResponseEntity.noContent().build()
+                    : ResponseEntity.ok(posts);
+        }
+
+        @PostMapping("/posts/create")
+        public ResponseEntity<?> createPost(@RequestBody Map<String, Object> request, HttpSession session) {
+            try {
+                User user = (User) session.getAttribute("user");
+                if (user == null) {
+                    return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
+                }
+
+                String title = (String) request.get("title");
+                String content = (String) request.get("content");
+                Integer roomId = (Integer) request.get("roomId");
+
+                if (title == null || content == null || roomId == null) {
+                    return new ResponseEntity<>("Missing required fields", HttpStatus.BAD_REQUEST);
+                }
+
+                Room room = roomServiceImpl.findRoomById(roomId);
+                if (room == null) {
+                    return new ResponseEntity<>("Room not found", HttpStatus.NOT_FOUND);
+                }
+                
+                Post post = new Post();
+                post.setTitle(title);
+                post.setContent(content);
+                System.out.println("Creating post with title: " + title + ", content: " + content);
+                System.out.println("User: " + user.getUsername() + ", Room ID: " + roomId);
+                post.setLikes(0); // Default likes to 0
+                post.setAuthor(user);
+                post.setDate(LocalDateTime.now());
+                post.setRoom(room);
+
+                Post savedPost = postService.savePost(post);
+                return new ResponseEntity<>(savedPost, HttpStatus.CREATED);
+
+            } catch (Exception e) {
+                return new ResponseEntity<>("Internal server error: " + e.getMessage(),
+                        HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        }
+
+        @PutMapping("/posts/{id}")
+        public ResponseEntity<Post> updatePost(@PathVariable int id, @RequestBody Post postDetails) {
+            Post post = postService.findPostById(id);
+            post.setDate(postDetails.getDate());
+            post.setAuthor(postDetails.getAuthor());
+            Post updatedPost = postService.updatePost(post);
+            return new ResponseEntity<>(updatedPost, HttpStatus.OK);
+        }
+
+        @DeleteMapping("/posts/{id}")
+        public ResponseEntity<String> deletePost(@PathVariable int id) {
+            postService.deletePostById(id);
+            return new ResponseEntity<>("Post with ID " + id + " deleted.", HttpStatus.NO_CONTENT);
         }
     }
 

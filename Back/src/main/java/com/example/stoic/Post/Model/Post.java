@@ -2,6 +2,7 @@ package com.example.stoic.Post.Model;
 
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.User.Model.User;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Entity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "post")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Post {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -25,12 +27,15 @@ public class Post {
     @Column(name = "content", nullable = false)
     private String content;
 
+    @Column(name = "title", nullable = false)
+    private String title;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User author;
 
-    @Column(name = "like", nullable = true)
-    private int like;
+    @Column(name = "likes", nullable = true)
+    private int likes;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)

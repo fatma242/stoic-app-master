@@ -13,10 +13,13 @@ public class WebSocketStompConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry
-                .addEndpoint("/ws-chat") // <-- your client will connect here
-                .setAllowedOrigins("*")
-                .withSockJS(); // fallback for browsers without native WS
+                .addEndpoint("/ws-chat")
+                .setAllowedOrigins(
+                        "http://localhost:8081",
+                        "exp://192.168.210.193:8081")
+                .withSockJS();
     }
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         // prefix for messages FROM server to client
@@ -24,4 +27,5 @@ public class WebSocketStompConfig implements WebSocketMessageBrokerConfigurer {
         // prefix for messages FROM client to server
         registry.setApplicationDestinationPrefixes("/app");
     }
+
 }

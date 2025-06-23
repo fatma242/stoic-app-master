@@ -8,10 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
-  Keyboard,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -46,7 +44,11 @@ interface Post {
   id: number;
   title: string;
   content: string;
-  author: string;
+  author: {
+    userId: number;
+    username: string;
+    // add other fields as needed
+  };
   date: string;
 }
 
@@ -177,7 +179,15 @@ export default function RoomScreen() {
       const data: Room = await response.json();
       setRoom(data);
       setEditedName(data.roomName);
-      setIsOwner(userId === data.ownerId);
+
+      const response2 = await fetch(
+        `${API_BASE_URL}/api/users/${data.ownerId}`,
+        {
+          credentials: "include",
+        }
+      );
+      const data2: User = await response2.json();
+      setIsOwner(username === data2.username);
     } catch (error) {
       Alert.alert(
         "Error",
@@ -211,25 +221,28 @@ export default function RoomScreen() {
     }
   };
 
+  // --- CHANGED: Use /rooms/posts/room/{roomId} ---
   const fetchPosts = async () => {
+    if (!roomId) return;
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/posts?roomId=${roomId}`,
-        {
-          credentials: "include",
-        }
+        `${API_BASE_URL}/rooms/posts/room/${roomId}`,
+        { credentials: "include" }
       );
-
+      if (response.status === 204) {
+        setPosts([]);
+        return;
+      }
       if (!response.ok) throw new Error("Failed to fetch posts");
-
       const data: Post[] = await response.json();
-      setPosts(data);
+      console.log(posts)
+      console.log("Fetched posts:")
+      console.log(data)
+       setPosts(data);
     } catch (error) {
       Alert.alert(
         "Error",
-        error instanceof Error && error.message
-          ? error.message
-          : "Could not load posts"
+        error instanceof Error ? error.message : "Could not load posts"
       );
     }
   };
@@ -291,6 +304,7 @@ export default function RoomScreen() {
     }
   };
 
+  // --- CHANGED: Use /rooms/posts/create ---
   const createPost = async () => {
     if (!newPostTitle.trim() || !newPostContent.trim()) {
       Alert.alert("Error", "Title and content are required");
@@ -299,21 +313,26 @@ export default function RoomScreen() {
 
     setIsCreatingPost(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/posts`, {
+      const response = await fetch(`${API_BASE_URL}/rooms/posts/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
         body: JSON.stringify({
           title: newPostTitle,
           content: newPostContent,
           roomId: roomId,
-          author: username,
         }),
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to create post");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create post: ${response.status} - ${errorText}`);
+      }
 
-      const newPost: Post = await response.json();
+      const newPost = await response.json();
       setPosts((prev) => [...prev, newPost]);
       setNewPostTitle("");
       setNewPostContent("");
@@ -580,7 +599,7 @@ export default function RoomScreen() {
             <View key={post.id} style={styles.postCard}>
               <Text style={styles.postTitle}>{post.title}</Text>
               <Text style={styles.postContent}>{post.content}</Text>
-              <Text style={styles.postAuthor}>By: {post.author}</Text>
+              <Text style={styles.postAuthor}>By: {post.author.username}</Text>
             </View>
           ))
         )}
