@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from "react";
+import BackgroundVideo from "@/components/BackgroundVideo";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  Alert,
   ActivityIndicator,
+  Alert,
+  BackHandler,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  BackHandler,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import { MaterialIcons, Ionicons } from "@expo/vector-icons";
-import { Video, ResizeMode } from "expo-av";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_BASE_URL = "http://localhost:8100";
 
@@ -133,14 +133,7 @@ export default function SignUp() {
 
   return (
     <View style={styles.container}>
-      <Video
-        source={require("../assets/background.mp4")}
-        style={styles.backgroundVideo}
-        isMuted
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-      />
+      <BackgroundVideo />
       <View style={styles.overlay} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}

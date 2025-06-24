@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { Video, ResizeMode } from 'expo-av';
+import BackgroundVideo from '@/components/BackgroundVideo';
 import { useRouter } from 'expo-router';
-import i18n from '../constants/i18n';
-import LanguageSwitcher from '../components/LanguageSwitcher';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AnswerButtons } from '../components/AnswerButtons';
-import { onboardingFlow, handleEmergencyCall, AnswerKey } from '../components/OnboardingFlow';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import { AnswerKey, handleEmergencyCall, onboardingFlow } from '../components/OnboardingFlow';
+import i18n from '../constants/i18n';
 
 const styles = StyleSheet.create({
   container: {
@@ -234,16 +234,7 @@ export default function Onboarding() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Video
-        source={require("../assets/background.mp4")}
-        style={styles.backgroundVideo}
-        rate={1.0}
-        volume={1.0}
-        isMuted={true}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-      />
+      <BackgroundVideo />
       <View style={styles.overlay}>
         <View style={styles.container} key={key}>
           <View style={{ marginTop: 20 }}>

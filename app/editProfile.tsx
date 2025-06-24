@@ -1,17 +1,17 @@
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import BackgroundVideo from "@/components/BackgroundVideo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import { useEffect, useLayoutEffect, useState } from "react";
 import {
-  View,
+  Alert,
+  Image,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
-  StyleSheet,
-  Image,
+  View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
-import { Video, ResizeMode } from "expo-av";
-import { useNavigation } from "@react-navigation/native";
 
 // Define the User type
 type User = {
@@ -23,7 +23,7 @@ type User = {
   userRole: string;
 };
 
-const API_BASE_URL = "http://localhost:8100";
+const API_BASE_URL = "http://192.168.1.55:8100";
 
 export default function EditProfile() {
   const navigation = useNavigation();
@@ -142,14 +142,7 @@ export default function EditProfile() {
 
   return (
     <View style={styles.container}>
-      <Video
-        source={require("../assets/background.mp4")}
-        style={StyleSheet.absoluteFill}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-        isMuted
-      />
+      <BackgroundVideo />
       <View style={styles.overlay} />
       <View style={styles.innerContainer}>
         <Image source={require("../assets/logo.png")} style={styles.logo} />

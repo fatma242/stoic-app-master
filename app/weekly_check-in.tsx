@@ -1,20 +1,18 @@
-import React, { useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient";
+import { router, Stack } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
-import { Video, ResizeMode } from "expo-av";
-import { LinearGradient } from "expo-linear-gradient";
-import { Stack } from "expo-router";
 
 const moods = [
   { emoji: "😢", score: 1 },
@@ -104,7 +102,7 @@ export default function WeeklyCheckIn() {
         return;
       }
 
-      await axios.post("http://localhost:8100/api/mood-logs", {
+      await axios.post("http://192.168.1.55:8100/api/mood-logs", {
         userId: userId,
         moodScore: selectedMood,
         timestamp: new Date().toISOString(),
@@ -133,17 +131,7 @@ export default function WeeklyCheckIn() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <Video
-        ref={videoRef}
-        source={require("../assets/background.mp4")}
-        style={styles.backgroundVideo}
-        rate={1.0}
-        volume={1.0}
-        isMuted={true}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-      />
+      <BackgroundVideo />
 
       <View style={styles.overlay} />
 

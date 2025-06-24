@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from "react";
+import BackgroundVideo from "@/components/BackgroundVideo";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  Alert,
   ActivityIndicator,
+  Alert,
+  BackHandler,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  BackHandler,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import { MaterialIcons, Ionicons } from "@expo/vector-icons";
-import { Video, ResizeMode } from "expo-av";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Login() {
   const router = useRouter();
@@ -122,17 +122,7 @@ export default function Login() {
   return (
     <View style={styles.container}>
       {/* Background Video */}
-      <Video
-        source={require("../assets/background.mp4")}
-        style={styles.backgroundVideo}
-        rate={1.0}
-        volume={1.0}
-        isMuted={true}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-      />
-
+     <BackgroundVideo />
       {/* Dark overlay */}
       <View style={styles.overlay} />
 

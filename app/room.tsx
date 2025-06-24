@@ -1,21 +1,21 @@
-import React, { useState, useEffect, useRef } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Client } from "@stomp/stompjs";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  View,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import SockJS from "sockjs-client";
-import { Client } from "@stomp/stompjs";
 
 // Type definitions
 interface User {
@@ -92,7 +92,7 @@ export default function RoomScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const stompClient = useRef<any>(null);
-  const API_BASE_URL = "http://localhost:8100";
+  const API_BASE_URL = "http://192.168.1.55:8100";
 
   const scrollViewRef = useRef<ScrollView>(null);
 

@@ -1,11 +1,8 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native';
+import BackgroundVideo from '@/components/BackgroundVideo';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Video, ResizeMode } from 'expo-av';
-import { BackHandler } from 'react-native';
-import { useEffect } from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function Home() {
   const router = useRouter();
@@ -23,16 +20,7 @@ export default function Home() {
   return (
     <View style={styles.container}>
       {/* Background Video */}
-      <Video
-        source={require("../../assets/background.mp4")}
-        style={styles.backgroundVideo}
-        rate={1.0}
-        volume={1.0}
-        isMuted={true}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-      />
+      <BackgroundVideo />
 
       {/* Overlay */}
       <View style={styles.overlay} />

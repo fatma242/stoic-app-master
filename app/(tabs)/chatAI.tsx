@@ -1,9 +1,9 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ImageBackground } from 'react-native';
-import { GiftedChat, IMessage, Bubble } from 'react-native-gifted-chat';
+import { Entypo, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons, Entypo } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import { useCallback, useState } from 'react';
+import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Bubble, GiftedChat, IMessage } from 'react-native-gifted-chat';
 import chatbotIcon from '../../assets/chatbot.png';
 
 const apiKey = Constants.expoConfig?.extra?.chatbotApiKey;
@@ -49,16 +49,22 @@ export default function ChatAI() {
       );
       return;
     }
+
     const prompt = `You are Stoic AI, an AI life coach. Classify the user's mental state according to ICD-11 and DSM-5 criteria into:
-    Anxiety: Recommend breathing exercises, meditation, or yoga. Link: https://www.youtube.com/@YogaWithRawda
-    Stress: Suggest relaxation techniques or time management tips.
-    Depression: Offer inspirational stories or mood-boosting support.
-    Suicidal Thoughts: Direct to crisis hotlines and websites: https://www.shezlong.com/ar, https://befrienders.org/ar/, https://www.betterhelp.com/get-started/
-    Normal: Cheer them up and reinforce positive emotions.
-    Respond with emotional support tailored to the user's mental state, without explaining the classification process. Offer encouragement and recommend professional help if necessary.
-    Always respond in the user's language or accent. Default to English if unsure.
-    Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user makes an offensive, racist, or vulgar request, Stoic AI will politely refuse, saying: "I'm here to support you positively, but I can't respond to that request." Always reply in the user's language or accent.
-    classify the user's mental state into at most two categories of the following categories: Anxiety, Stress, Depression, Suicidal Thoughts, Normal.`;
+Anxiety: Recommend breathing exercises, meditation, or yoga. Link: https://www.youtube.com/@YogaWithRawda
+Stress: Suggest relaxation techniques or time management tips.
+Depression: Offer inspirational stories or mood-boosting support.
+Suicidal Thoughts: Direct to crisis hotlines and websites: https://www.shezlong.com/ar, https://befrienders.org/ar/, https://www.betterhelp.com/get-started/
+Normal: Cheer them up and reinforce positive emotions.
+
+Start your response with:
+Classification: [Mental State Label(s)]
+Then write the supportive message tailored to the classified state(s).
+
+Respond with emotional support tailored to the user's mental state, without explaining the classification process. Offer encouragement and recommend professional help if necessary.
+Always respond in the user's language or accent. Default to English if unsure.
+Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user makes an offensive, racist, or vulgar request, Stoic AI will politely refuse, saying: "I'm here to support you positively, but I can't respond to that request." Always reply in the user's language or accent.
+Classify the user's mental state into at most two categories from: Anxiety, Stress, Depression, Suicidal Thoughts, Normal.`;
 
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -82,6 +88,11 @@ export default function ChatAI() {
       const data = await response.json();
       let botResponse = data.choices[0].message.content;
 
+      // Extract classification label (for logging or future evaluation)
+      const match = botResponse.match(/Classification:\s*(.+)/i);
+      const classification = match ? match[1].trim() : "Unknown";
+      console.log("Predicted classification:", classification);
+
       setMessages(prevMessages =>
         GiftedChat.append(prevMessages, [
           { _id: Math.random().toString(), text: botResponse, createdAt: new Date(), user: { _id: 2, name: 'Stoic AI', avatar: chatbotIcon } },
@@ -103,7 +114,6 @@ export default function ChatAI() {
       style={styles.container}
       resizeMode="cover"
     >
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="white" />
@@ -113,25 +123,14 @@ export default function ChatAI() {
           <Text style={styles.headerTitle}>Stoic AI</Text>
           <Text style={styles.headerStatus}>Active now</Text>
         </View>
-        
-        {/* Improved Menu Button */}
-        <TouchableOpacity 
-          style={styles.menuButton} 
-          onPress={() => setIsMenuVisible(!isMenuVisible)}
-        >
+        <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuVisible(!isMenuVisible)}>
           <Entypo name="dots-three-vertical" size={20} color="white" />
           {isMenuVisible && (
             <View style={styles.menuOptions}>
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={handleNewChat}
-              >
+              <TouchableOpacity style={styles.menuItem} onPress={handleNewChat}>
                 <Text style={styles.menuText}>New Chat</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={handleDeleteChat}
-              >
+              <TouchableOpacity style={styles.menuItem} onPress={handleDeleteChat}>
                 <Text style={styles.menuText}>Delete Chat</Text>
               </TouchableOpacity>
             </View>
@@ -139,7 +138,6 @@ export default function ChatAI() {
         </TouchableOpacity>
       </View>
 
-      {/* Chat Interface */}
       <GiftedChat
         messages={messages}
         onSend={messages => onSend(messages)}
@@ -154,10 +152,7 @@ export default function ChatAI() {
           color: '#0a170c'
         }}
         renderSend={(props) => (
-          <TouchableOpacity 
-            style={styles.sendButton} 
-            onPress={() => props.onSend && props.onSend({ text: props.text?.trim() }, true)}
-          >
+          <TouchableOpacity style={styles.sendButton} onPress={() => props.onSend && props.onSend({ text: props.text?.trim() }, true)}>
             <Text style={{ color: '#7CFC00', fontSize: 18 }}>Send</Text>
           </TouchableOpacity>
         )}

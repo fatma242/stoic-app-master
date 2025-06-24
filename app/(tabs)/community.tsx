@@ -1,21 +1,20 @@
-import React, { useEffect, useState } from "react";
+import BackgroundVideo from "@/components/BackgroundVideo";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
   ScrollView,
   StyleSheet,
-  Image,
-  Alert,
-  ActivityIndicator,
+  Text,
   TextInput,
-  Modal,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { Video, ResizeMode } from "expo-av";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Type definitions
 type RoomType = "PUBLIC" | "PRIVATE";
@@ -39,7 +38,7 @@ export default function Community() {
   const [roomName, setRoomName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  const API_BASE_URL = "http://localhost:8100";
+  const API_BASE_URL = "http://192.168.1.55:8100";
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -158,16 +157,7 @@ export default function Community() {
 
   return (
     <View style={styles.container}>
-      <Video
-        source={require("../../assets/background.mp4")}
-        style={styles.backgroundVideo}
-        rate={1.0}
-        volume={1.0}
-        isMuted
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-      />
+      <BackgroundVideo />
       <View style={styles.overlay} />
 
       <ScrollView style={styles.content}>

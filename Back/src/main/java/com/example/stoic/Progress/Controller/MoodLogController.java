@@ -15,8 +15,12 @@ import com.example.stoic.Progress.Model.MoodLog;
 import com.example.stoic.Progress.Repo.MoodLogRepository;
 
 @CrossOrigin(origins = {
-        "http://localhost:8081",
+        "http://192.168.1.6:8081",
         "exp://192.168.210.193:8081",
+        "http://192.168.1.100:8081",
+        "exp://192.168.100.11:8081",
+        "exp://192.168.1.55:8081",
+        "http://192.168.1.55:8081",
         "http://localhost:8081",
 }, allowCredentials = "true")
 @RestController

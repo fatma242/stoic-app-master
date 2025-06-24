@@ -1,17 +1,17 @@
-import React, { useEffect, useState, useRef } from "react";
-import {
-  View,
-  Text,
-  Dimensions,
-  ScrollView,
-  ActivityIndicator,
-  StyleSheet,
-} from "react-native";
-import { LineChart } from "react-native-chart-kit";
-import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 import { Video } from "expo-av";
 import moment from "moment"; // Add moment for date formatting
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { LineChart } from "react-native-chart-kit";
 
 const ProgressScreen = () => {
   const [moodData, setMoodData] = useState<MoodLog[]>([]);
@@ -28,7 +28,7 @@ const ProgressScreen = () => {
         }
 
         const response = await axios.get(
-          `http://localhost:8100/api/mood-logs/${userId}`
+          `http://192.168.1.55:8100/api/mood-logs/${userId}`
         );
         setMoodData(response.data);
         setLoading(false);
@@ -169,16 +169,7 @@ const VideoBackground = ({
 }: {
   videoRef: React.RefObject<Video>;
 }) => (
-  <Video
-    ref={videoRef}
-    source={require("../../assets/background.mp4")} // Update with your video path
-    style={StyleSheet.absoluteFill}
-    resizeMode="cover"
-    shouldPlay
-    isLooping
-    isMuted
-    rate={1.0}
-  />
+  <BackgroundVideo />
 );
 
 // Styles
