@@ -3,6 +3,8 @@ package com.example.stoic.Comment.Model;
 import com.example.stoic.Post.Model.Post;
 
 import com.example.stoic.User.Model.User;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,10 +14,11 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "comment")
+@Table(name = "comments")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Comment {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(unique = true, nullable = false, name = "id")
     private int id;
 

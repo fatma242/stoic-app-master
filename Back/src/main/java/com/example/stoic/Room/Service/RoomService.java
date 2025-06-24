@@ -2,6 +2,7 @@ package com.example.stoic.Room.Service;
 
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.Room.dto.RoomDTO;
+import com.example.stoic.User.Model.User;
 
 import java.util.List;
 
@@ -20,6 +21,9 @@ public interface RoomService {
 
     List<RoomDTO> findVisibleRoomsForUser(int userId);
     List<RoomDTO> findAllPublicRoomsWithUsers();
+
+    Void joinRoom( User user,String join_code);
+    List<User> findUsersByRoomId(int id);
 
     // void HandleReq();
 }

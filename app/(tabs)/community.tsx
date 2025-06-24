@@ -27,6 +27,8 @@ interface RoomDTO {
   roomName: string;
   type: RoomType;
   createdAt: string;
+  // Assuming backend returns join_code as joinCode
+  joinCode?: string;
 }
 
 export default function Community() {
@@ -38,8 +40,10 @@ export default function Community() {
   const [showModal, setShowModal] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  // New state for join code
+  const [joinCode, setJoinCode] = useState("");
 
-  const API_BASE_URL = "http://localhost:8100";
+  const API_BASE_URL = "http://192.168.1.56:8100";
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -122,9 +126,7 @@ export default function Community() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
-          `Room creation failed: ${response.status} ${errorText}`
-        );
+        throw new Error(`Room creation failed: ${response.status} ${errorText}`);
       }
 
       const newRoom = await response.json();
@@ -138,6 +140,36 @@ export default function Community() {
       );
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  // New join room function that uses the /rooms/joinPR endpoint
+  const joinRoom = async () => {
+    if (!joinCode.trim()) {
+      Alert.alert("Error", "Join code is required");
+      return;
+    }
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/rooms/joinPR?joinCode=${joinCode}`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to join room: ${response.status} ${errorText}`);
+      }
+      Alert.alert("Success", "Joined room successfully!");
+      // Optionally refresh room list
+      fetchVisibleRooms();
+      setJoinCode("");
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Error joining room"
+      );
     }
   };
 
@@ -191,6 +223,20 @@ export default function Community() {
                 : "Create Private Room"}
             </Text>
           </TouchableOpacity>
+
+          {/* New Join Room Section */}
+          <View style={styles.joinRoomContainer}>
+            <TextInput
+              style={styles.joinRoomInput}
+              placeholder="Enter room join code"
+              placeholderTextColor="#888"
+              value={joinCode}
+              onChangeText={setJoinCode}
+            />
+            <TouchableOpacity style={styles.joinRoomButton} onPress={joinRoom}>
+              <Text style={styles.joinRoomButtonText}>Join Room</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.roomsSection}>
@@ -230,9 +276,7 @@ export default function Community() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {userRole === "ADMIN"
-                ? "Create Public Room"
-                : "Create Private Room"}
+              {userRole === "ADMIN" ? "Create Public Room" : "Create Private Room"}
             </Text>
 
             <TextInput
@@ -322,6 +366,29 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontWeight: "600",
     fontSize: 16,
+  },
+  joinRoomContainer: {
+    marginTop: 15,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  joinRoomInput: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    color: "white",
+    padding: 12,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  joinRoomButton: {
+    backgroundColor: "#334155",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  joinRoomButtonText: {
+    color: "white",
+    fontWeight: "600",
   },
   roomsSection: {
     borderRadius: 15,

@@ -4,6 +4,7 @@ import com.example.stoic.Post.Model.Post;
 import com.example.stoic.Post.Service.PostServiceImpl;
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.Room.Model.RoomType;
+import com.example.stoic.Room.Repo.RoomRepo;
 import com.example.stoic.Room.Service.RoomService;
 import com.example.stoic.Room.Service.RoomServiceImpl;
 import com.example.stoic.Room.dto.RoomDTO;
@@ -22,9 +23,12 @@ import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 @CrossOrigin(origins = {
-        "http://localhost:8081",
+        "http://192.168.1.56:8081",
         "exp://192.168.210.193:8081"
 }, allowCredentials = "true")
 @RestController
@@ -82,6 +86,7 @@ public class RoomController {
     @PostMapping("/createPR")
     public ResponseEntity<?> createPrivateRoom(@RequestBody Room room, HttpSession session) {
         User user = (User) session.getAttribute("user");
+        // System.out.println(user);
         if (user == null)
             return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
         if (user.getUserRole() != UserRole.REG)
@@ -91,9 +96,35 @@ public class RoomController {
         room.setOwnerId(user.getUserId()); // ensure ID
         room.setCreatedAt(new Date());
         room.setType(RoomType.PRIVATE);
+        // room.getUsers().add(user);
+        room.adduser(user); // Add the user to the room
+        // room.setUsers(room.getUsers()); // Add the user to the room
         Room saved = roomService.createRoom(room);
         return new ResponseEntity<>(saved, HttpStatus.CREATED);
     }
+    @PostMapping("/joinPR")
+    public ResponseEntity<?> joinPrivateRoom(@RequestParam String joinCode, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        // System.out.println(user);
+        if (user == null)
+            return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
+        if (user.getUserRole() != UserRole.REG)
+            return new ResponseEntity<>("Forbidden", HttpStatus.FORBIDDEN);
+        
+        // Join the room
+        roomService.joinRoom(user, joinCode);
+        
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+    @GetMapping("/users")
+    public ResponseEntity<List<User>> getUsersByRoomId(@RequestParam int roomId) {
+        List<User> users = roomService.findUsersByRoomId(roomId);
+        return new ResponseEntity<>(users, HttpStatus.OK);
+    }
+    
+
+    
+
 
     @PutMapping("/{id}")
     public ResponseEntity<Room> updateRoom(@PathVariable int id, @RequestBody Room roomDetails) {
@@ -135,7 +166,7 @@ public class RoomController {
     @RestController
     @RequestMapping("/rooms") // Shares the same CORS and base path as RoomController
     @CrossOrigin(origins = {
-            "http://localhost:8081",
+            "http://192.168.1.56:8081",
             "exp://192.168.210.193:8081"
     }, allowCredentials = "true")
     class PostsController {

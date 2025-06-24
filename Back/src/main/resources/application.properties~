@@ -2,8 +2,7 @@ spring.application.name=Stoic
 
 spring.datasource.url=jdbc:mysql://localhost:3306/stoic?useSSL=false&serverTimezone=UTC
 spring.datasource.username=root
-spring.datasource.password=fadycrux123
-
+spring.datasource.password=Ahmed2002#
 
 spring.security.user.name=admin
 spring.security.user.password=admin

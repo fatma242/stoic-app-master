@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,9 @@ import {
   Platform,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import * as Clipboard from "expo-clipboard";
+import { useFocusEffect } from "@react-navigation/native";
+
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SockJS from "sockjs-client";
@@ -28,6 +31,7 @@ interface Room {
   roomId: number;
   ownerId: number;
   roomName: string;
+  join_code: string;
   type: "PUBLIC" | "PRIVATE";
   createdAt: string;
 }
@@ -91,8 +95,11 @@ export default function RoomScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Users in the room
+  const [roomUsers, setRoomUsers] = useState<User[]>([]);
+
   const stompClient = useRef<any>(null);
-  const API_BASE_URL = "http://localhost:8100";
+  const API_BASE_URL = "http://192.168.1.56:8100";
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -100,17 +107,20 @@ export default function RoomScreen() {
     const loadData = async () => {
       try {
         // Load user data
-        const storedUserId = await AsyncStorage.getItem("userId");
         const storedUsername = await AsyncStorage.getItem("username");
+        const storedUserId = await AsyncStorage.getItem("userId");
+        console.log("Stored userId:", storedUserId);
 
-        if (storedUserId && storedUsername) {
-          setUserId(parseInt(storedUserId));
-          setUsername(storedUsername);
+        if (storedUserId !== null) {
+          const parsedUserId = parseInt(storedUserId);
+          setUserId(parsedUserId);
+          // Use parsedUserId immediately instead of the state variable userId
+          console.log("Parsed userId:", parsedUserId);
         }
 
-        // Fetch room details
+        // Fetch room details only if roomId is available.
         if (roomId) {
-          await fetchRoom();
+          await fetchRoom();       // This might use the freshly loaded userId if needed
           await fetchMessages();
           await fetchPosts();
           await fetchNotifications();
@@ -177,6 +187,7 @@ export default function RoomScreen() {
       if (!response.ok) throw new Error("Failed to fetch room");
 
       const data: Room = await response.json();
+      console.log("Fetched room:", data);
       setRoom(data);
       setEditedName(data.roomName);
 
@@ -187,7 +198,10 @@ export default function RoomScreen() {
         }
       );
       const data2: User = await response2.json();
-      setIsOwner(username === data2.username);
+      console.log("Fetched room owner:", data2.userId);
+      console.log("Fetched username:", userId);
+      setIsOwner(userId === data2.userId);
+      console.log("Is owner:", isOwner);
     } catch (error) {
       Alert.alert(
         "Error",
@@ -235,10 +249,10 @@ export default function RoomScreen() {
       }
       if (!response.ok) throw new Error("Failed to fetch posts");
       const data: Post[] = await response.json();
-      console.log(posts)
-      console.log("Fetched posts:")
-      console.log(data)
-       setPosts(data);
+      console.log(posts);
+      console.log("Fetched posts:");
+      console.log(data);
+      setPosts(data);
     } catch (error) {
       Alert.alert(
         "Error",
@@ -317,7 +331,7 @@ export default function RoomScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify({
           title: newPostTitle,
@@ -329,7 +343,9 @@ export default function RoomScreen() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to create post: ${response.status} - ${errorText}`);
+        throw new Error(
+          `Failed to create post: ${response.status} - ${errorText}`
+        );
       }
 
       const newPost = await response.json();
@@ -443,6 +459,53 @@ export default function RoomScreen() {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   };
 
+  const copyRoomCode = async () => {
+    if (room?.join_code) {
+      await Clipboard.setStringAsync(room.join_code);
+      Alert.alert("Copied", "Room code copied to clipboard");
+    }
+  };
+
+  // Fetch room users whenever the roomId changes
+  useEffect(() => {
+    if (roomId) {
+      fetchRoomUsers();
+    }
+  }, [roomId]);
+
+  const fetchRoomUsers = async () => {
+    if (!roomId) return;
+    try {
+      console.log("Fetching room users");
+      const response = await fetch(
+        `${API_BASE_URL}/users?roomId=${roomId}`,
+        { credentials: "include" }
+      );
+      if (!response.ok) throw new Error("Failed to fetch room users");
+
+      const data = await response.json();
+      console.log("Raw room users response:", data);
+      // Extract the array from the HAL response
+      const users = data._embedded?.users;
+      setRoomUsers(Array.isArray(users) ? users : []);
+    } catch (error) {
+      console.error(error);
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Could not load room users"
+      );
+    }
+  };
+
+  // Replace or add this effect to re-fetch room users on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      if (roomId) {
+        fetchRoomUsers();
+      }
+    }, [roomId])
+  );
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -507,8 +570,30 @@ export default function RoomScreen() {
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Owner:</Text>
             <Text style={styles.detailValue}>
-              {isOwner ? "You" : `User #${room.ownerId}`}
+              {isOwner ? "You" : `Userx #${room.ownerId}`}
             </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Room Code:</Text>
+            <Text style={styles.detailValue}>{`${room.join_code}`}</Text>
+            <TouchableOpacity onPress={copyRoomCode} style={styles.copyButton}>
+              <Ionicons name="copy" size={18} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Users:</Text>
+            <View style={{ flex: 1 }}>
+              {roomUsers.length === 0 ? (
+                <Text style={styles.detailValue}>No users joined yet</Text>
+              ) : (
+                roomUsers.map((user) => (
+                  <Text key={user.userId} style={styles.detailValue}>
+                    {user.username}
+                  </Text>
+                ))
+              )}
+            </View>
           </View>
 
           {isOwner && (
@@ -877,5 +962,13 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 12,
     fontWeight: "bold",
+  },
+  copyButton: {
+    marginLeft: 8,
+    padding: 4,
+    backgroundColor: "#334155",
+    borderRadius: 4,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

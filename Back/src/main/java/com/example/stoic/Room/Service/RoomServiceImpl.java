@@ -3,6 +3,7 @@ package com.example.stoic.Room.Service;
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.Room.Repo.RoomRepo;
 import com.example.stoic.Room.dto.RoomDTO;
+import com.example.stoic.User.Model.User;
 
 import org.springframework.stereotype.Service;
 
@@ -25,6 +26,14 @@ public class RoomServiceImpl implements RoomService {
             return roomRepo.findAll();
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch all rooms", e);
+        }
+    }
+    @Override
+    public List<User> findUsersByRoomId(int id) {
+        try {
+            return roomRepo.findUsersByRoomId(id);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch users by room id: " + id, e);
         }
     }
     @Override
@@ -97,6 +106,25 @@ public class RoomServiceImpl implements RoomService {
         dto.setType(room.getType());
         dto.setCreatedAt(room.getCreatedAt());
         return dto;
+    }
+    @Override
+    public Void joinRoom(User user, String join_code) {
+        try {
+
+            Room room = roomRepo.findRoomByjoin_code(join_code);
+            if (room == null) {
+                throw new RuntimeException("Room not found with join code: " + join_code);
+            }
+            room.adduser(user); // Assuming adduser method is defined in Room class
+                roomRepo.save(room); // Save the updated room with the new user
+            // Logic to add user to the room
+            // For example, you might want to add the user to the room's Users list
+            // room.getUsers().add(user);
+            // roomRepo.save(room);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to join room with join code: " + join_code, e);
+        }
+        return null;
     }
 
     // @Override
