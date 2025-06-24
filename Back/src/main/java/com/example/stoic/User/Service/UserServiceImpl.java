@@ -72,4 +72,9 @@ public class UserServiceImpl implements UserService {
         }
         return user;
     }
+    @Override
+    public User findByEmail(String email) {
+        return userRepo.findByEmail(email)
+                .orElseThrow(() -> new NoSuchElementException("User with email " + email + " not found"));
+    }
 }

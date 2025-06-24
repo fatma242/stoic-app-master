@@ -22,4 +22,5 @@ public interface UserRepo extends JpaRepository<User, Integer>, JpaSpecification
     /**
      * Look up a user by username.
      */
+    
 }
