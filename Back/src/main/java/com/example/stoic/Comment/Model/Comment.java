@@ -32,7 +32,7 @@ public class Comment {
     @JoinColumn(name = "user_id", nullable = false)
     private User author;
 
-    @Column(name = "like", nullable = true)
+    @Column(name = "likes", nullable = true)
     private int like;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -1,6 +1,7 @@
 package com.example.stoic.Room.Controller;
 
 import com.example.stoic.Post.Model.Post;
+import com.example.stoic.Post.Repo.PostRepo;
 import com.example.stoic.Post.Service.PostServiceImpl;
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.Room.Model.RoomType;
@@ -23,12 +24,11 @@ import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+
 
 
 @CrossOrigin(origins = {
-        "http://192.168.1.56:8081",
+        "http://192.168.1.2:8081",
         "exp://192.168.210.193:8081"
 }, allowCredentials = "true")
 @RestController
@@ -36,9 +36,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class RoomController {
 
     private final RoomService roomService;
+    private final PostRepo postRepo;
 
-    public RoomController(RoomService roomService) {
+    public RoomController(RoomService roomService, PostRepo postRepo) {
         this.roomService = roomService;
+        this.postRepo = postRepo;
     }
 
     @GetMapping("/")
@@ -125,6 +127,40 @@ public class RoomController {
 
     
 
+    @PutMapping("likes/{id}")
+    public int postLikes(@PathVariable int id, HttpSession session) {
+        try {
+            User user = (User) session.getAttribute("user");
+            if (user == null) {
+                return -1; // Unauthorized
+            }
+
+            Post post = postRepo.findByid(id);
+            if (post == null) {
+                return -2; // Post not found
+            }
+
+            // Check if user already liked the post
+            boolean alreadyLiked = post.getLikes().contains(user);
+            
+            if (alreadyLiked) {
+                // Unlike the post
+                post.getLikes().remove(user);
+            } else {
+                // Like the post
+                post.getLikes().add(user);
+            }
+            
+            Post savedPost = postRepo.save(post);
+            
+            // Return the updated post data
+            return savedPost.getLikes().size(); // Return the number of likes
+
+        } catch (Exception e) {
+            return -3; // Internal server error
+        }
+    }
+
 
     @PutMapping("/{id}")
     public ResponseEntity<Room> updateRoom(@PathVariable int id, @RequestBody Room roomDetails) {
@@ -166,7 +202,7 @@ public class RoomController {
     @RestController
     @RequestMapping("/rooms") // Shares the same CORS and base path as RoomController
     @CrossOrigin(origins = {
-            "http://192.168.1.56:8081",
+            "http://192.168.1.2:8081",
             "exp://192.168.210.193:8081"
     }, allowCredentials = "true")
     class PostsController {
@@ -228,7 +264,6 @@ public class RoomController {
                 post.setContent(content);
                 System.out.println("Creating post with title: " + title + ", content: " + content);
                 System.out.println("User: " + user.getUsername() + ", Room ID: " + roomId);
-                post.setLikes(0); // Default likes to 0
                 post.setAuthor(user);
                 post.setDate(LocalDateTime.now());
                 post.setRoom(room);

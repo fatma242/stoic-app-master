@@ -43,7 +43,7 @@ export default function Community() {
   // New state for join code
   const [joinCode, setJoinCode] = useState("");
 
-  const API_BASE_URL = "http://192.168.1.56:8100";
+  const API_BASE_URL = "http://192.168.1.2:8100";
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -53,7 +53,6 @@ export default function Community() {
           router.replace("/login");
           return;
         }
-
         setUserId(parseInt(storedUserId));
 
         // Fetch user role from API

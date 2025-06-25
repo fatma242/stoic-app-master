@@ -12,4 +12,6 @@ import org.springframework.stereotype.Repository;
 public interface PostRepo extends JpaRepository<Post, Integer>, JpaSpecificationExecutor<Post> {
     // @Query("SELECT r FROM Post r WHERE r.room_id =")
     List<Post> findByRoomRoomId(int roomId);
+
+    Post findByid(int postId);
 }
