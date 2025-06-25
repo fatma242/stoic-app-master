@@ -33,7 +33,9 @@ interface RoomDTO {
 
 export default function Community() {
   const router = useRouter();
-  const [rooms, setRooms] = useState<RoomDTO[]>([]);
+  const [publicRooms, setPublicRooms] = useState<RoomDTO[]>([]);
+  const [ownerRooms, setOwnerRooms] = useState<RoomDTO[]>([]);
+  const [nonOwnerRooms, setNonOwnerRooms] = useState<RoomDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
@@ -43,11 +45,12 @@ export default function Community() {
   // New state for join code
   const [joinCode, setJoinCode] = useState("");
 
-  const API_BASE_URL = "http://192.168.1.56:8100";
+  const API_BASE_URL = "http://192.168.1.19:8100";
 
   useEffect(() => {
     const loadUserData = async () => {
       try {
+        console.log("useEffect running");
         const storedUserId = await AsyncStorage.getItem("userId");
         if (!storedUserId) {
           router.replace("/login");
@@ -66,8 +69,12 @@ export default function Community() {
         const userData = await response.json();
         setUserRole(userData.userRole);
 
-        // Fetch visible rooms
-        await fetchVisibleRooms();
+        // Fetch both owner and non-owner rooms
+        await fetchOwnerRooms();
+        await fetchNonOwnerRooms();
+        if (userData.userRole !== "ADMIN") {
+          await fetchPublicRooms();
+        }
       } catch (error) {
         Alert.alert("Error", "Failed to load user data");
       } finally {
@@ -77,8 +84,48 @@ export default function Community() {
 
     loadUserData();
   }, []);
+  const fetchPublicRooms = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/rooms/getPub`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch public rooms");
+      const data = await response.json();
+      setPublicRooms(data);
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Could not load public rooms"
+      );
+    }
+  };
+  const filteredPublicRooms = publicRooms.filter(
+    (room) =>
+      room.ownerId !== userId &&
+      !nonOwnerRooms.some((r) => r.roomId === room.roomId) &&
+      !ownerRooms.some((r) => r.roomId === room.roomId)
+  );
 
-  const fetchVisibleRooms = async () => {
+  const fetchOwnerRooms = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/rooms/visible/owner`, {
+        credentials: "include",
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch owner rooms");
+
+      const data = await response.json();
+      console.log("Owner rooms:", data);
+      setOwnerRooms(data);
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Could not load owner rooms"
+      );
+    }
+  };
+
+  const fetchNonOwnerRooms = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/rooms/visible`, {
         credentials: "include",
@@ -87,7 +134,8 @@ export default function Community() {
       if (!response.ok) throw new Error("Failed to fetch rooms");
 
       const data = await response.json();
-      setRooms(data);
+      console.log("Non-owner rooms:", data);
+      setNonOwnerRooms(data);
     } catch (error) {
       Alert.alert(
         "Error",
@@ -107,7 +155,7 @@ export default function Community() {
       const endpoint =
         userRole === "ADMIN"
           ? `${API_BASE_URL}/rooms`
-          : `${API_BASE_URL}/rooms/createPR`;
+          : `${API_BASE_URL}/rooms/createPR/${userId}`;
 
       // Create a complete room object
       const roomData = {
@@ -126,11 +174,14 @@ export default function Community() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Room creation failed: ${response.status} ${errorText}`);
+        throw new Error(
+          `Room creation failed: ${response.status} ${errorText}`
+        );
       }
 
       const newRoom = await response.json();
-      setRooms((prev) => [...prev, newRoom]);
+      // Add to owner rooms since the user created it
+      setOwnerRooms((prev) => [...prev, newRoom]);
       setShowModal(false);
       setRoomName("");
     } catch (error) {
@@ -162,8 +213,9 @@ export default function Community() {
         throw new Error(`Failed to join room: ${response.status} ${errorText}`);
       }
       Alert.alert("Success", "Joined room successfully!");
-      // Optionally refresh room list
-      fetchVisibleRooms();
+      // Refresh both room lists
+      await fetchOwnerRooms();
+      await fetchNonOwnerRooms();
       setJoinCode("");
     } catch (error) {
       Alert.alert(
@@ -209,7 +261,7 @@ export default function Community() {
             style={styles.logo}
           />
           <Text style={styles.greeting}>
-            {userRole === "ADMIN" ? "Admin Community" : "Your Private Rooms"}
+            {userRole === "ADMIN" ? "Admin Community" : "Your Community"}
           </Text>
 
           <TouchableOpacity
@@ -225,45 +277,96 @@ export default function Community() {
           </TouchableOpacity>
 
           {/* New Join Room Section */}
-          <View style={styles.joinRoomContainer}>
-            <TextInput
-              style={styles.joinRoomInput}
-              placeholder="Enter room join code"
-              placeholderTextColor="#888"
-              value={joinCode}
-              onChangeText={setJoinCode}
-            />
-            <TouchableOpacity style={styles.joinRoomButton} onPress={joinRoom}>
-              <Text style={styles.joinRoomButtonText}>Join Room</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.roomsSection}>
-          <Text style={styles.sectionTitle}>
-            {userRole === "ADMIN" ? "Public Rooms" : "Your Rooms"}
-          </Text>
-
-          {rooms.length === 0 ? (
-            <Text style={styles.emptyText}>No rooms available</Text>
-          ) : (
-            rooms.map((room) => (
+          {userRole === "REG" && (
+            <View style={styles.joinRoomContainer}>
+              <TextInput
+                style={styles.joinRoomInput}
+                placeholder="Enter room join code"
+                placeholderTextColor="#888"
+                value={joinCode}
+                onChangeText={setJoinCode}
+              />
               <TouchableOpacity
-                key={room.roomId}
-                style={styles.roomItem}
-                onPress={() => handleRoomPress(room.roomId)}
+                style={styles.joinRoomButton}
+                onPress={joinRoom}
               >
-                <Text style={styles.roomName}>{room.roomName}</Text>
-                <Text style={styles.roomDetails}>
-                  {room.type === "PUBLIC" ? "Public" : "Private"} •
-                  {room.ownerId === userId
-                    ? " Your Room"
-                    : ` Owner: ${room.ownerId}`}
-                </Text>
+                <Text style={styles.joinRoomButtonText}>Join Room</Text>
               </TouchableOpacity>
-            ))
+            </View>
           )}
         </View>
+
+        {userRole !== "ADMIN" && (
+          <>
+            {/* Rooms You Own */}
+            <View style={styles.roomsSection}>
+              <Text style={styles.sectionTitle}>Rooms You Own</Text>
+              {ownerRooms.length === 0 ? (
+                <Text style={styles.emptyText}>No rooms owned yet</Text>
+              ) : (
+                ownerRooms.map((room) => (
+                  <TouchableOpacity
+                    key={room.roomId}
+                    style={[styles.roomItem, styles.ownerRoomItem]}
+                    onPress={() => handleRoomPress(room.roomId)}
+                  >
+                    <View style={styles.roomHeader}>
+                      <Text style={styles.roomName}>{room.roomName}</Text>
+                      <Ionicons name="star" size={16} color="#FFD700" />
+                    </View>
+                    <Text style={styles.roomDetails}>
+                      {room.type === "PUBLIC" ? "Public" : "Private"} • Owner
+                      {room.joinCode && ` • Code: ${room.joinCode}`}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+
+            {/* Joined Rooms */}
+            <View style={styles.roomsSection}>
+              <Text style={styles.sectionTitle}>Joined Rooms</Text>
+              {nonOwnerRooms.length === 0 ? (
+                <Text style={styles.emptyText}>No joined rooms yet</Text>
+              ) : (
+                nonOwnerRooms.map((room) => (
+                  <TouchableOpacity
+                    key={room.roomId}
+                    style={styles.roomItem}
+                    onPress={() => handleRoomPress(room.roomId)}
+                  >
+                    <Text style={styles.roomName}>{room.roomName}</Text>
+                    <Text style={styles.roomDetails}>
+                      {room.type === "PUBLIC" ? "Public" : "Private"} • Owner:{" "}
+                      {room.ownerId}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+
+            {/* Public Rooms */}
+            <View style={styles.roomsSection}>
+              <Text style={styles.sectionTitle}>Public Rooms</Text>
+              {filteredPublicRooms.length === 0 ? (
+                <Text style={styles.emptyText}>No public rooms available</Text>
+              ) : (
+                filteredPublicRooms.map((room) => (
+                  <TouchableOpacity
+                    key={room.roomId}
+                    style={styles.roomItem}
+                    onPress={() => handleRoomPress(room.roomId)}
+                  >
+                    <Text style={styles.roomName}>{room.roomName}</Text>
+                    <Text style={styles.roomDetails}>
+                      Public • Owner: {room.ownerId}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {/* Create Room Modal */}
@@ -276,7 +379,9 @@ export default function Community() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {userRole === "ADMIN" ? "Create Public Room" : "Create Private Room"}
+              {userRole === "ADMIN"
+                ? "Create Public Room"
+                : "Create Private Room"}
             </Text>
 
             <TextInput
@@ -394,6 +499,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 15,
     backgroundColor: "rgba(255,255,255,0.1)",
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
@@ -407,11 +513,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
   },
+  ownerRoomItem: {
+    backgroundColor: "rgba(255,215,0,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255,215,0,0.3)",
+  },
+  roomHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 5,
+  },
   roomName: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "500",
-    marginBottom: 5,
+    flex: 1,
   },
   roomDetails: {
     color: "#ffffffaa",

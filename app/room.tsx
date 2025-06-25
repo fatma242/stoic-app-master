@@ -26,7 +26,7 @@ interface User {
   username: string;
   email: string;
 }
-
+//
 interface Room {
   roomId: number;
   ownerId: number;
@@ -99,7 +99,7 @@ export default function RoomScreen() {
   const [roomUsers, setRoomUsers] = useState<User[]>([]);
 
   const stompClient = useRef<any>(null);
-  const API_BASE_URL = "http://192.168.1.56:8100";
+  const API_BASE_URL = "http://192.168.1.19:8100";
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -120,7 +120,7 @@ export default function RoomScreen() {
 
         // Fetch room details only if roomId is available.
         if (roomId) {
-          await fetchRoom();       // This might use the freshly loaded userId if needed
+          await fetchRoom(); // This might use the freshly loaded userId if needed
           await fetchMessages();
           await fetchPosts();
           await fetchNotifications();
@@ -477,10 +477,9 @@ export default function RoomScreen() {
     if (!roomId) return;
     try {
       console.log("Fetching room users");
-      const response = await fetch(
-        `${API_BASE_URL}/users?roomId=${roomId}`,
-        { credentials: "include" }
-      );
+      const response = await fetch(`${API_BASE_URL}/users?roomId=${roomId}`, {
+        credentials: "include",
+      });
       if (!response.ok) throw new Error("Failed to fetch room users");
 
       const data = await response.json();

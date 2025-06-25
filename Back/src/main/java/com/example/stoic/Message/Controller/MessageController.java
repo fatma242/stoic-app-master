@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @CrossOrigin(origins = {
-        "http://192.168.1.56:8081",
-        "exp://192.168.210.193:8081"
+        "http://192.168.1.19:8081",
+        "exp://192.168.1.19:8081"
 }, allowCredentials = "true")
 @RestController
 @RequiredArgsConstructor
