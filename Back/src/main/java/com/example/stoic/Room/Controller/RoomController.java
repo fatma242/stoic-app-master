@@ -37,10 +37,12 @@ public class RoomController {
 
     private final RoomService roomService;
     private final PostRepo postRepo;
+    private final UserServiceImpl uServiceImpl;
 
-    public RoomController(RoomService roomService, PostRepo postRepo) {
+    public RoomController(RoomService roomService, PostRepo postRepo, UserServiceImpl uServiceImpl) {
         this.roomService = roomService;
         this.postRepo = postRepo;
+        this.uServiceImpl = uServiceImpl;
     }
 
     @GetMapping("/")

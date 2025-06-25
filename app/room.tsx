@@ -26,7 +26,7 @@ interface User {
   username: string;
   email: string;
 }
-//
+
 interface Room {
   roomId: number;
   ownerId: number;
@@ -109,45 +109,6 @@ export default function RoomScreen() {
   const API_BASE_URL = "http://192.168.1.19:8100";
 
   const scrollViewRef = useRef<ScrollView>(null);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load user data
-        const storedUsername = await AsyncStorage.getItem("username");
-        const storedUserId = await AsyncStorage.getItem("userId");
-        console.log("Stored userId:", storedUserId);
-
-        if (storedUserId !== null) {
-          const parsedUserId = parseInt(storedUserId);
-          setUserId(parsedUserId);
-          // Use parsedUserId immediately instead of the state variable userId
-          console.log("Parsed userId:", parsedUserId);
-        }
-
-        // Fetch room details only if roomId is available.
-        if (roomId) {
-          await fetchRoom(); // This might use the freshly loaded userId if needed
-          await fetchMessages();
-          await fetchPosts();
-          await fetchNotifications();
-          connectWebSocket();
-        }
-      } catch (error) {
-        Alert.alert("Error", "Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-
-    return () => {
-      if (stompClient.current) {
-        stompClient.current.deactivate();
-      }
-    };
-  }, [roomId]);
 
   const connectWebSocket = () => {
     const socket = new SockJS(`${API_BASE_URL}/ws-chat`);
