@@ -14,7 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 @Table(name = "room")
 public class Room {
 
@@ -41,20 +41,20 @@ public class Room {
     private String join_code;
 
     @ManyToMany
-    @JoinTable(name = "user_rooms",
-            joinColumns = @JoinColumn(name = "room_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id"))
+    @JoinTable(name = "user_rooms", joinColumns = @JoinColumn(name = "room_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
     private List<User> Users;
 
     // Automatically generate a join code before persisting
     @PrePersist
     public void generateJoinCode() {
         if (this.join_code == null || this.join_code.isEmpty()) {
-            // Generate a random alphanumeric code; take a substring of UUID to keep it short
+            // Generate a random alphanumeric code; take a substring of UUID to keep it
+            // short
             this.join_code = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         }
     }
 
+    //
     public void adduser(User user) {
         if (this.Users == null) {
             this.Users = new ArrayList<>();
