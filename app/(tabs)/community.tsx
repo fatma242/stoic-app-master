@@ -56,7 +56,6 @@ export default function Community() {
           router.replace("/login");
           return;
         }
-
         setUserId(parseInt(storedUserId));
 
         // Fetch user role from API

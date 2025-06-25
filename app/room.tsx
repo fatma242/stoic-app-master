@@ -48,12 +48,16 @@ interface Post {
   id: number;
   title: string;
   content: string;
-  author: {
+  author?: {
     userId: number;
     username: string;
-    // add other fields as needed
+    email?: string; // Backend might be returning email too
+    password?: string; // Backend might be returning password (which it shouldn't)
+    userRole?: string; // Backend might be returning userRole
   };
   date: string;
+  likes: Set<User>;
+  isLikedByUser?: boolean;
 }
 
 interface Notification {
@@ -97,6 +101,9 @@ export default function RoomScreen() {
 
   // Users in the room
   const [roomUsers, setRoomUsers] = useState<User[]>([]);
+
+  // Add this after your existing state declarations
+  const [likingPostIds, setLikingPostIds] = useState<Set<number>>(new Set());
 
   const stompClient = useRef<any>(null);
   const API_BASE_URL = "http://192.168.1.19:8100";
@@ -178,7 +185,7 @@ export default function RoomScreen() {
     stompClient.current.activate();
   };
 
-  const fetchRoom = async () => {
+  const fetchRoom = async (currentUserId: number) => {
     try {
       const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
         credentials: "include",
@@ -191,17 +198,31 @@ export default function RoomScreen() {
       setRoom(data);
       setEditedName(data.roomName);
 
-      const response2 = await fetch(
-        `${API_BASE_URL}/api/users/${data.ownerId}`,
-        {
-          credentials: "include",
-        }
+      // Calculate owner status immediately with the current userId
+      const ownerStatus = currentUserId === data.ownerId;
+      setIsOwner(ownerStatus);
+      console.log(
+        "Owner check: userId",
+        currentUserId,
+        "room.ownerId",
+        data.ownerId,
+        "isOwner:",
+        ownerStatus
       );
-      const data2: User = await response2.json();
-      console.log("Fetched room owner:", data2.userId);
-      console.log("Fetched username:", userId);
-      setIsOwner(userId === data2.userId);
-      console.log("Is owner:", isOwner);
+
+      // Optional: Fetch owner details if needed
+      try {
+        const response2 = await fetch(
+          `${API_BASE_URL}/api/users/${data.ownerId}`,
+          {
+            credentials: "include",
+          }
+        );
+        const ownerData: User = await response2.json();
+        console.log("Fetched room owner:", ownerData.userId);
+      } catch (error) {
+        console.log("Could not fetch owner details:", error);
+      }
     } catch (error) {
       Alert.alert(
         "Error",
@@ -235,9 +256,10 @@ export default function RoomScreen() {
     }
   };
 
-  // --- CHANGED: Use /rooms/posts/room/{roomId} ---
-  const fetchPosts = async () => {
-    if (!roomId) return;
+  const fetchPosts = async (currentUserIdParam?: number) => {
+    const uid = currentUserIdParam ?? userId;
+    if (!roomId || uid === null) return;
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/rooms/posts/room/${roomId}`,
@@ -248,11 +270,23 @@ export default function RoomScreen() {
         return;
       }
       if (!response.ok) throw new Error("Failed to fetch posts");
+
       const data: Post[] = await response.json();
-      console.log(posts);
-      console.log("Fetched posts:");
-      console.log(data);
-      setPosts(data);
+      const processed: Post[] = data.map((post) => {
+        const likesArray = Array.isArray((post as any).likes)
+          ? ((post as any).likes as User[])
+          : [];
+        const likesSet = new Set<number>(likesArray.map((u) => u.userId));
+        const likedByMe = likesSet.has(uid);
+
+        return {
+          ...post,
+          likes: likesSet as unknown as Set<User>,
+          isLikedByUser: likedByMe,
+        };
+      });
+
+      setPosts(processed);
     } catch (error) {
       Alert.alert(
         "Error",
@@ -261,10 +295,10 @@ export default function RoomScreen() {
     }
   };
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (currentUserId: number) => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/notifications?userId=${userId}`,
+        `${API_BASE_URL}/api/notifications?userId=${currentUserId}`,
         {
           credentials: "include",
         }
@@ -284,6 +318,29 @@ export default function RoomScreen() {
         error instanceof Error && error.message
           ? error.message
           : "Could not load notifications"
+      );
+    }
+  };
+
+  const fetchRoomUsers = async () => {
+    if (!roomId) return;
+    try {
+      console.log("Fetching room users");
+      const response = await fetch(`${API_BASE_URL}/users?roomId=${roomId}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch room users");
+
+      const data = await response.json();
+      console.log("Raw room users response:", data);
+      // Extract the array from the HAL response
+      const users = data._embedded?.users;
+      setRoomUsers(Array.isArray(users) ? users : []);
+    } catch (error) {
+      console.error(error);
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Could not load room users"
       );
     }
   };
@@ -318,7 +375,6 @@ export default function RoomScreen() {
     }
   };
 
-  // --- CHANGED: Use /rooms/posts/create ---
   const createPost = async () => {
     if (!newPostTitle.trim() || !newPostContent.trim()) {
       Alert.alert("Error", "Title and content are required");
@@ -441,6 +497,7 @@ export default function RoomScreen() {
   };
 
   const markNotificationsAsRead = async () => {
+    if (!userId) return;
     try {
       await fetch(
         `${API_BASE_URL}/api/notifications/mark-read?userId=${userId}`,
@@ -466,44 +523,129 @@ export default function RoomScreen() {
     }
   };
 
-  // Fetch room users whenever the roomId changes
-  useEffect(() => {
-    if (roomId) {
-      fetchRoomUsers();
-    }
-  }, [roomId]);
-
-  const fetchRoomUsers = async () => {
-    if (!roomId) return;
-    try {
-      console.log("Fetching room users");
-      const response = await fetch(`${API_BASE_URL}/users?roomId=${roomId}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch room users");
-
-      const data = await response.json();
-      console.log("Raw room users response:", data);
-      // Extract the array from the HAL response
-      const users = data._embedded?.users;
-      setRoomUsers(Array.isArray(users) ? users : []);
-    } catch (error) {
-      console.error(error);
-      Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not load room users"
-      );
-    }
-  };
-
-  // Replace or add this effect to re-fetch room users on screen focus
+  // Use useFocusEffect to reload data every time the screen is focused
   useFocusEffect(
     useCallback(() => {
-      if (roomId) {
-        fetchRoomUsers();
+      let isActive = true;
+
+      async function loadData() {
+        try {
+          setLoading(true);
+
+          // First, load user data from AsyncStorage
+          const storedUserId = await AsyncStorage.getItem("userId");
+          const storedUsername = await AsyncStorage.getItem("username");
+
+          if (!storedUserId) {
+            Alert.alert("Error", "User not found. Please log in again.");
+            return;
+          }
+
+          const parsedUserId = parseInt(storedUserId);
+          console.log("Loading user data - userId:", parsedUserId);
+
+          // Set user data immediately
+          setUserId(parsedUserId);
+          if (storedUsername) {
+            setUsername(storedUsername);
+          }
+
+          // Only proceed if we have a valid roomId and the component is still active
+          if (roomId && isActive) {
+            // Fetch room data with the current userId to determine ownership immediately
+            await fetchRoom(parsedUserId);
+            await fetchMessages();
+            // pass the parsedUserId here:
+            await fetchPosts(parsedUserId);
+            await fetchNotifications(parsedUserId);
+            await fetchRoomUsers();
+
+            // Connect WebSocket after all data is loaded
+            if (isActive) {
+              connectWebSocket();
+            }
+          }
+        } catch (error) {
+          console.error("Error loading data:", error);
+          Alert.alert("Error", "Failed to load room data");
+        } finally {
+          if (isActive) {
+            setLoading(false);
+          }
+        }
       }
+
+      loadData();
+
+      // Cleanup function
+      return () => {
+        isActive = false;
+        if (stompClient.current) {
+          stompClient.current.deactivate();
+        }
+      };
     }, [roomId])
   );
+
+  const handlePostPress = (postId: number) => {
+    router.push({
+      pathname: "../post-details",
+      params: { postId: postId.toString(), roomId: roomId?.toString() || "" },
+    });
+  };
+
+  const handleLike = async (postId: number) => {
+    if (likingPostIds.has(postId)) return;
+
+    setLikingPostIds((prev) => new Set(prev).add(postId));
+    try {
+      const response = await fetch(`${API_BASE_URL}/rooms/likes/${postId}`, {
+        method: "PUT",
+        credentials: "include",
+      });
+
+      if (!response.ok) throw new Error("Failed to like post");
+
+      // Backend now returns just the likes count as a number
+      const likesCount = await response.json();
+      console.log("Likes count returned from backend:", likesCount);
+      fetchPosts(); // Refresh posts to get updated likes count
+      // Handle error codes from backend
+      if (likesCount === -1) {
+        throw new Error("Unauthorized");
+      }
+      if (likesCount === -2) {
+        throw new Error("Post not found");
+      }
+      if (likesCount === -3) {
+        throw new Error("Server error");
+      }
+
+      // Update the specific post in the posts array
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                likes: likesCount, // Use the returned likes count
+                isLikedByUser: !post.isLikedByUser, // Toggle the current like status
+              }
+            : post
+        )
+      );
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Could not like post"
+      );
+    } finally {
+      setLikingPostIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(postId);
+        return newSet;
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -520,7 +662,15 @@ export default function RoomScreen() {
       </View>
     );
   }
-
+  // Replace line 605-606 with:
+  console.log(
+    "First post likes count:",
+    posts.length > 0 ? posts[0].likes || 0 : 0
+  );
+  console.log(
+    "Number of posts with likes:",
+    posts.filter((post) => post.likes && post.likes.size > 0).length
+  );
   return (
     <View style={styles.container}>
       <ScrollView
@@ -569,12 +719,13 @@ export default function RoomScreen() {
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Owner:</Text>
             <Text style={styles.detailValue}>
-              {isOwner ? "You" : `Userx #${room.ownerId}`}
+              {isOwner ? "You" : `User #${room.ownerId}`}
             </Text>
           </View>
+
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Room Code:</Text>
-            <Text style={styles.detailValue}>{`${room.join_code}`}</Text>
+            <Text style={styles.detailValue}>{room.join_code}</Text>
             <TouchableOpacity onPress={copyRoomCode} style={styles.copyButton}>
               <Ionicons name="copy" size={18} color="white" />
             </TouchableOpacity>
@@ -586,15 +737,21 @@ export default function RoomScreen() {
               {roomUsers.length === 0 ? (
                 <Text style={styles.detailValue}>No users joined yet</Text>
               ) : (
-                roomUsers.map((user) => (
-                  <Text key={user.userId} style={styles.detailValue}>
-                    {user.username}
+                roomUsers.map((user, index) => (
+                  <Text
+                    key={`user-${user.userId}-${index}`}
+                    style={styles.detailValue}
+                  >
+                    {typeof user === "object" && user !== null
+                      ? user.username || "Unknown User"
+                      : String(user)}
                   </Text>
                 ))
               )}
             </View>
           </View>
 
+          {/* Owner actions - will only show if isOwner is true */}
           {isOwner && (
             <View style={styles.actionsContainer}>
               {isEditing ? (
@@ -680,10 +837,53 @@ export default function RoomScreen() {
           <Text style={styles.emptyText}>No posts yet</Text>
         ) : (
           posts.map((post) => (
-            <View key={post.id} style={styles.postCard}>
-              <Text style={styles.postTitle}>{post.title}</Text>
-              <Text style={styles.postContent}>{post.content}</Text>
-              <Text style={styles.postAuthor}>By: {post.author.username}</Text>
+            <View key={`post-${post.id}`} style={styles.postItem}>
+              <TouchableOpacity
+                onPress={() => handlePostPress(post.id)}
+                style={styles.postContent}
+              >
+                <Text style={styles.postTitle}>{post.title}</Text>
+                <Text style={styles.postContentText}>{post.content}</Text>
+                <Text style={styles.postAuthor}>
+                  By: {post.author?.username || "Unknown Author"}
+                </Text>
+                <Text style={styles.postDate}>
+                  {new Date(post.date).toLocaleDateString()}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Like Button */}
+              <View style={styles.postActions}>
+                <TouchableOpacity
+                  style={styles.likeButton}
+                  onPress={() => handleLike(post.id)}
+                  disabled={likingPostIds.has(post.id)}
+                >
+                  {likingPostIds.has(post.id) ? (
+                    <ActivityIndicator size="small" color="#ef4444" />
+                  ) : (
+                    <Ionicons
+                      name={post.isLikedByUser ? "heart" : "heart-outline"}
+                      size={20}
+                      color={post.isLikedByUser ? "#ef4444" : "#94a3b8"}
+                    />
+                  )}
+
+                  <Text style={styles.likeCount}>{post.likes.size || 0}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.commentButton}
+                  onPress={() => handlePostPress(post.id)}
+                >
+                  <Ionicons
+                    name="chatbubble-outline"
+                    size={20}
+                    color="#94a3b8"
+                  />
+                  <Text style={styles.commentText}>Comment</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))
         )}
@@ -891,6 +1091,12 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 15,
   },
+  postItem: {
+    backgroundColor: "#1e293b",
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+  },
   postTitle: {
     color: "white",
     fontSize: 16,
@@ -898,6 +1104,9 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   postContent: {
+    flex: 1,
+  },
+  postContentText: {
     color: "#cbd5e1",
     marginBottom: 10,
   },
@@ -905,6 +1114,11 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
     fontSize: 12,
     fontStyle: "italic",
+  },
+  postDate: {
+    color: "#94a3b8",
+    fontSize: 12,
+    marginTop: 5,
   },
   postForm: {
     marginTop: 20,
@@ -969,5 +1183,34 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     justifyContent: "center",
     alignItems: "center",
+  },
+  postActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#334155",
+  },
+  likeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 5,
+  },
+  likeCount: {
+    color: "#94a3b8",
+    marginLeft: 5,
+    fontSize: 14,
+  },
+  commentButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 5,
+  },
+  commentText: {
+    color: "#94a3b8",
+    marginLeft: 5,
+    fontSize: 14,
   },
 });
