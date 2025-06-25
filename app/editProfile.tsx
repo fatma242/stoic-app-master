@@ -2,6 +2,7 @@ import BackgroundVideo from "@/components/BackgroundVideo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
+import React from "react";
 import { useEffect, useLayoutEffect, useState } from "react";
 import {
   Alert,
@@ -23,7 +24,7 @@ type User = {
   userRole: string;
 };
 
-const API_BASE_URL = "http://192.168.1.55:8100";
+const API_BASE_URL = "http://192.168.1.6:8100";
 
 export default function EditProfile() {
   const navigation = useNavigation();

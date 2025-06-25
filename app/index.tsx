@@ -3,6 +3,7 @@ import { AntDesign, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import React from "react";
 import { useEffect, useRef } from "react";
 import { Animated, BackHandler, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -60,10 +61,7 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
-      {/* Background Video (kept active) */}
       <BackgroundVideo />
-
-      {/* Rest of the component remains unchanged */}
       <View style={styles.overlay} />
       <Image source={require("../assets/logo.png")} style={styles.logo} />
       <Text style={styles.subtitle}>Your daily mental wellness companion</Text>

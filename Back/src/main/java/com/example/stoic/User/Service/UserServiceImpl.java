@@ -2,7 +2,10 @@ package com.example.stoic.User.Service;
 
 import com.example.stoic.User.Model.User;
 import com.example.stoic.User.Repo.UserRepo;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -66,10 +69,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public User login(String email, String password) {
         User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "User not found"));
+
         if (!user.getPassword().equals(password)) {
-            throw new RuntimeException("Incorrect password");
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Incorrect password");
         }
+
         return user;
     }
 }

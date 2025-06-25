@@ -3,6 +3,7 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import React from "react";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -76,41 +77,52 @@ export default function Login() {
     return valid;
   };
 
-  const API_BASE_URL = "http://localhost:8100";
+  const API_BASE_URL = "http://192.168.1.6:8100";
 
   const handleLogin = async () => {
-    if (!validateForm()) return;
-    setLoading(true);
-    // ← add this line
-    const { username: email, password } = formData;
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/users/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      });
+  if (!validateForm()) return;
+  setLoading(true);
 
-      if (!response.ok) {
-        const err = await response.text();
-        throw new Error(err);
-      }
+  const { username: email, password } = formData;
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/users/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      credentials: "include",
+    });
 
-      const data: { userId: string; email: string } = await response.json();
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log("Login failed - status:", response.status);
+      console.log("Error response:", errorText);
 
-      // store exactly what you got
-      await AsyncStorage.setItem("userId", String(data.userId));
-      await AsyncStorage.setItem("userEmail", data.email);
-
-      // Now both Settings and EditProfile will see a non-null userId
-      router.replace("/home");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Login failed";
-      Alert.alert("Login Error", message);
-    } finally {
-      setLoading(false);
+      const errorMessage = [400, 401].includes(response.status)
+        ? "Incorrect email or password."
+        : "An error occurred. Please try again.";
+      Alert.alert("Login Failed", errorMessage);
+      return;
     }
-  };
+
+    const data: { userId: string; email: string } = await response.json();
+
+    if (!data?.userId || !data?.email) {
+      Alert.alert("Login Failed", "Invalid user data returned from server.");
+      return;
+    }
+
+    await AsyncStorage.setItem("userId", String(data.userId));
+    await AsyncStorage.setItem("userEmail", data.email);
+    router.replace("/home");
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Login failed";
+    Alert.alert("Login Error", message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));

@@ -6,6 +6,7 @@ import { AnswerButtons } from '../components/AnswerButtons';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { AnswerKey, handleEmergencyCall, onboardingFlow } from '../components/OnboardingFlow';
 import i18n from '../constants/i18n';
+import React from 'react';
 
 const styles = StyleSheet.create({
   container: {

@@ -5,6 +5,7 @@ import { useCallback, useState } from 'react';
 import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Bubble, GiftedChat, IMessage } from 'react-native-gifted-chat';
 import chatbotIcon from '../../assets/chatbot.png';
+import React from 'react';
 
 const apiKey = Constants.expoConfig?.extra?.chatbotApiKey;
 const therapyKeywords = ['treatment', 'therapy', 'therapist', 'counseling', 'medication', 'doctor'];

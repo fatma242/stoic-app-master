@@ -3,6 +3,7 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import React from "react";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -19,7 +20,7 @@ import {
   View,
 } from "react-native";
 
-const API_BASE_URL = "http://localhost:8100";
+const API_BASE_URL = "http://192.168.1.6:8100";
 
 export default function SignUp() {
   const router = useRouter();

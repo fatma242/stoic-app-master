@@ -1,3 +1,4 @@
+import BackgroundVideo from "@/components/BackgroundVideo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
@@ -102,7 +103,7 @@ export default function WeeklyCheckIn() {
         return;
       }
 
-      await axios.post("http://192.168.1.55:8100/api/mood-logs", {
+      await axios.post("http://192.168.1.6:8100/api/mood-logs", {
         userId: userId,
         moodScore: selectedMood,
         timestamp: new Date().toISOString(),

@@ -13,8 +13,9 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import BackgroundVideo from "@/components/BackgroundVideo";
 
-const API_BASE_URL = "http://localhost:8100";
+const API_BASE_URL = "http://192.168.1.6:8100";
 
 export default function Settings() {
   const router = useRouter();
@@ -76,14 +77,7 @@ export default function Settings() {
 
   return (
     <View style={styles.container}>
-      <Video
-        source={require("../../assets/background.mp4")}
-        style={styles.backgroundVideo}
-        isMuted
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-      />
+      <BackgroundVideo></BackgroundVideo>
       <View style={styles.overlay} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>

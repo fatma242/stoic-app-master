@@ -1,3 +1,4 @@
+import BackgroundVideo from "@/components/BackgroundVideo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Video } from "expo-av";
@@ -28,7 +29,7 @@ const ProgressScreen = () => {
         }
 
         const response = await axios.get(
-          `http://192.168.1.55:8100/api/mood-logs/${userId}`
+          `http://192.168.1.6:8100/api/mood-logs/${userId}`
         );
         setMoodData(response.data);
         setLoading(false);
