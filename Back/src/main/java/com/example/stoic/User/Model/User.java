@@ -25,8 +25,13 @@ public class User {
     @Column(name = "username", nullable = false)
     private String username;
 
-    @Column(name = "email", nullable = false, unique = true)
-    private String email;
+    @Column(
+    name = "email",
+    nullable = false,
+    unique = true,
+    columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin"
+)
+private String email;
 
     @Column(name = "password", nullable = false)
     private String password;
