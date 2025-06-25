@@ -108,11 +108,7 @@ export default function WeeklyCheckIn() {
         return;
       }
 
-<<<<<<< HEAD
       await axios.post("http://192.168.1.19:8100/api/mood-logs", {
-=======
-      await axios.post("http://192.168.1.2:8100/api/mood-logs", {
->>>>>>> 349eb05d8d6c7a20e92e8fcb1e820f998151b3e3
         userId: userId,
         moodScore: selectedMood,
         timestamp: new Date().toISOString(),

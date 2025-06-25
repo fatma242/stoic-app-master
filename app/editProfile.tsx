@@ -23,11 +23,7 @@ type User = {
   userRole: string;
 };
 
-<<<<<<< HEAD
 const API_BASE_URL = "http://192.168.1.19:8100";
-=======
-const API_BASE_URL = "http://192.168.1.2:8100";
->>>>>>> 349eb05d8d6c7a20e92e8fcb1e820f998151b3e3
 
 export default function EditProfile() {
   const navigation = useNavigation();
