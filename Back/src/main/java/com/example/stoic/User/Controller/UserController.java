@@ -102,7 +102,7 @@ public class UserController {
             HttpSession session) {
         User u = userService.login(req.getEmail(), req.getPassword());
         session.setAttribute("user", u);
-        return ResponseEntity.ok(new LoginResponse(String.valueOf(u.getUserId()), u.getEmail()));
+        return ResponseEntity.ok(new LoginResponse(String.valueOf(u.getUserId()), u.getEmail(), u.getUserRole().name()));
     }
 
     static class UserSessionResponse {

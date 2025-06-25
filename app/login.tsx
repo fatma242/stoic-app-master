@@ -104,7 +104,7 @@ export default function Login() {
       return;
     }
 
-    const data: { userId: string; email: string } = await response.json();
+    const data: { userId: string; email: string, role: string } = await response.json();
 
     if (!data?.userId || !data?.email) {
       Alert.alert("Login Failed", "Invalid user data returned from server.");
@@ -113,6 +113,7 @@ export default function Login() {
 
     await AsyncStorage.setItem("userId", String(data.userId));
     await AsyncStorage.setItem("userEmail", data.email);
+    await AsyncStorage.setItem("UserRole", String(data.role));
     router.replace("/home");
 
   } catch (error) {

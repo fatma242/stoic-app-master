@@ -2,57 +2,69 @@ import BackgroundVideo from '@/components/BackgroundVideo';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Home() {
   const router = useRouter();
+  const [role, setRole] = useState<string | null>(null);
 
-// useEffect(() => {
-//     const onBackPress = () => {
-//       // Prevent going back to login
-//       return true;
-//     };
-//     BackHandler.addEventListener("hardwareBackPress", onBackPress);
+  useEffect(() => {
+    const fetchRole = async () => {
+      const storedRole = await AsyncStorage.getItem('UserRole');
+      setRole(storedRole);
+    };
+    fetchRole();
+  }, []);
 
-//     return () => BackHandler.removeEventListener("hardwareBackPress", onBackPress);
-//   }, []);
+  if (!role) {
+    return (
+      <View style={styles.container}>
+        <Text style={{ color: '#fff', marginTop: 50, textAlign: 'center' }}>
+          Loading...
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {/* Background Video */}
       <BackgroundVideo />
-
-      {/* Overlay */}
       <View style={styles.overlay} />
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Header */}
         <View style={styles.header}>
-          <Image source={require("../../assets/logo.png")} style={styles.logo} />
+          <Image source={require('../../assets/logo.png')} style={styles.logo} />
           <Text style={styles.greeting}>Welcome Back!</Text>
         </View>
 
-        {/* Weekly Check-in */}
-        <LinearGradient
-          colors={['#16A34A', '#0d4215']}
-          style={styles.card}
-        >
-          <Text style={styles.cardTitle}>ًWeekly Check-in</Text>
-          <Text style={styles.cardText}>How are you feeling now?</Text>
-          <TouchableOpacity 
-            style={styles.checkinButton}
-            onPress={() => router.push('/weekly_check-in')}
-          >
-            <Text style={styles.buttonText}>Start Check-in</Text>
-          </TouchableOpacity>
-        </LinearGradient>
+        {/* Weekly Check-in => فقط للمستخدم REG */}
+        {role === 'REG' && (
+          <LinearGradient colors={['#16A34A', '#0d4215']} style={styles.card}>
+            <Text style={styles.cardTitle}>Weekly Check-in</Text>
+            <Text style={styles.cardText}>How are you feeling now?</Text>
+            <TouchableOpacity
+              style={styles.checkinButton}
+              onPress={() => router.push('/weekly_check-in')}
+            >
+              <Text style={styles.buttonText}>Start Check-in</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        )}
 
-        {/* Quick Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Access</Text>
           <View style={styles.grid}>
-            <TouchableOpacity 
+            {/* Community => للجميع */}
+            <TouchableOpacity
               onPress={() => router.push('/community')}
               style={styles.gridItem}
             >
@@ -60,23 +72,30 @@ export default function Home() {
               <Text style={styles.gridText}>Community</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.gridItem}
-              onPress={() => router.push('/chatAI')}
-            >
-              <Ionicons name="chatbubbles" size={32} color="#16A34A" />
-              <Text style={styles.gridText}>AI Chat</Text>
-            </TouchableOpacity>
+            {/* AI Chat => فقط REG */}
+            {role === 'REG' && (
+              <TouchableOpacity
+                style={styles.gridItem}
+                onPress={() => router.push('/chatAI')}
+              >
+                <Ionicons name="chatbubbles" size={32} color="#16A34A" />
+                <Text style={styles.gridText}>AI Chat</Text>
+              </TouchableOpacity>
+            )}
 
-            <TouchableOpacity 
-              style={styles.gridItem}
-              onPress={() => router.push('/progress')}
-            >
-              <Ionicons name="stats-chart" size={32} color="#16A34A" />
-              <Text style={styles.gridText}>Progress</Text>
-            </TouchableOpacity>
+            {/* Progress => فقط REG */}
+            {role === 'REG' && (
+              <TouchableOpacity
+                style={styles.gridItem}
+                onPress={() => router.push('/progress')}
+              >
+                <Ionicons name="stats-chart" size={32} color="#16A34A" />
+                <Text style={styles.gridText}>Progress</Text>
+              </TouchableOpacity>
+            )}
 
-            <TouchableOpacity 
+            {/* Settings => للجميع */}
+            <TouchableOpacity
               style={styles.gridItem}
               onPress={() => router.push('/settings')}
             >
@@ -85,22 +104,6 @@ export default function Home() {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Recent Activity */}
-        <LinearGradient
-          colors={['#16A34A20', '#0d421520']}
-          style={styles.card}
-        >
-          <Text style={styles.cardTitle}>Recent Activity</Text>
-          <View style={styles.activityItem}>
-            <Ionicons name="checkmark-circle" size={24} color="#7CFC00" />
-            <Text style={styles.activityText}>Completed mindfulness exercise</Text>
-          </View>
-          <View style={styles.activityItem}>
-            <Ionicons name="chatbox" size={24} color="#7CFC00" />
-            <Text style={styles.activityText}>New message in Anxiety Support</Text>
-          </View>
-        </LinearGradient>
       </ScrollView>
     </View>
   );

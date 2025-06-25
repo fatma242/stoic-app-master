@@ -120,6 +120,8 @@ export default function SignUp() {
         await AsyncStorage.setItem("userId", String(data.userId));
         console.log("✅ Stored userId:", data.userId);
       }
+      await AsyncStorage.setItem("UserRole", data.role);
+      await AsyncStorage.setItem("onboardingStatus", data.onboardingStatus);
 
       router.replace("/onboarding");
     } catch (error) {
