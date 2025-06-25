@@ -159,11 +159,18 @@ export default function SignUp() {
                     ]}
                   >
                     <MaterialIcons
-                      name={field.includes("email") ? "email" : "lock"}
+                      name={
+                        field === "username"
+                          ? "person"
+                          : field === "email"
+                          ? "email"
+                          : "lock"
+                      }
                       size={24}
                       color="#16A34A"
                       style={styles.icon}
                     />
+
                     <TextInput
                       style={styles.input}
                       placeholder={
@@ -178,13 +185,14 @@ export default function SignUp() {
                         field === "email" ? "email-address" : "default"
                       }
                       secureTextEntry={
-                        field.includes("password") &&
-                        (field === "password"
+                        field === "password"
                           ? !showPassword
-                          : !showConfirmPassword)
+                          : field === "confirmPassword"
+                          ? !showConfirmPassword
+                          : false
                       }
                     />
-                    {field.includes("password") && (
+                    {(field === "password" || field === "confirmPassword") && (
                       <TouchableOpacity
                         onPress={() =>
                           field === "password"
@@ -195,11 +203,11 @@ export default function SignUp() {
                       >
                         <Ionicons
                           name={
-                            (
-                              field === "password"
-                                ? showPassword
-                                : showConfirmPassword
-                            )
+                            field === "password"
+                              ? showPassword
+                                ? "eye-off"
+                                : "eye"
+                              : showConfirmPassword
                               ? "eye-off"
                               : "eye"
                           }
@@ -208,6 +216,7 @@ export default function SignUp() {
                         />
                       </TouchableOpacity>
                     )}
+
                   </View>
                   {errors[field as keyof typeof errors] && (
                     <Text style={styles.errorText}>

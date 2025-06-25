@@ -1,15 +1,20 @@
 package com.example.stoic.User.Controller;
 
+import com.example.stoic.User.Model.OnboardingStatus;
 import com.example.stoic.User.Model.User;
 import com.example.stoic.User.DTO.LoginRequest;
 import com.example.stoic.User.DTO.LoginResponse;
 import com.example.stoic.User.Model.UserRole;
 import com.example.stoic.User.Service.UserServiceImpl;
 import jakarta.servlet.http.HttpSession;
+import lombok.Data;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 @CrossOrigin(origins = {
         "http://192.168.1.6:8081",
@@ -63,6 +68,7 @@ public class UserController {
         user.setEmail(userDetails.getEmail());
         user.setUserRole(userDetails.getUserRole());
         user.setPassword(userDetails.getPassword());
+        user.setStatus(userDetails.getStatus());
         User updatedUser = userService.update(user);
         return new ResponseEntity<>(updatedUser, HttpStatus.OK);
     }
@@ -71,6 +77,7 @@ public class UserController {
     public ResponseEntity<?> register(@RequestBody User user, HttpSession session) {
         try {
             user.setUserRole(UserRole.REG); // default role
+            user.setOnboardingStatus(OnboardingStatus.NORMAL); // default status
             User registeredUser = userService.register(user);
             // Create session immediately after registration
             session.setAttribute("user", registeredUser);
@@ -80,7 +87,10 @@ public class UserController {
                     registeredUser.getUserId(),
                     registeredUser.getUsername(),
                     registeredUser.getEmail(),
-                    registeredUser.getUserRole().name()));
+                    registeredUser.getUserRole().name(),
+                    registeredUser.getOnboardingStatus().name()
+            ));
+
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
@@ -119,13 +129,15 @@ public class UserController {
         public String username;
         public String email;
         public String role;
+        public String onboardingStatus;
 
-        public RegisterResponse(String message, int userId, String username, String email, String role) {
+        public RegisterResponse(String message, int userId, String username, String email, String role, String onboardingStatus) {
             this.message = message;
             this.userId = userId;
             this.username = username;
             this.email = email;
             this.role = role;
+            this.onboardingStatus = onboardingStatus;
         }
     }
 
@@ -134,4 +146,45 @@ public class UserController {
         session.invalidate();
         return ResponseEntity.ok("Logged out");
     }
+
+    @PostMapping("/submit-status")
+    public ResponseEntity<?> submitUserStatus(@RequestBody StatusRequest statusRequest) {
+        System.out.println("📥 RECEIVED submit-status for user " + statusRequest.getUserId() + " with status "
+                + statusRequest.getStatus());
+
+        try {
+            Integer userId = statusRequest.getUserId();
+            OnboardingStatus status;
+
+            try {
+                status = OnboardingStatus.valueOf(statusRequest.getStatus().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body("Invalid status value: " + statusRequest.getStatus());
+            }
+
+            userService.submitStatus(userId, status);
+            return ResponseEntity.ok("Status updated successfully");
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @Data
+    static class StatusRequest {
+        private int userId;
+        private String status;
+    }
+
+    @GetMapping("/status/{userId}")
+    public ResponseEntity<OnboardingStatus> getStatus(@PathVariable int userId) {
+        try {
+            OnboardingStatus status = userService.getStatus(userId);
+            return ResponseEntity.ok(status);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
 }

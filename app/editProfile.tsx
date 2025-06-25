@@ -2,8 +2,7 @@ import BackgroundVideo from "@/components/BackgroundVideo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React from "react";
-import { useEffect, useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -14,7 +13,7 @@ import {
   View,
 } from "react-native";
 
-// Define the User type
+
 type User = {
   id: string;
   userId?: string;
@@ -22,6 +21,7 @@ type User = {
   email: string;
   password: string;
   userRole: string;
+  status?: string;
 };
 
 const API_BASE_URL = "http://192.168.1.6:8100";
@@ -34,6 +34,8 @@ export default function EditProfile() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
+
+  const [status, setStatus] = useState("");
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -51,39 +53,35 @@ export default function EditProfile() {
           });
           return;
         }
-        // Convert to integer and guard against NaN
+
         const userIdint = parseInt(userID, 10);
         if (isNaN(userIdint)) {
           Alert.alert("Error", "Stored user ID is not a valid number");
           return;
         }
-        // Fetch *only* the current user
+
         const res = await fetch(`${API_BASE_URL}/api/users/${userIdint}`, {
           credentials: "include",
         });
-        if (!res.ok) {
-          throw new Error(`Server returned status ${res.status}`);
-        }
+
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
 
         const currentUser: User = await res.json();
-        console.log("Fetched user:", currentUser);
+        console.log("✅ Fetched user:", currentUser);
 
         setUser(currentUser);
         setName(currentUser.username);
         setEmail(currentUser.email);
+        setStatus(currentUser.status || "");
 
-        // ensure we keep the ID in AsyncStorage too
+        await AsyncStorage.setItem("userStatus", currentUser.status || "");
+
         if (currentUser.userId) {
           await AsyncStorage.setItem("userId", String(currentUser.userId));
-        } else {
-          console.warn("⚠️ userId missing on payload:", currentUser);
         }
       } catch (error) {
         console.error("❌ fetchUser failed:", error);
-        Alert.alert(
-          "Error",
-          "Failed to fetch user data. See console for details."
-        );
+        Alert.alert("Error", "Failed to fetch user data.");
       }
     };
 
@@ -122,6 +120,7 @@ export default function EditProfile() {
         email,
         password: newPassword || user?.password || "",
         userRole: user?.userRole || "REG",
+        status: status, 
       };
 
       const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {

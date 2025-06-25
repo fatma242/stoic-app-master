@@ -7,6 +7,8 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import { AnswerKey, handleEmergencyCall, onboardingFlow } from '../components/OnboardingFlow';
 import i18n from '../constants/i18n';
 import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
 const styles = StyleSheet.create({
   container: {
@@ -14,13 +16,6 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: 'center',
     backgroundColor: 'transparent',
-  },
-  backgroundVideo: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    bottom: 0,
-    right: 0,
   },
   overlay: {
     flex: 1,
@@ -105,6 +100,7 @@ export default function Onboarding() {
   const [assessmentResults, setAssessmentResults] = useState<Record<string, string>>({});
   const [key, setKey] = useState(0);
   const [history, setHistory] = useState<AnswerKey[]>([]);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   useEffect(() => {
     global.reloadApp = () => setKey(prev => prev + 1);
@@ -112,6 +108,27 @@ export default function Onboarding() {
       global.reloadApp = undefined;
     };
   }, []);
+
+  const submitStatus = async (status: string) => {
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      if (!userId) throw new Error('User ID not found in storage');
+
+      const res = await axios.post(
+        'http://192.168.1.6:8100/api/users/submit-status',
+        {
+          userId: parseInt(userId, 10),
+          status: status,
+        },
+        { withCredentials: true }
+      );
+
+      console.log('✅ Status submitted:', res.data);
+    } catch (error) {
+      console.error('❌ Error submitting status:', error);
+    }
+  };
+
 
   const handleAnswer = (answer: string) => {
     const node = onboardingFlow[currentNode];
@@ -122,7 +139,6 @@ export default function Onboarding() {
       [currentNode]: answer
     }));
 
-    // Add current node to history before moving forward
     setHistory(prev => [...prev, currentNode]);
 
     if (nextNode === 'RESOURCES') {
@@ -142,40 +158,63 @@ export default function Onboarding() {
   const handleBack = () => {
     if (history.length > 0) {
       const previousNode = history[history.length - 1];
-      setHistory(prev => prev.slice(0, -1)); // Remove current node from history
+      setHistory(prev => prev.slice(0, -1));
       setCurrentNode(previousNode);
     }
   };
 
-  const handleSkip = () => {
-    // Skip to next question in the flow
-    const node = onboardingFlow[currentNode];
-    const firstAnswerKey = Object.keys(node.answers)[0];
-    const nextNode = node.answers[firstAnswerKey];
-    
-    if (typeof nextNode === 'string') {
-      setHistory(prev => [...prev, currentNode]);
-      setCurrentNode(nextNode as AnswerKey);
-    }
+  const handleSkip = async () => {
+    if (hasSubmitted) return;
+
+    const status = 'normal';
+    setCurrentNode('normal_resources');
+    await submitStatus(status);
+    setHasSubmitted(true);
+
+    setTimeout(() => {
+      router.replace('/login');
+    }, 3000);
   };
 
-  const showResources = () => {
-    const mainConditionEntry = Object.entries(assessmentResults)
-      .find(([key, value]) => value === 'yes' && key === 'initial');
-    
-    const mainCondition = mainConditionEntry?.[1] as keyof typeof onboardingFlow | undefined;
+  const showResources = async () => {
+    if (hasSubmitted) return;
 
-    if (mainCondition === 'hopeless_q5') {
+    let status = 'normal';
+
+    const yesAnswers = Object.entries(assessmentResults)
+      .filter(([_, value]) => value === 'yes')
+      .map(([key]) => key);
+
+    if (yesAnswers.includes('hopeless_q5')) {
+      status = 'SUICIDAL';
       setCurrentNode('crisis_resources');
-    } else if (mainCondition) {
-      const resourceNode = `${mainCondition}_resources` as AnswerKey;
-      setCurrentNode(resourceNode);
+    } else if (yesAnswers.includes('disconnected_q5')) {
+      status = 'DEPRESSION';
+      setCurrentNode('disconnected_resources');
+    } else if (yesAnswers.includes('low_energy_q5')) {
+      status = 'STRESS';
+      setCurrentNode('low_energy_resources');
+    } else if (yesAnswers.includes('overwhelmed_q5')) {
+      status = 'ANXIETY';
+      setCurrentNode('overwhelmed_resources');
+    } else {
+      status = 'NORMAL';
+      setCurrentNode('normal_resources');
     }
+
+
+    console.log("📤 Submitting user status:", status); 
+    await submitStatus(status);
+    setHasSubmitted(true);
+
+    setTimeout(() => {
+      router.replace('/login');
+    }, 3000);
   };
 
   const renderQuestion = () => {
     const node = onboardingFlow[currentNode];
-    
+
     if (node.resourcesKey) {
       return (
         <View style={{ alignItems: 'center' }}>
@@ -203,11 +242,10 @@ export default function Onboarding() {
           onAnswer={handleAnswer}
           translationPrefix={currentNode === 'initial' ? 'onboarding.moodOptions' : 'onboarding.answers'}
         />
-        
+
         <View style={styles.navigationContainer}>
-          {/* Show Back button only if not on initial screen and has history */}
           {(currentNode !== 'initial' && history.length > 0) ? (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.navButton}
               onPress={handleBack}
             >
@@ -216,11 +254,10 @@ export default function Onboarding() {
               </Text>
             </TouchableOpacity>
           ) : (
-            <View style={styles.navButton} /> // Empty spacer to maintain layout
+            <View style={styles.navButton} />
           )}
-          
-          {/* Skip button - shows different text on initial screen */}
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[styles.navButton, styles.skipButton]}
             onPress={handleSkip}
           >
@@ -241,7 +278,6 @@ export default function Onboarding() {
           <View style={{ marginTop: 20 }}>
             <LanguageSwitcher />
           </View>
-
           <ScrollView contentContainerStyle={styles.scrollContainer}>
             <View style={extraStyles.contentContainer}>
               <Text style={extraStyles.welcomeText}>

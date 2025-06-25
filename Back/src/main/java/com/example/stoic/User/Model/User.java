@@ -13,7 +13,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 @Entity
 @Table(name = "users")
 public class User {
@@ -25,13 +25,8 @@ public class User {
     @Column(name = "username", nullable = false)
     private String username;
 
-    @Column(
-    name = "email",
-    nullable = false,
-    unique = true,
-    columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin"
-)
-private String email;
+    @Column(name = "email", nullable = false, unique = true, columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin")
+    private String email;
 
     @Column(name = "password", nullable = false)
     private String password;
@@ -39,9 +34,22 @@ private String email;
     @Enumerated(EnumType.STRING)
     @Column(name = "userRole", columnDefinition = "ENUM('REG','ADMIN') DEFAULT 'REG'")
     private UserRole userRole;
-    
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "onboarding_status", columnDefinition = "ENUM('NORMAL', 'STRESS', 'ANXIETY', 'DEPRESSION', 'SUICIDAL')")
+    private OnboardingStatus onboardingStatus;
+
+    public void setStatus(OnboardingStatus status) {
+        this.onboardingStatus = status;
+    }
+    public OnboardingStatus getStatus() {
+        return onboardingStatus;
+    }
+
     @JsonIgnore
     @ManyToMany(mappedBy = "Users")
     private List<Room> rooms;
+
+    
 
 }

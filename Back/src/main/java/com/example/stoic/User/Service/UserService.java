@@ -1,5 +1,6 @@
 package com.example.stoic.User.Service;
 
+import com.example.stoic.User.Model.OnboardingStatus;
 import com.example.stoic.User.Model.User;
 
 import java.util.List;
@@ -13,5 +14,7 @@ public interface UserService {
     User update(User user);
     User register(User user);
     User login(String email, String password);
+    void submitStatus(int userId, OnboardingStatus moodKey);
+    OnboardingStatus getStatus(int userId);
 
 }
