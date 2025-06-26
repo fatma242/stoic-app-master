@@ -18,7 +18,7 @@ function connect() {
   
   // Use the correct WebSocket URL (using the server.port from application.properties)
 <<<<<<< HEAD
-  ws = new WebSocket(`ws://192.168.1.19:8100/hello`);
+  ws = new WebSocket(`ws://192.168.1.2:8100/hello`);
 =======
   ws = new WebSocket(`ws://192.168.1.2:8100/hello`);
 >>>>>>> 349eb05d8d6c7a20e92e8fcb1e820f998151b3e3

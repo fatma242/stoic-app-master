@@ -1,13 +1,16 @@
 package com.example.stoic.Post.Model;
 
+import com.example.stoic.Post.Repo.PostRepo;
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.User.Model.User;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.google.api.services.storage.Storage.BucketAccessControls.Get;
 
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +22,8 @@ import java.util.Set;
 @Table(name = "post")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Post {
+
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(unique = true, nullable = false, name = "id")
@@ -44,9 +49,28 @@ public class Post {
     joinColumns = @JoinColumn(name = "post_id"),
     inverseJoinColumns = @JoinColumn(name = "user_id")
 )
-private Set<User> likes = new HashSet<>();
+private List<User> likes = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)
     private Room room;
+
+
+    public boolean Getlikes(User user) {
+        for (User u : likes) {
+            if (u.getUserId() == user.getUserId()) {
+                return true;
+            }
+        }
+        return false;
+
+    }
+
+
+    public List<User> removelike(User user) {
+        System.out.println("Removing like from user: " + likes.getFirst().getUsername());
+        likes.remove(user);
+        System.out.println("Post likes after unliking: " + likes.getFirst().getUsername());
+        return likes;
+    }
 }

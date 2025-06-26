@@ -4,6 +4,7 @@ import com.example.stoic.Room.Model.Room;
 import com.example.stoic.Room.Repo.RoomRepo;
 import com.example.stoic.Room.dto.RoomDTO;
 import com.example.stoic.User.Model.User;
+import com.example.stoic.User.Repo.UserRepo;
 
 import org.springframework.stereotype.Service;
 
@@ -15,9 +16,10 @@ import java.util.stream.Collectors;
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepo roomRepo;
-
-    public RoomServiceImpl(RoomRepo roomRepo) {
+    private final UserRepo userRepo;
+    public RoomServiceImpl(RoomRepo roomRepo, UserRepo userRepo ) {
         this.roomRepo = roomRepo;
+        this.userRepo = userRepo;
     }
 
     @Override
@@ -35,6 +37,23 @@ public class RoomServiceImpl implements RoomService {
             return roomRepo.findUsersByRoomId(id);
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch users by room id: " + id, e);
+        }
+    }
+
+    @Override
+    public void removeUserFromRoom(int userId, int roomId) {
+        try {
+            Room room = roomRepo.findById(roomId)
+                    .orElseThrow(() -> new RuntimeException("Room not found with id: " + roomId));
+            User user = userRepo.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+            room.removeUser(user);
+            System.out.println("User removed from room successfully");
+            roomRepo.save(room);
+
+        } catch (Exception e) {
+            System.err.println("Error removing user from room: " + e.getMessage());
+            throw new RuntimeException("Failed to remove user from room", e);
         }
     }
 

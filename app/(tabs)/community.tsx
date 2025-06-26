@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -45,44 +46,48 @@ export default function Community() {
   // New state for join code
   const [joinCode, setJoinCode] = useState("");
 
-  const API_BASE_URL = "http://192.168.1.19:8100";
+  const API_BASE_URL = "http://192.168.1.2:8100";
 
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        console.log("useEffect running");
-        const storedUserId = await AsyncStorage.getItem("userId");
-        if (!storedUserId) {
-          router.replace("/login");
-          return;
-        }
-        setUserId(parseInt(storedUserId));
-
-        // Fetch user role from API
-        const response = await fetch(
-          `${API_BASE_URL}/api/users/${storedUserId}`,
-          {
-            credentials: "include",
+  // Replace the existing useEffect with useFocusEffect to refresh data when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadUserData = async () => {
+        try {
+          console.log("useFocusEffect running");
+          const storedUserId = await AsyncStorage.getItem("userId");
+          if (!storedUserId) {
+            router.replace("/login");
+            return;
           }
-        );
-        const userData = await response.json();
-        setUserRole(userData.userRole);
+          setUserId(parseInt(storedUserId));
 
-        // Fetch both owner and non-owner rooms
-        await fetchOwnerRooms();
-        await fetchNonOwnerRooms();
-        if (userData.userRole !== "ADMIN") {
-          await fetchPublicRooms();
+          // Fetch user role from API
+          const response = await fetch(
+            `${API_BASE_URL}/api/users/${storedUserId}`,
+            {
+              credentials: "include",
+            }
+          );
+          const userData = await response.json();
+          setUserRole(userData.userRole);
+
+          // Fetch both owner and non-owner rooms
+          await fetchOwnerRooms();
+          await fetchNonOwnerRooms();
+          if (userData.userRole !== "ADMIN") {
+            await fetchPublicRooms();
+          }
+        } catch (error) {
+          Alert.alert("Error", "Failed to load user data");
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        Alert.alert("Error", "Failed to load user data");
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
 
-    loadUserData();
-  }, []);
+      loadUserData();
+    }, [])
+  );
+
   const fetchPublicRooms = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/rooms/getPub`, {
