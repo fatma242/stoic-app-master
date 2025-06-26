@@ -101,6 +101,28 @@ export default function Settings() {
         </LinearGradient>
 
         <LinearGradient
+          colors={['#16A34A', '#0d4215']}
+          style={styles.card}
+        >
+          <Text style={styles.cardTitle}>App Information</Text>
+          
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Version</Text>
+            <Text style={styles.infoValue}>1.0.0</Text>
+          </View>
+
+          <TouchableOpacity style={styles.infoItem} onPress={() => router.push('/PrivacyPolicy')}>
+            <Text style={styles.infoLabel}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.infoItem} onPress={() => router.push('/TermsOfService')}>
+            <Text style={styles.infoLabel}>Terms of Service</Text>
+            <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
+          </TouchableOpacity>
+        </LinearGradient>
+
+        <LinearGradient
           colors={["#FF4444", "#8B0000"]}
           style={[styles.card, { marginTop: 20 }]}
         >
@@ -151,6 +173,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 15,
   },
+  infoItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: '#ffffff20',
+    },
+    infoLabel: {
+      color: '#fff',
+      fontSize: 16,
+    },
+    infoValue: {
+      color: '#7CFC00',
+      fontSize: 16,
+    },
   dangerText: {
     color: "#FFF",
     marginLeft: 15,

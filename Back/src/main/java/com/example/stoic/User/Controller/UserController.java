@@ -154,13 +154,7 @@ public class UserController {
 
         try {
             Integer userId = statusRequest.getUserId();
-            OnboardingStatus status;
-
-            try {
-                status = OnboardingStatus.valueOf(statusRequest.getStatus().toUpperCase());
-            } catch (IllegalArgumentException e) {
-                return ResponseEntity.badRequest().body("Invalid status value: " + statusRequest.getStatus());
-            }
+            OnboardingStatus status = statusRequest.getStatus();
 
             userService.submitStatus(userId, status);
             return ResponseEntity.ok("Status updated successfully");
@@ -174,7 +168,7 @@ public class UserController {
     @Data
     static class StatusRequest {
         private int userId;
-        private String status;
+        private OnboardingStatus status;
     }
 
     @GetMapping("/status/{userId}")
