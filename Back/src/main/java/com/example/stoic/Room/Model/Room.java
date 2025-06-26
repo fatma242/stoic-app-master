@@ -1,6 +1,8 @@
 package com.example.stoic.Room.Model;
 
+import com.example.stoic.Post.Model.Post;
 import com.example.stoic.User.Model.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,8 +35,11 @@ public class Room {
     @Column(name = "type")
     private RoomType type;
 
+    @JsonIgnore
     @Column(name = "created_at")
     private Date createdAt;
+    @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Post> posts = new ArrayList<>();
 
     // New unique join code for users
     @Column(name = "join_code", unique = true, updatable = false, nullable = false)

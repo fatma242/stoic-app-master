@@ -18,7 +18,7 @@ import { useRouter } from "expo-router";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import Constants from "expo-constants";
 export default function Login() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -76,7 +76,7 @@ export default function Login() {
     return valid;
   };
 
-  const API_BASE_URL = "http://192.168.1.19:8100";
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   const handleLogin = async () => {
     if (!validateForm()) return;

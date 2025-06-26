@@ -16,3 +16,5 @@ logging.level.org.hibernate.SQL=DEBUG
 
 
 server.port=8100
+ALLOWED_ORIGIN=http://192.168.1.19:8081
+expo_url=exp://192.168.1.19:8081

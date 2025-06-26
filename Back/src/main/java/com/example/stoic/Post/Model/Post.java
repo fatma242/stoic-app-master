@@ -3,6 +3,7 @@ package com.example.stoic.Post.Model;
 import com.example.stoic.Post.Repo.PostRepo;
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.User.Model.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.api.services.storage.Storage.BucketAccessControls.Get;
 
@@ -20,9 +21,8 @@ import java.util.Set;
 @AllArgsConstructor
 @Entity
 @Table(name = "post")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class Post {
-
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -43,18 +43,13 @@ public class Post {
     private User author;
 
     // @Column(name = "likes", nullable = true)
-  @ManyToMany
-@JoinTable(
-    name = "post_likes",
-    joinColumns = @JoinColumn(name = "post_id"),
-    inverseJoinColumns = @JoinColumn(name = "user_id")
-)
-private List<User> likes = new ArrayList<>();
-
+    @ManyToMany
+    @JoinTable(name = "post_likes", joinColumns = @JoinColumn(name = "post_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
+    private List<User> likes = new ArrayList<>();
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)
     private Room room;
-
 
     public boolean Getlikes(User user) {
         for (User u : likes) {
@@ -65,7 +60,6 @@ private List<User> likes = new ArrayList<>();
         return false;
 
     }
-
 
     public List<User> removelike(User user) {
         System.out.println("Removing like from user: " + likes.getFirst().getUsername());

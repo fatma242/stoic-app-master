@@ -14,7 +14,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect } from "@react-navigation/native";
-
+import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SockJS from "sockjs-client";
@@ -104,7 +104,7 @@ export default function RoomScreen() {
   const [refreshCount, setRefreshCount] = useState(0);
 
   const stompClient = useRef<any>(null);
-  const API_BASE_URL = "http://192.168.1.19:8100";
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   const scrollViewRef = useRef<ScrollView>(null);
 

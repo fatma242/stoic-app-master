@@ -13,7 +13,9 @@ import com.example.stoic.User.Model.User;
 import com.example.stoic.User.Model.UserRole;
 import com.example.stoic.User.Service.UserServiceImpl;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpSession;
+import jakarta.transaction.Transactional;
 
 import org.checkerframework.checker.units.qual.s;
 import org.springframework.http.HttpStatus;
@@ -26,18 +28,18 @@ import java.util.List;
 import java.util.Map;
 
 @CrossOrigin(origins = {
-        "http://192.168.1.19:8081",
-        "exp://192.168.1.19:8081"
+        "${ALLOWED_ORIGIN}",
+        "${expo_url}"
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/rooms")
 public class RoomController {
 
-    private final RoomService roomService;
+    private final RoomServiceImpl roomService;
     private final PostRepo postRepo;
     private final UserServiceImpl uServiceImpl;
 
-    public RoomController(RoomService roomService, PostRepo postRepo, UserServiceImpl uServiceImpl) {
+    public RoomController(RoomServiceImpl roomService, PostRepo postRepo, UserServiceImpl uServiceImpl) {
         this.roomService = roomService;
         this.postRepo = postRepo;
         this.uServiceImpl = uServiceImpl;
@@ -174,7 +176,6 @@ public class RoomController {
                 // Like the post
                 post.getLikes().add(user);
             }
-
             Post savedPost = postRepo.save(post);
 
             // Return the updated post data
@@ -197,7 +198,7 @@ public class RoomController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRoom(@PathVariable int id) {
-        roomService.deleteRoomById(id);
+        roomService.deleteRoom(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
@@ -244,8 +245,8 @@ public class RoomController {
     @RestController
     @RequestMapping("/rooms") // Shares the same CORS and base path as RoomController
     @CrossOrigin(origins = {
-            "http://192.168.1.19:8081",
-            "exp://192.168.1.19:8081"
+            "${ALLOWED_ORIGIN}",
+            "${expo_url}"
     }, allowCredentials = "true")
     class PostsController {
 

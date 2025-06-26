@@ -6,6 +6,9 @@ import com.example.stoic.Room.dto.RoomDTO;
 import com.example.stoic.User.Model.User;
 import com.example.stoic.User.Repo.UserRepo;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
+
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,7 +20,8 @@ public class RoomServiceImpl implements RoomService {
 
     private final RoomRepo roomRepo;
     private final UserRepo userRepo;
-    public RoomServiceImpl(RoomRepo roomRepo, UserRepo userRepo ) {
+
+    public RoomServiceImpl(RoomRepo roomRepo, UserRepo userRepo) {
         this.roomRepo = roomRepo;
         this.userRepo = userRepo;
     }
@@ -38,6 +42,14 @@ public class RoomServiceImpl implements RoomService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch users by room id: " + id, e);
         }
+    }
+
+    @Transactional
+    public void deleteRoom(int roomId) {
+        Room room = roomRepo.findById(roomId)
+                .orElseThrow(() -> new EntityNotFoundException("Room not found"));
+        roomRepo.delete(room);
+        // because of CascadeType.ALL + orphanRemoval, all posts will be removed too
     }
 
     @Override
