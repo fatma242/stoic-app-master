@@ -17,6 +17,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 
 // Type definitions
 type RoomType = "PUBLIC" | "PRIVATE";
@@ -43,6 +44,7 @@ export default function Community() {
   const [showModal, setShowModal] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+
   // New state for join code
   const [joinCode, setJoinCode] = useState("");
 
@@ -309,20 +311,74 @@ export default function Community() {
                 <Text style={styles.emptyText}>No rooms owned yet</Text>
               ) : (
                 ownerRooms.map((room) => (
-                  <TouchableOpacity
+                  <View
                     key={room.roomId}
-                    style={[styles.roomItem, styles.ownerRoomItem]}
-                    onPress={() => handleRoomPress(room.roomId)}
+                    style={[
+                      styles.roomItem,
+                      styles.ownerRoomItem,
+                      {
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      },
+                    ]}
                   >
-                    <View style={styles.roomHeader}>
-                      <Text style={styles.roomName}>{room.roomName}</Text>
-                      <Ionicons name="star" size={16} color="#FFD700" />
-                    </View>
-                    <Text style={styles.roomDetails}>
-                      {room.type === "PUBLIC" ? "Public" : "Private"} • Owner
-                      {room.joinCode && ` • Code: ${room.joinCode}`}
-                    </Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ flex: 1 }}
+                      onPress={() => handleRoomPress(room.roomId)}
+                    >
+                      <View style={styles.roomHeader}>
+                        <Text style={styles.roomName}>{room.roomName}</Text>
+                        <Ionicons name="star" size={16} color="#FFD700" />
+                      </View>
+                      <Text style={styles.roomDetails}>
+                        {room.type === "PUBLIC" ? "Public" : "Private"} • Owner
+                        {room.joinCode && ` • Code: ${room.joinCode}`}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        Alert.alert(
+                          "Delete Room",
+                          "Are you sure you want to delete this room? This will delete all posts in the room.",
+                          [
+                            { text: "Cancel", style: "cancel" },
+                            {
+                              text: "Delete",
+                              style: "destructive",
+                              onPress: async () => {
+                                try {
+                                  const response = await fetch(
+                                    `${API_BASE_URL}/rooms/${room.roomId}`,
+                                    {
+                                      method: "DELETE",
+                                      credentials: "include",
+                                    }
+                                  );
+                                  if (!response.ok)
+                                    throw new Error("Failed to delete room");
+                                  setOwnerRooms((prev) =>
+                                    prev.filter((r) => r.roomId !== room.roomId)
+                                  );
+                                  Alert.alert("Success", "Room deleted!");
+                                } catch (error) {
+                                  Alert.alert(
+                                    "Error",
+                                    error instanceof Error
+                                      ? error.message
+                                      : "Could not delete room"
+                                  );
+                                }
+                              },
+                            },
+                          ]
+                        );
+                      }}
+                      style={{ marginLeft: 10, padding: 8 }}
+                    >
+                      <Ionicons name="trash" size={22} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
                 ))
               )}
             </View>

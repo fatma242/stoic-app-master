@@ -6,6 +6,9 @@ import com.example.stoic.Room.dto.RoomDTO;
 import com.example.stoic.User.Model.User;
 import com.example.stoic.User.Repo.UserRepo;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
+
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -39,6 +42,23 @@ public class RoomServiceImpl implements RoomService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch users by room id: " + id, e);
         }
+    }
+
+    @Override
+    @Transactional
+    public void deleteRoom(int roomId) {
+        Room room = roomRepo.findById(roomId)
+            .orElseThrow(() -> new EntityNotFoundException("Room not found: " + roomId));
+
+        // 1) for each post in the room, clear its likes & comments so that
+        //    Hibernate doesn’t attempt to null-out author or orphan them
+        room.getPosts().forEach(post -> {
+            post.getLikes().clear();
+            post.getComments().clear();
+        });
+
+        // 2) now remove the room (will cascade‐remove posts)
+        roomRepo.delete(room);
     }
 
     @Override

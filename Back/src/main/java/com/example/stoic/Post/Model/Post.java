@@ -4,6 +4,7 @@ import com.example.stoic.Comment.Model.Comment;
 import com.example.stoic.Post.Repo.PostRepo;
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.User.Model.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.api.services.storage.Storage.BucketAccessControls.Get;
 
@@ -28,7 +29,7 @@ import org.hibernate.annotations.OnDeleteAction;
 public class Post {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(unique = true, nullable = false, name = "id")
     private int id;
 
@@ -41,7 +42,7 @@ public class Post {
     @Column(name = "title", nullable = false)
     private String title;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User author;
 
@@ -55,8 +56,15 @@ public class Post {
     @JoinTable(name = "post_likes", joinColumns = @JoinColumn(name = "post_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
     private List<User> likes = new ArrayList<>();
 
+    // @ManyToOne(fetch = FetchType.LAZY)
+    // @JoinColumn(name = "room_id", nullable = false)
+    // @JsonIgnore
+    // private Room room;
+
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Room room;
 
     public boolean Getlikes(User user) {
@@ -70,9 +78,7 @@ public class Post {
     }
 
     public List<User> removelike(User user) {
-        System.out.println("Removing like from user: " + likes.getFirst().getUsername());
         likes.remove(user);
-        System.out.println("Post likes after unliking: " + likes.getFirst().getUsername());
         return likes;
     }
 }

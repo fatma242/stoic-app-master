@@ -14,4 +14,9 @@ public interface commentservice {
     List<Comment> getCommentsByPostId(int id);
 
     Comment CreateComment(Comment comment);
+
+    Comment getComment(int id);
+
+    void deleteByCommentId(int id);
+
 }

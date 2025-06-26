@@ -18,7 +18,7 @@ import { useRouter } from "expo-router";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import Constants from "expo-constants";
 export default function Login() {
   const router = useRouter();
   const [formData, setFormData] = useState({

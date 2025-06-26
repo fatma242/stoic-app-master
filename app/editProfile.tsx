@@ -12,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { Video, ResizeMode } from "expo-av";
 import { useNavigation } from "@react-navigation/native";
+import Constants from "expo-constants";
 
 // Define the User type
 type User = {

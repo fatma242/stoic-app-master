@@ -28,7 +28,7 @@ const ProgressScreen = () => {
         }
 
         const response = await axios.get(
-          `http://192.168.1.2:8100/api/mood-logs/${userId}`
+          `process.env.EXPO_PUBLIC_API_BASE_URL/api/mood-logs/${userId}`
         );
         setMoodData(response.data);
         setLoading(false);
