@@ -26,8 +26,8 @@ import java.util.List;
 import java.util.Map;
 
 @CrossOrigin(origins = {
-        "http://192.168.1.2:8081",
-        "exp://192.168.1.2:8081"
+        "http://192.168.1.19:8081",
+        "exp://192.168.1.19:8081"
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/rooms")
@@ -244,8 +244,8 @@ public class RoomController {
     @RestController
     @RequestMapping("/rooms") // Shares the same CORS and base path as RoomController
     @CrossOrigin(origins = {
-            "http://192.168.1.2:8081",
-            "exp://192.168.1.2:8081"
+            "http://192.168.1.19:8081",
+            "exp://192.168.1.19:8081"
     }, allowCredentials = "true")
     class PostsController {
 

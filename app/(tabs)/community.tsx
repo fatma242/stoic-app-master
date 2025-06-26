@@ -46,7 +46,7 @@ export default function Community() {
   // New state for join code
   const [joinCode, setJoinCode] = useState("");
 
-  const API_BASE_URL = "http://192.168.1.2:8100";
+  const API_BASE_URL = "http://192.168.1.19:8100";
 
   // Replace the existing useEffect with useFocusEffect to refresh data when screen is focused
   useFocusEffect(

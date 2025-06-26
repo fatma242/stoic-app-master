@@ -35,7 +35,7 @@ public class Comment {
     private User author;
 
     @ManyToMany
-    @JoinTable(name = "post_likes", joinColumns = @JoinColumn(name = "id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
+    @JoinTable(name = "comment_likes", joinColumns = @JoinColumn(name = "id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
     private List<User> likes;
 
     @ManyToOne(fetch = FetchType.LAZY)

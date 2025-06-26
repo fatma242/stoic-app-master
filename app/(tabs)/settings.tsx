@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = "http://192.168.1.2:8100";
+const API_BASE_URL = "http://192.168.1.19:8100";
 
 export default function Settings() {
   const router = useRouter();
