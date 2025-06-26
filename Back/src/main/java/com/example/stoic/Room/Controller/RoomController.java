@@ -24,12 +24,11 @@ import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+
 
 @CrossOrigin(origins = {
-        "http://192.168.1.19:8081",
-        "exp://192.168.1.19:8081"
+        "http://192.168.1.2:8081",
+        "exp://192.168.1.2:8081"
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/rooms")
@@ -37,10 +36,13 @@ public class RoomController {
 
     private final RoomService roomService;
     private final PostRepo postRepo;
+    private final UserServiceImpl uServiceImpl;
 
-    public RoomController(RoomService roomService, PostRepo postRepo) {
+
+    public RoomController(RoomService roomService, PostRepo postRepo, UserServiceImpl uServiceImpl) {
         this.roomService = roomService;
         this.postRepo = postRepo;
+        this.uServiceImpl = uServiceImpl;
     }
 
     @GetMapping("/")
@@ -159,16 +161,20 @@ public class RoomController {
             if (post == null) {
                 return -2; // Post not found
             }
-
+            User Temp =user;
+           
             // Check if user already liked the post
-            boolean alreadyLiked = post.getLikes().contains(user);
-
+            boolean alreadyLiked = post.Getlikes(user);
+            System.out.println("User " + user.getUsername() + " already liked post: " + alreadyLiked);
             if (alreadyLiked) {
                 // Unlike the post
-                post.getLikes().remove(user);
+                System.out.println("User " + user.getUsername() + " is unliking post with ID: " + id);
+                postRepo.deleteLike(id, user.getUserId());
+                // postRepo.save(post);
             } else {
+                System.out.println("User " + user.getUsername() + " is liking post with ID: " + id);
                 // Like the post
-                post.getLikes().add(user);
+                post.getLikes().add(user);                
             }
 
             Post savedPost = postRepo.save(post);
@@ -184,6 +190,7 @@ public class RoomController {
     @PutMapping("/{id}")
     public ResponseEntity<Room> updateRoom(@PathVariable int id, @RequestBody Room roomDetails) {
         Room room = roomService.findRoomById(id);
+        room.setRoomName(roomDetails.getRoomName());
         room.setType(roomDetails.getType());
         room.setOwnerId(roomDetails.getOwnerId());
         Room updatedRoom = roomService.createRoom(room);
@@ -239,8 +246,8 @@ public class RoomController {
     @RestController
     @RequestMapping("/rooms") // Shares the same CORS and base path as RoomController
     @CrossOrigin(origins = {
-            "http://192.168.1.19:8081",
-            "exp://192.168.1.19:8081"
+            "http://192.168.1.2:8081",
+            "exp://192.168.1.2:8081"
     }, allowCredentials = "true")
     class PostsController {
 
@@ -313,6 +320,52 @@ public class RoomController {
                         HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
+
+     @DeleteMapping("/{roomId}/remove-user/{username}")
+public ResponseEntity<?> removeUserFromRoom(
+    @PathVariable int roomId,
+    @PathVariable String username,
+    HttpSession session
+) {
+    try {
+        // Get the current user from session (must be room owner)
+        User currentUser = (User) session.getAttribute("user");
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+        }
+
+        // Verify the current user is the owner of the room
+        Room room = roomService.findRoomById(roomId);
+        
+        if (room == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Room not found");
+        }
+
+        if (room.getOwnerId() != currentUser.getUserId()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only room owner can remove users");
+        }
+
+        // Find the user to remove by username
+        User userToRemove = userServiceImpl.findByUsername(username);
+        if (userToRemove == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+
+        // Prevent owner from removing themselves
+        if (userToRemove.getUserId() == currentUser.getUserId()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Cannot remove yourself from the room");
+        }
+
+        // Remove user from room
+        roomService.removeUserFromRoom(roomId, userToRemove.getUserId());
+
+        return ResponseEntity.ok().body("User removed successfully");
+
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to remove user: " + e.getMessage());
+    }
+}
 
         @PutMapping("/posts/{id}")
         public ResponseEntity<Post> updatePost(@PathVariable int id, @RequestBody Post postDetails) {

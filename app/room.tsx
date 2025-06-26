@@ -26,7 +26,7 @@ interface User {
   username: string;
   email: string;
 }
-//
+
 interface Room {
   roomId: number;
   ownerId: number;
@@ -51,12 +51,9 @@ interface Post {
   author?: {
     userId: number;
     username: string;
-    email?: string; // Backend might be returning email too
-    password?: string; // Backend might be returning password (which it shouldn't)
-    userRole?: string; // Backend might be returning userRole
   };
   date: string;
-  likes: Set<User>;
+  likes: number;
   isLikedByUser?: boolean;
 }
 
@@ -104,50 +101,12 @@ export default function RoomScreen() {
 
   // Add this after your existing state declarations
   const [likingPostIds, setLikingPostIds] = useState<Set<number>>(new Set());
+  const [refreshCount, setRefreshCount] = useState(0);
 
   const stompClient = useRef<any>(null);
-  const API_BASE_URL = "http://192.168.1.19:8100";
+  const API_BASE_URL = "http://192.168.1.2:8100";
 
   const scrollViewRef = useRef<ScrollView>(null);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load user data
-        const storedUsername = await AsyncStorage.getItem("username");
-        const storedUserId = await AsyncStorage.getItem("userId");
-        console.log("Stored userId:", storedUserId);
-
-        if (storedUserId !== null) {
-          const parsedUserId = parseInt(storedUserId);
-          setUserId(parsedUserId);
-          // Use parsedUserId immediately instead of the state variable userId
-          console.log("Parsed userId:", parsedUserId);
-        }
-
-        // Fetch room details only if roomId is available.
-        if (roomId) {
-          await fetchRoom(); // This might use the freshly loaded userId if needed
-          await fetchMessages();
-          await fetchPosts();
-          await fetchNotifications();
-          connectWebSocket();
-        }
-      } catch (error) {
-        Alert.alert("Error", "Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-
-    return () => {
-      if (stompClient.current) {
-        stompClient.current.deactivate();
-      }
-    };
-  }, [roomId]);
 
   const connectWebSocket = () => {
     const socket = new SockJS(`${API_BASE_URL}/ws-chat`);
@@ -201,14 +160,7 @@ export default function RoomScreen() {
       // Calculate owner status immediately with the current userId
       const ownerStatus = currentUserId === data.ownerId;
       setIsOwner(ownerStatus);
-      console.log(
-        "Owner check: userId",
-        currentUserId,
-        "room.ownerId",
-        data.ownerId,
-        "isOwner:",
-        ownerStatus
-      );
+      console.log("Owner check: userId", currentUserId, "room.ownerId", data.ownerId, "isOwner:", ownerStatus);
 
       // Optional: Fetch owner details if needed
       try {
@@ -274,14 +226,14 @@ export default function RoomScreen() {
       const data: Post[] = await response.json();
       const processed: Post[] = data.map((post) => {
         const likesArray = Array.isArray((post as any).likes)
-          ? ((post as any).likes as User[])
+          ? (post as any).likes as User[]
           : [];
-        const likesSet = new Set<number>(likesArray.map((u) => u.userId));
-        const likedByMe = likesSet.has(uid);
+        const likesCount = likesArray.length;
+        const likedByMe = likesArray.some(u => u.userId === uid);
 
         return {
           ...post,
-          likes: likesSet as unknown as Set<User>,
+          likes: likesCount,
           isLikedByUser: likedByMe,
         };
       });
@@ -326,9 +278,10 @@ export default function RoomScreen() {
     if (!roomId) return;
     try {
       console.log("Fetching room users");
-      const response = await fetch(`${API_BASE_URL}/users?roomId=${roomId}`, {
-        credentials: "include",
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/users?roomId=${roomId}`,
+        { credentials: "include" }
+      );
       if (!response.ok) throw new Error("Failed to fetch room users");
 
       const data = await response.json();
@@ -535,7 +488,7 @@ export default function RoomScreen() {
           // First, load user data from AsyncStorage
           const storedUserId = await AsyncStorage.getItem("userId");
           const storedUsername = await AsyncStorage.getItem("username");
-
+          
           if (!storedUserId) {
             Alert.alert("Error", "User not found. Please log in again.");
             return;
@@ -543,7 +496,7 @@ export default function RoomScreen() {
 
           const parsedUserId = parseInt(storedUserId);
           console.log("Loading user data - userId:", parsedUserId);
-
+          
           // Set user data immediately
           setUserId(parsedUserId);
           if (storedUsername) {
@@ -559,7 +512,7 @@ export default function RoomScreen() {
             await fetchPosts(parsedUserId);
             await fetchNotifications(parsedUserId);
             await fetchRoomUsers();
-
+            
             // Connect WebSocket after all data is loaded
             if (isActive) {
               connectWebSocket();
@@ -587,6 +540,14 @@ export default function RoomScreen() {
     }, [roomId])
   );
 
+  // Add this useEffect after your existing state declarations and before useFocusEffect
+
+  useEffect(() => {
+    if (userId !== null && roomId) {
+      fetchPosts(userId);
+    }
+  }, [refreshCount, userId, roomId]);
+
   const handlePostPress = (postId: number) => {
     router.push({
       pathname: "../post-details",
@@ -594,57 +555,78 @@ export default function RoomScreen() {
     });
   };
 
+
   const handleLike = async (postId: number) => {
-    if (likingPostIds.has(postId)) return;
+    if (likingPostIds.has(postId) || userId === null) return;
+    // mark this post as pending
+    setLikingPostIds(prev => new Set(prev).add(postId));
 
-    setLikingPostIds((prev) => new Set(prev).add(postId));
     try {
-      const response = await fetch(`${API_BASE_URL}/rooms/likes/${postId}`, {
-        method: "PUT",
-        credentials: "include",
-      });
-
-      if (!response.ok) throw new Error("Failed to like post");
-
-      // Backend now returns just the likes count as a number
-      const likesCount = await response.json();
-      console.log("Likes count returned from backend:", likesCount);
-      fetchPosts(); // Refresh posts to get updated likes count
-      // Handle error codes from backend
-      if (likesCount === -1) {
-        throw new Error("Unauthorized");
-      }
-      if (likesCount === -2) {
-        throw new Error("Post not found");
-      }
-      if (likesCount === -3) {
-        throw new Error("Server error");
-      }
-
-      // Update the specific post in the posts array
-      setPosts((prev) =>
-        prev.map((post) =>
-          post.id === postId
-            ? {
-                ...post,
-                likes: likesCount, // Use the returned likes count
-                isLikedByUser: !post.isLikedByUser, // Toggle the current like status
-              }
-            : post
-        )
+      const response = await fetch(
+        `${API_BASE_URL}/rooms/likes/${postId}`,
+        {
+          method: "PUT",
+          credentials: "include",
+        }
       );
+      if (!response.ok) throw new Error("Failed to toggle like");
+
+      // Trigger a refresh of all posts to get updated counts
+      setRefreshCount(prev => prev + 1);
     } catch (error) {
       Alert.alert(
         "Error",
-        error instanceof Error ? error.message : "Could not like post"
+        error instanceof Error ? error.message : "Could not toggle like"
       );
     } finally {
-      setLikingPostIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(postId);
-        return newSet;
+      // clear pending flag
+      setLikingPostIds(prev => {
+        const copy = new Set(prev);
+        copy.delete(postId);
+        return copy;
       });
     }
+  };
+
+  const handleRemoveUser = async ( username: string) => {
+    if (!roomId || !userId) return;
+
+    Alert.alert(
+      "Remove User",
+      `Are you sure you want to remove ${username} from this room? ` ,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              console.log("Attempting to remove user:", roomId);
+              const response = await fetch(
+                `${API_BASE_URL}/rooms/${roomId}/remove-user/${username}`,
+                {
+                  method: "DELETE",
+                  credentials: "include",
+                }
+              );
+              console.log("Removing user:", username);
+                            console.log("responce:"+response.status)
+
+              if (!response.ok) throw new Error("Failed to remove user");
+              else( console.log("User removed successfully:", username) );
+              // Refresh the room users list
+              await fetchRoomUsers();
+              Alert.alert("Success", `${username} has been removed from the room`);
+            } catch (error) {
+              Alert.alert(
+                "Error",
+                error instanceof Error ? error.message : "Could not remove user"
+              );
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -662,15 +644,9 @@ export default function RoomScreen() {
       </View>
     );
   }
-  // Replace line 605-606 with:
-  console.log(
-    "First post likes count:",
-    posts.length > 0 ? posts[0].likes || 0 : 0
-  );
-  console.log(
-    "Number of posts with likes:",
-    posts.filter((post) => post.likes && post.likes.size > 0).length
-  );
+// Replace line 605-606 with:
+console.log("First post likes count:", posts.length > 0 ? (posts[0].likes || 0) : 0);
+  // console.log("Number of posts with likes:", posts.filter(post => post.likes && post.likes.size > 0).length);
   return (
     <View style={styles.container}>
       <ScrollView
@@ -706,7 +682,8 @@ export default function RoomScreen() {
               />
             ) : (
               <Text style={styles.roomNameText}>{room.roomName}</Text>
-            )}
+            )
+            }
           </View>
 
           <View style={styles.detailRow}>
@@ -722,7 +699,7 @@ export default function RoomScreen() {
               {isOwner ? "You" : `User #${room.ownerId}`}
             </Text>
           </View>
-
+          
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Room Code:</Text>
             <Text style={styles.detailValue}>{room.join_code}</Text>
@@ -738,16 +715,27 @@ export default function RoomScreen() {
                 <Text style={styles.detailValue}>No users joined yet</Text>
               ) : (
                 roomUsers.map((user, index) => (
-                  <Text
-                    key={`user-${user.userId}-${index}`}
-                    style={styles.detailValue}
+                  <View 
+                    key={`user-${user.userId}-${index}`} 
+                    style={styles.userRow}
                   >
-                    {typeof user === "object" && user !== null
-                      ? user.username || "Unknown User"
-                      : String(user)}
-                  </Text>
+                    <Text style={styles.detailValue}>
+                      {typeof user === 'object' && user !== null ? (user.username || 'Unknown User') : String(user)}
+                      {user.userId === userId && " (You)"}
+                      {user.userId === room?.ownerId && " (Owner)"}
+                    </Text>
+                    {/* Show remove button only if current user is owner and target user is not owner or self */}
+                    {isOwner && user.userId !== userId && user.userId !== room?.ownerId && (
+                      <TouchableOpacity
+                        style={styles.removeUserButton}
+                        onPress={() => handleRemoveUser( user.username || 'Unknown User')}
+                      >
+                        <Ionicons name="person-remove" size={16} color="#ef4444" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 ))
-              )}
+             )}
             </View>
           </View>
 
@@ -828,7 +816,7 @@ export default function RoomScreen() {
                 </Text>
               </View>
             ))
-          )}
+         )}
         </View>
 
         {/* Posts Section */}
@@ -838,49 +826,46 @@ export default function RoomScreen() {
         ) : (
           posts.map((post) => (
             <View key={`post-${post.id}`} style={styles.postItem}>
-              <TouchableOpacity
+              <TouchableOpacity 
                 onPress={() => handlePostPress(post.id)}
                 style={styles.postContent}
               >
                 <Text style={styles.postTitle}>{post.title}</Text>
                 <Text style={styles.postContentText}>{post.content}</Text>
                 <Text style={styles.postAuthor}>
-                  By: {post.author?.username || "Unknown Author"}
+                  By: {post.author?.username || 'Unknown Author'}
                 </Text>
                 <Text style={styles.postDate}>
                   {new Date(post.date).toLocaleDateString()}
                 </Text>
               </TouchableOpacity>
-
+              
               {/* Like Button */}
               <View style={styles.postActions}>
-                <TouchableOpacity
-                  style={styles.likeButton}
+                <TouchableOpacity 
+                  style={styles.likeButton}  
                   onPress={() => handleLike(post.id)}
                   disabled={likingPostIds.has(post.id)}
                 >
                   {likingPostIds.has(post.id) ? (
                     <ActivityIndicator size="small" color="#ef4444" />
                   ) : (
-                    <Ionicons
-                      name={post.isLikedByUser ? "heart" : "heart-outline"}
-                      size={20}
-                      color={post.isLikedByUser ? "#ef4444" : "#94a3b8"}
+                    <Ionicons 
+                      name={post.isLikedByUser ? "heart" : "heart-outline"} 
+                      size={20} 
+                      color={post.isLikedByUser ? "#ef4444" : "#94a3b8"} 
                     />
                   )}
-
-                  <Text style={styles.likeCount}>{post.likes.size || 0}</Text>
+                  <Text style={styles.likeCount}>{post.likes}</Text>
                 </TouchableOpacity>
+                
 
-                <TouchableOpacity
+
+                <TouchableOpacity 
                   style={styles.commentButton}
                   onPress={() => handlePostPress(post.id)}
                 >
-                  <Ionicons
-                    name="chatbubble-outline"
-                    size={20}
-                    color="#94a3b8"
-                  />
+                  <Ionicons name="chatbubble-outline" size={20} color="#94a3b8" />
                   <Text style={styles.commentText}>Comment</Text>
                 </TouchableOpacity>
               </View>
@@ -1045,6 +1030,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 10,
   },
+  
   emptyText: {
     color: "#94a3b8",
     textAlign: "center",
@@ -1213,4 +1199,17 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontSize: 14,
   },
+  userRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+
+
+  removeUserButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
 });
+

@@ -61,4 +61,10 @@ public class Room {
         }
         Users.add(user);
     }
+
+    public void removeUser(User user) {
+        if (this.Users != null) {
+            this.Users.remove(user);
+        }
+    }
 }
