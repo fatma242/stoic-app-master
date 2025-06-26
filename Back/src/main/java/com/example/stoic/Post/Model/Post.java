@@ -1,5 +1,6 @@
 package com.example.stoic.Post.Model;
 
+import com.example.stoic.Comment.Model.Comment;
 import com.example.stoic.Post.Repo.PostRepo;
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.User.Model.User;
@@ -15,14 +16,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
 @Table(name = "post")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class Post {
-
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -42,19 +45,19 @@ public class Post {
     @JoinColumn(name = "user_id", nullable = false)
     private User author;
 
+    // ✅ ADD: Comments relationship with CASCADE DELETE
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<Comment> comments = new ArrayList<>();
+
     // @Column(name = "likes", nullable = true)
-  @ManyToMany
-@JoinTable(
-    name = "post_likes",
-    joinColumns = @JoinColumn(name = "post_id"),
-    inverseJoinColumns = @JoinColumn(name = "user_id")
-)
-private List<User> likes = new ArrayList<>();
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinTable(name = "post_likes", joinColumns = @JoinColumn(name = "post_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
+    private List<User> likes = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)
     private Room room;
-
 
     public boolean Getlikes(User user) {
         for (User u : likes) {
@@ -65,7 +68,6 @@ private List<User> likes = new ArrayList<>();
         return false;
 
     }
-
 
     public List<User> removelike(User user) {
         System.out.println("Removing like from user: " + likes.getFirst().getUsername());

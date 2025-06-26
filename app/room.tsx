@@ -102,9 +102,13 @@ export default function RoomScreen() {
   // Add this after your existing state declarations
   const [likingPostIds, setLikingPostIds] = useState<Set<number>>(new Set());
   const [refreshCount, setRefreshCount] = useState(0);
+  const [userRole, setUserRole] = useState<string>("");
+  const [deletingPostIds, setDeletingPostIds] = useState<Set<number>>(
+    new Set()
+  );
 
   const stompClient = useRef<any>(null);
-  const API_BASE_URL = "http://192.168.1.19:8100";
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -181,6 +185,20 @@ export default function RoomScreen() {
         console.log("Fetched room owner:", ownerData.userId);
       } catch (error) {
         console.log("Could not fetch owner details:", error);
+      }
+
+      // Fetch user role for admin privileges
+      try {
+        const userResponse = await fetch(
+          `${API_BASE_URL}/api/users/${currentUserId}`,
+          { credentials: "include" }
+        );
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          setUserRole(userData.userRole);
+        }
+      } catch (error) {
+        console.log("Could not fetch user role:", error);
       }
     } catch (error) {
       Alert.alert(
@@ -284,19 +302,38 @@ export default function RoomScreen() {
   const fetchRoomUsers = async () => {
     if (!roomId) return;
     try {
-      console.log("Fetching room users");
-      const response = await fetch(`${API_BASE_URL}/users?roomId=${roomId}`, {
+      console.log("Fetching room users for roomId:", roomId);
+
+      // Fix the API endpoint - should be room-specific
+      const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
         credentials: "include",
       });
+
+      console.log("Room users response status:", response.status);
+      console.log("Room users response ok:", response.ok);
+
       if (!response.ok) throw new Error("Failed to fetch room users");
 
       const data = await response.json();
       console.log("Raw room users response:", data);
-      // Extract the array from the HAL response
-      const users = data._embedded?.users;
+
+      // Handle different response formats
+      let users = [];
+      if (Array.isArray(data)) {
+        // Direct array response
+        users = data;
+      } else if (data._embedded?.users) {
+        // HAL format response
+        users = data._embedded.users;
+      } else if (data.users) {
+        // Nested users property
+        users = data.users;
+      }
+
+      console.log("Processed users:", users);
       setRoomUsers(Array.isArray(users) ? users : []);
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching room users:", error);
       Alert.alert(
         "Error",
         error instanceof Error ? error.message : "Could not load room users"
@@ -634,6 +671,197 @@ export default function RoomScreen() {
     );
   };
 
+  const handleAdminDeletePost = async (postId: number, postTitle: string) => {
+    if (userRole !== "ADMIN") {
+      Alert.alert("Error", "Only admins can delete posts");
+      return;
+    }
+
+    Alert.alert(
+      "Admin Force Delete",
+      `Are you sure you want to permanently delete the post "${postTitle}"? This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            if (deletingPostIds.has(postId)) return;
+
+            setDeletingPostIds((prev) => new Set(prev).add(postId));
+            try {
+              const response = await fetch(
+                `${API_BASE_URL}/rooms/forceDelete/${postId}`,
+                {
+                  method: "DELETE",
+                  credentials: "include",
+                }
+              );
+
+              if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || "Failed to delete post");
+              }
+
+              // Remove the post from the local state
+              setPosts((prev) => prev.filter((post) => post.id !== postId));
+              Alert.alert("Success", "Post deleted successfully");
+            } catch (error) {
+              Alert.alert(
+                "Error",
+                error instanceof Error ? error.message : "Could not delete post"
+              );
+            } finally {
+              setDeletingPostIds((prev) => {
+                const copy = new Set(prev);
+                copy.delete(postId);
+                return copy;
+              });
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleOwnerDeletePost = async (postId: number, postTitle: string) => {
+    if (!userId) {
+      Alert.alert("Error", "User not authenticated");
+      return;
+    }
+
+    // Find the post and verify ownership
+    const post = posts.find((p) => p.id === postId);
+    if (!post || post.author?.userId !== userId) {
+      Alert.alert("Error", "You can only delete your own posts");
+      return;
+    }
+
+    Alert.alert(
+      "Delete Post",
+      `Are you sure you want to delete "${postTitle}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            if (deletingPostIds.has(postId)) return;
+
+            setDeletingPostIds((prev) => new Set(prev).add(postId));
+            try {
+              const response = await fetch(
+                `${API_BASE_URL}/rooms/delete/${postId}/${userId}`,
+                {
+                  method: "DELETE",
+                  credentials: "include",
+                }
+              );
+
+              if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || "Failed to delete post");
+              }
+
+              // Remove the post from the local state
+              setPosts((prev) => prev.filter((post) => post.id !== postId));
+              Alert.alert("Success", "Post deleted successfully");
+            } catch (error) {
+              Alert.alert(
+                "Error",
+                error instanceof Error ? error.message : "Could not delete post"
+              );
+            } finally {
+              setDeletingPostIds((prev) => {
+                const copy = new Set(prev);
+                copy.delete(postId);
+                return copy;
+              });
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Update your posts mapping section (around line 1000) to include owner delete button
+
+  {posts.map((post) => (
+    <View key={`post-${post.id}`} style={styles.postItem}>
+      <TouchableOpacity
+        onPress={() => handlePostPress(post.id)}
+        style={styles.postContent}
+      >
+        <Text style={styles.postTitle}>{post.title}</Text>
+        <Text style={styles.postContentText}>{post.content}</Text>
+        <Text style={styles.postAuthor}>
+          By: {post.author?.username || "Unknown Author"}
+        </Text>
+        <Text style={styles.postDate}>
+          {new Date(post.date).toLocaleDateString()}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Like Button, Comment Button, and Delete Buttons */}
+      <View style={styles.postActions}>
+        <TouchableOpacity
+          style={styles.likeButton}
+          onPress={() => handleLike(post.id)}
+          disabled={likingPostIds.has(post.id)}
+        >
+          {likingPostIds.has(post.id) ? (
+            <ActivityIndicator size="small" color="#ef4444" />
+          ) : (
+            <Ionicons
+              name={post.isLikedByUser ? "heart" : "heart-outline"}
+              size={20}
+              color={post.isLikedByUser ? "#ef4444" : "#94a3b8"}
+            />
+          )}
+          <Text style={styles.likeCount}>{post.likes}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.commentButton}
+          onPress={() => handlePostPress(post.id)}
+        >
+          <Ionicons name="chatbubble-outline" size={20} color="#94a3b8" />
+          <Text style={styles.commentText}>Comment</Text>
+        </TouchableOpacity>
+
+        {/* Owner Delete Button - Show if current user is the post author */}
+        {post.author?.userId === userId && (
+          <TouchableOpacity
+            style={styles.ownerDeleteButton}
+            onPress={() => handleOwnerDeletePost(post.id, post.title)}
+            disabled={deletingPostIds.has(post.id)}
+          >
+            {deletingPostIds.has(post.id) ? (
+              <ActivityIndicator size="small" color="#f59e0b" />
+            ) : (
+              <Ionicons name="trash-outline" size={20} color="#f59e0b" />
+            )}
+          </TouchableOpacity>
+        )}
+
+        {/* Admin Delete Button - Show if current user is admin */}
+        {userRole === "ADMIN" && (
+          <TouchableOpacity
+            style={styles.adminDeleteButton}
+            onPress={() => handleAdminDeletePost(post.id, post.title)}
+            disabled={deletingPostIds.has(post.id)}
+          >
+            {deletingPostIds.has(post.id) ? (
+              <ActivityIndicator size="small" color="#ef4444" />
+            ) : (
+              <Ionicons name="trash" size={20} color="#ef4444" />
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  ))}
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -654,6 +882,10 @@ export default function RoomScreen() {
     "First post likes count:",
     posts.length > 0 ? posts[0].likes || 0 : 0
   );
+
+  console.log("Current userRole:", userRole);
+  console.log("Is userRole ADMIN?", userRole === "ADMIN");
+  console.log("Posts count:", posts.length);
   // console.log("Number of posts with likes:", posts.filter(post => post.likes && post.likes.size > 0).length);
   return (
     <View style={styles.container}>
@@ -857,7 +1089,7 @@ export default function RoomScreen() {
                 </Text>
               </TouchableOpacity>
 
-              {/* Like Button */}
+              {/* Like Button, Comment Button, and Delete Buttons */}
               <View style={styles.postActions}>
                 <TouchableOpacity
                   style={styles.likeButton}
@@ -887,6 +1119,36 @@ export default function RoomScreen() {
                   />
                   <Text style={styles.commentText}>Comment</Text>
                 </TouchableOpacity>
+
+                {/* Owner Delete Button - Show if current user is the post author */}
+                {post.author?.userId === userId && (
+                  <TouchableOpacity
+                    style={styles.ownerDeleteButton}
+                    onPress={() => handleOwnerDeletePost(post.id, post.title)}
+                    disabled={deletingPostIds.has(post.id)}
+                  >
+                    {deletingPostIds.has(post.id) ? (
+                      <ActivityIndicator size="small" color="#f59e0b" />
+                    ) : (
+                      <Ionicons name="trash-outline" size={20} color="#f59e0b" />
+                    )}
+                  </TouchableOpacity>
+                )}
+
+                {/* Admin Delete Button - Show if current user is admin */}
+                {userRole === "ADMIN" && (
+                  <TouchableOpacity
+                    style={styles.adminDeleteButton}
+                    onPress={() => handleAdminDeletePost(post.id, post.title)}
+                    disabled={deletingPostIds.has(post.id)}
+                  >
+                    {deletingPostIds.has(post.id) ? (
+                      <ActivityIndicator size="small" color="#ef4444" />
+                    ) : (
+                      <Ionicons name="trash" size={20} color="#ef4444" />
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           ))
@@ -1197,6 +1459,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: "#334155",
+    flexWrap: "wrap", // Allow wrapping if too many buttons
   },
   likeButton: {
     flexDirection: "row",
@@ -1228,5 +1491,23 @@ const styles = StyleSheet.create({
   removeUserButton: {
     padding: 4,
     marginLeft: 8,
+  },
+  adminDeleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 5,
+    backgroundColor: "#1e293b",
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#ef4444", // Red color for admin delete
+  },
+  ownerDeleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 5,
+    backgroundColor: "#1e293b",
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#f59e0b", // Orange color for owner delete
   },
 });

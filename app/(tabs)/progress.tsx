@@ -28,7 +28,7 @@ const ProgressScreen = () => {
         }
 
         const response = await axios.get(
-          `http://192.168.1.19:8100/api/mood-logs/${userId}`
+          `http://192.168.1.2:8100/api/mood-logs/${userId}`
         );
         setMoodData(response.data);
         setLoading(false);

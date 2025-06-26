@@ -23,7 +23,7 @@ type User = {
   userRole: string;
 };
 
-const API_BASE_URL = "http://192.168.1.19:8100";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export default function EditProfile() {
   const navigation = useNavigation();

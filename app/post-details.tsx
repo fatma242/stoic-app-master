@@ -68,7 +68,8 @@ export default function PostDetailsScreen() {
   const [isCommenting, setIsCommenting] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
-
+  const [likingPostIds, setLikingPostIds] = useState<Set<number>>(new Set());
+  const [refreshCount, setRefreshCount] = useState(0);
   // Animation refs
   const slideAnim = useRef(new Animated.Value(50)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -78,7 +79,7 @@ export default function PostDetailsScreen() {
   const commentOpacityAnim = useRef(new Animated.Value(0)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const API_BASE_URL = "http://192.168.1.19:8100";
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   useEffect(() => {
     loadUserData();
@@ -108,7 +109,7 @@ export default function PostDetailsScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [postId]);
+  }, [postId, refreshCount]);
 
   const loadUserData = async () => {
     try {
@@ -130,8 +131,22 @@ export default function PostDetailsScreen() {
         },
       });
       if (!response.ok) throw new Error("Failed to fetch post");
-      const data: Post = await response.json();
-      setPost(data);
+      
+      const data: any = await response.json();
+      
+      // Process the likes data similar to room.tsx
+      const likesArray = Array.isArray(data.likes) 
+        ? data.likes as User[]
+        : [];
+      const likedByMe = userId !== null && likesArray.some((u: User) => u.userId === userId);
+
+      const processedPost: Post = {
+        ...data,
+        likes: new Set(likesArray),
+        isLikedByUser: likedByMe, // This is the key fix
+      };
+      
+      setPost(processedPost);
     } catch (error) {
       console.error("Error fetching post details:", error);
       Alert.alert("Error", "Could not load post details");
@@ -190,9 +205,9 @@ export default function PostDetailsScreen() {
     }
   };
 
-  const handleLike = async () => {
-    if (!post || isLiking) return;
-
+  const handleLike = async (postId: number) => {
+    if (likingPostIds.has(postId) || userId === null) return;
+    
     // Like animation
     Animated.sequence([
       Animated.timing(likeScaleAnim, {
@@ -209,43 +224,28 @@ export default function PostDetailsScreen() {
       }),
     ]).start();
 
-    setIsLiking(true);
+    setLikingPostIds((prev) => new Set(prev).add(postId));
+
     try {
-      const response = await fetch(`${API_BASE_URL}/posts/${postId}/like`, {
-        method: "POST",
+      const response = await fetch(`${API_BASE_URL}/rooms/likes/${postId}`, {
+        method: "PUT",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
+      if (!response.ok) throw new Error("Failed to toggle like");
 
-      if (!response.ok) throw new Error("Failed to like post");
-
-      setPost((prev) =>
-        prev
-          ? {
-              ...prev,
-              likes: (() => {
-                if (!userId) return prev.likes;
-                const newLikes = new Set(prev.likes);
-                if (prev.isLikedByUser) {
-                  newLikes.forEach((user) => {
-                    if (user.userId === userId) newLikes.delete(user);
-                  });
-                } else {
-                  newLikes.add({ userId, username: "You", email: "" });
-                }
-                return newLikes;
-              })(),
-              isLikedByUser: !prev.isLikedByUser,
-            }
-          : null
-      );
+      // Trigger a refresh to get updated like state
+      setRefreshCount((prev) => prev + 1);
     } catch (error) {
-      console.error("Error liking post:", error);
-      Alert.alert("Error", "Could not like post");
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Could not toggle like"
+      );
     } finally {
-      setIsLiking(false);
+      setLikingPostIds((prev) => {
+        const copy = new Set(prev);
+        copy.delete(postId);
+        return copy;
+      });
     }
   };
 
@@ -325,6 +325,12 @@ export default function PostDetailsScreen() {
     extrapolate: "clamp",
   });
 
+  useEffect(() => {
+    if (userId !== null) {
+      fetchPostDetails();
+    }
+  }, [userId, refreshCount]);
+
   if (loading) {
     return (
       <LinearGradient
@@ -402,7 +408,8 @@ export default function PostDetailsScreen() {
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
-        )}
+        )
+        }
         scrollEventThrottle={16}
       >
         {/* Post Details Card */}
@@ -455,7 +462,7 @@ export default function PostDetailsScreen() {
                   styles.likeButton,
                   post.isLikedByUser && styles.likeButtonActive,
                 ]}
-                onPress={handleLike}
+                onPress={() => handleLike(post.id)}
                 disabled={isLiking}
                 activeOpacity={0.8}
               >
@@ -468,9 +475,9 @@ export default function PostDetailsScreen() {
                   style={styles.likeButtonGradient}
                 >
                   <Ionicons
-                    name={post.isLikedByUser ? "heart" : "heart-outline"}
-                    size={20}
-                    color={post.isLikedByUser ? "#fff" : "#10b981"}
+                    name={post?.isLikedByUser ? "heart" : "heart-outline"}
+                    size={24}
+                    color={post?.isLikedByUser ? "#ef4444" : "#94a3b8"}
                   />
                   <Text
                     style={[
