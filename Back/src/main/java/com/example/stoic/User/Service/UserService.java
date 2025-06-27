@@ -25,4 +25,6 @@ public interface UserService {
 
     OnboardingStatus getStatus(int userId);
 
+    User findByUsername(String username);
+
 }

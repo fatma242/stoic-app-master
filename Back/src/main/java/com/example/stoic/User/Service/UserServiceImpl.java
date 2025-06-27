@@ -100,6 +100,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User findByUsername(String username) {
         return userRepo.findByUsername(username)
-                .orElseThrow(() -> new NoSuchElementException("User with username " + username + " not found"));
+                .orElseThrow(() -> new NoSuchElementException("User with username " +
+                        username + " not found"));
     }
 }

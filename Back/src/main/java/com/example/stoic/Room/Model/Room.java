@@ -43,7 +43,8 @@ public class Room {
     @Column(name = "created_at")
     private Date createdAt;
 
-    // @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
+    // @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval =
+    // true)
     // @OnDelete(action = OnDeleteAction.CASCADE)
     // private List<Post> posts = new ArrayList<>();
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)

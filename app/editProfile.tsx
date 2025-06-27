@@ -1,7 +1,7 @@
 import BackgroundVideo from "@/components/BackgroundVideo";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation } from "@react-navigation/native";
-import { useRouter } from "expo-router";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { useNavigation } from "@react-navigation/native";
+// import { useRouter } from "expo-router";
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import {
   Alert,

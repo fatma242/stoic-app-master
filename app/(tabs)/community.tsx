@@ -1,7 +1,7 @@
 import BackgroundVideo from "@/components/BackgroundVideo";
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+// import { Ionicons } from "@expo/vector-icons";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { useRouter } from "expo-router";
 import React from "react";
 import { useEffect, useState } from "react";
 import {
@@ -22,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import { useFocusEffect } from "@react-navigation/native";
 
 // Type definitions
 type RoomType = "PUBLIC" | "PRIVATE";

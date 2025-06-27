@@ -1,36 +1,24 @@
-<<<<<<< HEAD
 import React, { useState, useEffect, useRef, useCallback } from "react";
-=======
-import { Ionicons } from "@expo/vector-icons";
-import { Client } from "@stomp/stompjs";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
-import { useEffect, useRef, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
->>>>>>> main
 import {
-  ActivityIndicator,
-  Alert,
-  ImageBackground,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
+  View,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-<<<<<<< HEAD
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect } from "@react-navigation/native";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-=======
->>>>>>> main
 import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
 
 // Type definitions
 interface User {
@@ -120,51 +108,10 @@ export default function RoomScreen() {
   );
 
   const stompClient = useRef<any>(null);
-<<<<<<< HEAD
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-=======
-  const API_BASE_URL = "http://192.168.1.6:8100";
-
-  const scrollViewRef = useRef<ScrollView>(null);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load user data
-        const storedUserId = await AsyncStorage.getItem("userId");
-        const storedUsername = await AsyncStorage.getItem("username");
-
-        if (storedUserId && storedUsername) {
-          setUserId(parseInt(storedUserId));
-          setUsername(storedUsername);
-        }
-        if (roomId) {
-          await fetchRoom();
-          await fetchMessages();
-          await fetchPosts();
-          await fetchNotifications();
-          connectWebSocket();
-        }
-      } catch (error) {
-        Alert.alert("Error", "Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-
-    return () => {
-      if (stompClient.current) {
-        stompClient.current.deactivate();
-      }
-    };
-  }, [roomId]);
-  
->>>>>>> main
   const connectWebSocket = () => {
     const socket = new SockJS(`${API_BASE_URL}/ws-chat`);
     stompClient.current = new Client({
@@ -181,6 +128,7 @@ export default function RoomScreen() {
             scrollToBottom();
           }
         );
+
         // Subscribe to notifications
         stompClient.current.subscribe(
           `/user/${userId}/queue/notifications`,
@@ -199,17 +147,13 @@ export default function RoomScreen() {
 
     stompClient.current.activate();
   };
-<<<<<<< HEAD
 
   const fetchRoom = async (currentUserId: number) => {
-=======
-  
-  const fetchRoom = async () => {
->>>>>>> main
     try {
       const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
         credentials: "include",
       });
+
       if (!response.ok) throw new Error("Failed to fetch room");
 
       const data: Room = await response.json();
@@ -265,7 +209,7 @@ export default function RoomScreen() {
       );
     }
   };
-  
+
   const fetchMessages = async () => {
     try {
       const response = await fetch(
@@ -274,6 +218,7 @@ export default function RoomScreen() {
           credentials: "include",
         }
       );
+
       if (!response.ok) throw new Error("Failed to fetch messages");
 
       const data: Message[] = await response.json();
@@ -287,17 +232,11 @@ export default function RoomScreen() {
       );
     }
   };
-<<<<<<< HEAD
 
   const fetchPosts = async (currentUserIdParam?: number) => {
     const uid = currentUserIdParam ?? userId;
     if (!roomId || uid === null) return;
 
-=======
-  
-  const fetchPosts = async () => {
-    if (!roomId) return;
->>>>>>> main
     try {
       const response = await fetch(
         `${API_BASE_URL}/rooms/posts/room/${roomId}`,
@@ -310,7 +249,6 @@ export default function RoomScreen() {
       if (!response.ok) throw new Error("Failed to fetch posts");
 
       const data: Post[] = await response.json();
-<<<<<<< HEAD
       const processed: Post[] = data.map((post) => {
         const likesArray = Array.isArray((post as any).likes)
           ? ((post as any).likes as User[])
@@ -326,9 +264,6 @@ export default function RoomScreen() {
       });
 
       setPosts(processed);
-=======
-      setPosts(data);
->>>>>>> main
     } catch (error) {
       Alert.alert(
         "Error",
@@ -336,13 +271,8 @@ export default function RoomScreen() {
       );
     }
   };
-<<<<<<< HEAD
 
   const fetchNotifications = async (currentUserId: number) => {
-=======
-  
-  const fetchNotifications = async () => {
->>>>>>> main
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/notifications?userId=${currentUserId}`,
@@ -350,10 +280,13 @@ export default function RoomScreen() {
           credentials: "include",
         }
       );
+
       if (!response.ok) throw new Error("Failed to fetch notifications");
 
       const data: Notification[] = await response.json();
       setNotifications(data);
+
+      // Count unread notifications
       const unread = data.filter((n) => !n.read).length;
       setUnreadCount(unread);
     } catch (error) {
@@ -365,7 +298,6 @@ export default function RoomScreen() {
       );
     }
   };
-<<<<<<< HEAD
 
   const fetchRoomUsers = async () => {
     if (!roomId) return;
@@ -409,9 +341,6 @@ export default function RoomScreen() {
     }
   };
 
-=======
-  
->>>>>>> main
   const sendMessage = async () => {
     if (!newMessage.trim() || !stompClient.current || !userId || !roomId)
       return;
@@ -447,6 +376,7 @@ export default function RoomScreen() {
       Alert.alert("Error", "Title and content are required");
       return;
     }
+
     setIsCreatingPost(true);
     try {
       const response = await fetch(`${API_BASE_URL}/rooms/posts/create`, {
@@ -469,6 +399,7 @@ export default function RoomScreen() {
           `Failed to create post: ${response.status} - ${errorText}`
         );
       }
+
       const newPost = await response.json();
       setPosts((prev) => [...prev, newPost]);
       setNewPostTitle("");
@@ -485,12 +416,13 @@ export default function RoomScreen() {
       setIsCreatingPost(false);
     }
   };
-  
+
   const handleUpdateRoom = async () => {
     if (!room || !editedName.trim()) {
       Alert.alert("Error", "Room name is required");
       return;
     }
+
     setIsUpdating(true);
     try {
       const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
@@ -502,6 +434,7 @@ export default function RoomScreen() {
         }),
         credentials: "include",
       });
+
       if (!response.ok) throw new Error("Update failed");
 
       const updatedRoom = await response.json();
@@ -519,9 +452,10 @@ export default function RoomScreen() {
       setIsUpdating(false);
     }
   };
-  
+
   const handleDeleteRoom = async () => {
     if (!room) return;
+
     Alert.alert(
       "Confirm Delete",
       `Are you sure you want to delete "${room.roomName}"?`,
@@ -557,7 +491,7 @@ export default function RoomScreen() {
       ]
     );
   };
-  
+
   const markNotificationsAsRead = async () => {
     if (!userId) return;
     try {
@@ -573,11 +507,10 @@ export default function RoomScreen() {
       console.error("Failed to mark notifications as read", error);
     }
   };
-  
+
   const scrollToBottom = () => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   };
-<<<<<<< HEAD
 
   const copyRoomCode = async () => {
     if (room?.join_code) {
@@ -853,113 +786,99 @@ export default function RoomScreen() {
 
   // Update your posts mapping section (around line 1000) to include owner delete button
 
-  {posts.map((post) => (
-    <View key={`post-${post.id}`} style={styles.postItem}>
-      <TouchableOpacity
-        onPress={() => handlePostPress(post.id)}
-        style={styles.postContent}
-      >
-        <Text style={styles.postTitle}>{post.title}</Text>
-        <Text style={styles.postContentText}>{post.content}</Text>
-        <Text style={styles.postAuthor}>
-          By: {post.author?.username || "Unknown Author"}
-        </Text>
-        <Text style={styles.postDate}>
-          {new Date(post.date).toLocaleDateString()}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Like Button, Comment Button, and Delete Buttons */}
-      <View style={styles.postActions}>
+  {
+    posts.map((post) => (
+      <View key={`post-${post.id}`} style={styles.postItem}>
         <TouchableOpacity
-          style={styles.likeButton}
-          onPress={() => handleLike(post.id)}
-          disabled={likingPostIds.has(post.id)}
-        >
-          {likingPostIds.has(post.id) ? (
-            <ActivityIndicator size="small" color="#ef4444" />
-          ) : (
-            <Ionicons
-              name={post.isLikedByUser ? "heart" : "heart-outline"}
-              size={20}
-              color={post.isLikedByUser ? "#ef4444" : "#94a3b8"}
-            />
-          )}
-          <Text style={styles.likeCount}>{post.likes}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.commentButton}
           onPress={() => handlePostPress(post.id)}
+          style={styles.postContent}
         >
-          <Ionicons name="chatbubble-outline" size={20} color="#94a3b8" />
-          <Text style={styles.commentText}>Comment</Text>
+          <Text style={styles.postTitle}>{post.title}</Text>
+          <Text style={styles.postContentText}>{post.content}</Text>
+          <Text style={styles.postAuthor}>
+            By: {post.author?.username || "Unknown Author"}
+          </Text>
+          <Text style={styles.postDate}>
+            {new Date(post.date).toLocaleDateString()}
+          </Text>
         </TouchableOpacity>
 
-        {/* Owner Delete Button - Show if current user is the post author */}
-        {post.author?.userId === userId && (
+        {/* Like Button, Comment Button, and Delete Buttons */}
+        <View style={styles.postActions}>
           <TouchableOpacity
-            style={styles.ownerDeleteButton}
-            onPress={() => handleOwnerDeletePost(post.id, post.title)}
-            disabled={deletingPostIds.has(post.id)}
+            style={styles.likeButton}
+            onPress={() => handleLike(post.id)}
+            disabled={likingPostIds.has(post.id)}
           >
-            {deletingPostIds.has(post.id) ? (
-              <ActivityIndicator size="small" color="#f59e0b" />
-            ) : (
-              <Ionicons name="trash-outline" size={20} color="#f59e0b" />
-            )}
-          </TouchableOpacity>
-        )}
-
-        {/* Admin Delete Button - Show if current user is admin */}
-        {userRole === "ADMIN" && (
-          <TouchableOpacity
-            style={styles.adminDeleteButton}
-            onPress={() => handleAdminDeletePost(post.id, post.title)}
-            disabled={deletingPostIds.has(post.id)}
-          >
-            {deletingPostIds.has(post.id) ? (
+            {likingPostIds.has(post.id) ? (
               <ActivityIndicator size="small" color="#ef4444" />
             ) : (
-              <Ionicons name="trash" size={20} color="#ef4444" />
+              <Ionicons
+                name={post.isLikedByUser ? "heart" : "heart-outline"}
+                size={20}
+                color={post.isLikedByUser ? "#ef4444" : "#94a3b8"}
+              />
             )}
+            <Text style={styles.likeCount}>{post.likes}</Text>
           </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  ))}
 
-=======
-  
->>>>>>> main
+          <TouchableOpacity
+            style={styles.commentButton}
+            onPress={() => handlePostPress(post.id)}
+          >
+            <Ionicons name="chatbubble-outline" size={20} color="#94a3b8" />
+            <Text style={styles.commentText}>Comment</Text>
+          </TouchableOpacity>
+
+          {/* Owner Delete Button - Show if current user is the post author */}
+          {post.author?.userId === userId && (
+            <TouchableOpacity
+              style={styles.ownerDeleteButton}
+              onPress={() => handleOwnerDeletePost(post.id, post.title)}
+              disabled={deletingPostIds.has(post.id)}
+            >
+              {deletingPostIds.has(post.id) ? (
+                <ActivityIndicator size="small" color="#f59e0b" />
+              ) : (
+                <Ionicons name="trash-outline" size={20} color="#f59e0b" />
+              )}
+            </TouchableOpacity>
+          )}
+
+          {/* Admin Delete Button - Show if current user is admin */}
+          {userRole === "ADMIN" && (
+            <TouchableOpacity
+              style={styles.adminDeleteButton}
+              onPress={() => handleAdminDeletePost(post.id, post.title)}
+              disabled={deletingPostIds.has(post.id)}
+            >
+              {deletingPostIds.has(post.id) ? (
+                <ActivityIndicator size="small" color="#ef4444" />
+              ) : (
+                <Ionicons name="trash" size={20} color="#ef4444" />
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    ));
+  }
+
   if (loading) {
     return (
-      <ImageBackground
-        source={require('../assets/background-photo.png')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      >
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#16A34A" />
-        </View>
-      </ImageBackground>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#16A34A" />
+      </View>
     );
   }
-  
+
   if (!room) {
     return (
-      <ImageBackground
-        source={require('../assets/background-photo.png')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      >
-        <View style={styles.center}>
-          <Text style={styles.errorText}>Room not found</Text>
-        </View>
-      </ImageBackground>
+      <View style={styles.center}>
+        <Text style={styles.errorText}>Room not found</Text>
+      </View>
     );
   }
-<<<<<<< HEAD
   // Replace line 605-606 with:
   console.log(
     "First post likes count:",
@@ -970,38 +889,43 @@ export default function RoomScreen() {
   console.log("Is userRole ADMIN?", userRole === "ADMIN");
   console.log("Posts count:", posts.length);
   // console.log("Number of posts with likes:", posts.filter(post => post.likes && post.likes.size > 0).length);
-=======
-  
->>>>>>> main
   return (
-    <ImageBackground
-      source={require('../assets/background-photo.png')}
-      style={styles.backgroundImage}
-      resizeMode="cover"
-    >
-      <View style={styles.container}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <ScrollView
-          style={styles.content}
-          ref={scrollViewRef}
-          onContentSizeChange={() => scrollToBottom()}
-        >
-          {/* Back button and notifications at top of content */}
-          <View style={styles.topBar}>
-            <TouchableOpacity onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={24} color="white" />
-            </TouchableOpacity>
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.content}
+        ref={scrollViewRef}
+        onContentSizeChange={() => scrollToBottom()}
+      >
+        {/* Back button and notifications at top of content */}
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
 
-            <TouchableOpacity onPress={markNotificationsAsRead}>
-              <Ionicons name="notifications" size={24} color="white" />
-              {unreadCount > 0 && (
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.badgeText}>{unreadCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+          <TouchableOpacity onPress={markNotificationsAsRead}>
+            <Ionicons name="notifications" size={24} color="white" />
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Room Info */}
+        <View style={styles.infoCard}>
+          <View style={styles.roomNameContainer}>
+            {isEditing ? (
+              <TextInput
+                style={styles.roomNameInput}
+                value={editedName}
+                onChangeText={setEditedName}
+                autoFocus
+              />
+            ) : (
+              <Text style={styles.roomNameText}>{room.roomName}</Text>
+            )}
           </View>
-<<<<<<< HEAD
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Type:</Text>
@@ -1069,132 +993,83 @@ export default function RoomScreen() {
           {/* Owner actions - will only show if isOwner is true */}
           {isOwner && (
             <View style={styles.actionsContainer}>
-=======
-          
-          {/* Room Info */}
-          <View style={styles.infoCard}>
-            <View style={styles.roomNameContainer}>
->>>>>>> main
               {isEditing ? (
-                <TextInput
-                  style={styles.roomNameInput}
-                  value={editedName}
-                  onChangeText={setEditedName}
-                  autoFocus
-                />
+                <>
+                  <TouchableOpacity
+                    style={[styles.button, styles.cancelButton]}
+                    onPress={() => setIsEditing(false)}
+                    disabled={isUpdating}
+                  >
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.saveButton]}
+                    onPress={handleUpdateRoom}
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? (
+                      <ActivityIndicator color="white" />
+                    ) : (
+                      <Text style={styles.buttonText}>Save</Text>
+                    )}
+                  </TouchableOpacity>
+                </>
               ) : (
-                <Text style={styles.roomNameText}>{room.roomName}</Text>
+                <>
+                  <TouchableOpacity
+                    style={[styles.button, styles.editButton]}
+                    onPress={() => setIsEditing(true)}
+                  >
+                    <Text style={styles.buttonText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.deleteButton]}
+                    onPress={handleDeleteRoom}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <ActivityIndicator color="white" />
+                    ) : (
+                      <Text style={styles.buttonText}>Delete</Text>
+                    )}
+                  </TouchableOpacity>
+                </>
               )}
             </View>
+          )}
+        </View>
 
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Type:</Text>
-              <Text style={styles.detailValue}>
-                {room.type === "PUBLIC" ? "Public" : "Private"}
-              </Text>
-            </View>
-
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Owner:</Text>
-              <Text style={styles.detailValue}>
-                {isOwner ? "You" : `User #${room.ownerId}`}
-              </Text>
-            </View>
-
-            {isOwner && (
-              <View style={styles.actionsContainer}>
-                {isEditing ? (
-                  <>
-                    <TouchableOpacity
-                      style={[styles.button, styles.cancelButton]}
-                      onPress={() => setIsEditing(false)}
-                      disabled={isUpdating}
-                    >
-                      <Text style={styles.buttonText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.button, styles.saveButton]}
-                      onPress={handleUpdateRoom}
-                      disabled={isUpdating}
-                    >
-                      {isUpdating ? (
-                        <ActivityIndicator color="white" />
-                      ) : (
-                        <Text style={styles.buttonText}>Save</Text>
-                      )}
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <>
-                    <TouchableOpacity
-                      style={[styles.button, styles.editButton]}
-                      onPress={() => setIsEditing(true)}
-                    >
-                      <Text style={styles.buttonText}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.button, styles.deleteButton]}
-                      onPress={handleDeleteRoom}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? (
-                        <ActivityIndicator color="white" />
-                      ) : (
-                        <Text style={styles.buttonText}>Delete</Text>
-                      )}
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            )}
-          </View>
-
-          {/* Chat Section */}
-          <Text style={styles.sectionTitle}>Chat</Text>
-          <View style={styles.chatContainer}>
-            {messages.length === 0 ? (
-              <Text style={styles.emptyText}>No messages yet</Text>
-            ) : (
-              messages.map((message, index) => (
-                <View
-                  key={`${message.id}-${index}`}
-                  style={[
-                    styles.messageBubble,
-                    message.senderId === userId
-                      ? styles.myMessage
-                      : styles.otherMessage,
-                  ]}
-                >
-                  <Text style={styles.senderName}>
-                    {message.senderId === userId ? "You" : message.senderName}
-                  </Text>
-                  <Text style={styles.messageText}>{message.content}</Text>
-                  <Text style={styles.messageTime}>
-                    {new Date(message.timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-                </View>
-              ))
-            )}
-          </View>
-
-          {/* Posts Section */}
-          <Text style={styles.sectionTitle}>Posts</Text>
-          {posts.length === 0 ? (
-            <Text style={styles.emptyText}>No posts yet</Text>
+        {/* Chat Section */}
+        <Text style={styles.sectionTitle}>Chat</Text>
+        <View style={styles.chatContainer}>
+          {messages.length === 0 ? (
+            <Text style={styles.emptyText}>No messages yet</Text>
           ) : (
-            posts.map((post) => (
-              <View key={post.id} style={styles.postCard}>
-                <Text style={styles.postTitle}>{post.title}</Text>
-                <Text style={styles.postContent}>{post.content}</Text>
-                <Text style={styles.postAuthor}>By: {post.author.username}</Text>
+            messages.map((message, index) => (
+              <View
+                key={`${message.id}-${index}`}
+                style={[
+                  styles.messageBubble,
+                  message.senderId === userId
+                    ? styles.myMessage
+                    : styles.otherMessage,
+                ]}
+              >
+                <Text style={styles.senderName}>
+                  {message.senderId === userId ? "You" : message.senderName}
+                </Text>
+                <Text style={styles.messageText}>{message.content}</Text>
+                <Text style={styles.messageTime}>
+                  {new Date(message.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
               </View>
             ))
           )}
+        </View>
 
-<<<<<<< HEAD
         {/* Posts Section */}
         <Text style={styles.sectionTitle}>Posts</Text>
         {posts.length === 0 ? (
@@ -1257,7 +1132,11 @@ export default function RoomScreen() {
                     {deletingPostIds.has(post.id) ? (
                       <ActivityIndicator size="small" color="#f59e0b" />
                     ) : (
-                      <Ionicons name="trash-outline" size={20} color="#f59e0b" />
+                      <Ionicons
+                        name="trash-outline"
+                        size={20}
+                        color="#f59e0b"
+                      />
                     )}
                   </TouchableOpacity>
                 )}
@@ -1280,85 +1159,79 @@ export default function RoomScreen() {
             </View>
           ))
         )}
-=======
-          {/* Create Post Form */}
-          <View style={styles.postForm}>
-            <Text style={styles.sectionTitle}>Create New Post</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Post title"
-              placeholderTextColor="#94a3b8"
-              value={newPostTitle}
-              onChangeText={setNewPostTitle}
-            />
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Post content"
-              placeholderTextColor="#94a3b8"
-              value={newPostContent}
-              onChangeText={setNewPostContent}
-              multiline
-              numberOfLines={4}
-            />
-            <TouchableOpacity
-              style={[styles.button, styles.postButton]}
-              onPress={createPost}
-              disabled={isCreatingPost}
-            >
-              {isCreatingPost ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.buttonText}>Create Post</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
->>>>>>> main
 
-        {/* Message Input */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.messageInputContainer}
-        >
+        {/* Create Post Form */}
+        <View style={styles.postForm}>
+          <Text style={styles.sectionTitle}>Create New Post</Text>
           <TextInput
-            style={styles.messageInput}
-            placeholder="Type a message..."
+            style={styles.input}
+            placeholder="Post title"
             placeholderTextColor="#94a3b8"
-            value={newMessage}
-            onChangeText={setNewMessage}
-            onSubmitEditing={sendMessage}
+            value={newPostTitle}
+            onChangeText={setNewPostTitle}
+          />
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Post content"
+            placeholderTextColor="#94a3b8"
+            value={newPostContent}
+            onChangeText={setNewPostContent}
+            multiline
+            numberOfLines={4}
           />
           <TouchableOpacity
-            style={styles.sendButton}
-            onPress={sendMessage}
-            disabled={isSending}
+            style={[styles.button, styles.postButton]}
+            onPress={createPost}
+            disabled={isCreatingPost}
           >
-            <Ionicons
-              name="send"
-              size={24}
-              color={isSending ? "#94a3b8" : "#16A34A"}
-            />
+            {isCreatingPost ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.buttonText}>Create Post</Text>
+            )}
           </TouchableOpacity>
-        </KeyboardAvoidingView>
-      </View>
-    </ImageBackground>
+        </View>
+      </ScrollView>
+
+      {/* Message Input */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.messageInputContainer}
+      >
+        <TextInput
+          style={styles.messageInput}
+          placeholder="Type a message..."
+          placeholderTextColor="#94a3b8"
+          value={newMessage}
+          onChangeText={setNewMessage}
+          onSubmitEditing={sendMessage}
+        />
+        <TouchableOpacity
+          style={styles.sendButton}
+          onPress={sendMessage}
+          disabled={isSending}
+        >
+          <Ionicons
+            name="send"
+            size={24}
+            color={isSending ? "#94a3b8" : "#16A34A"}
+          />
+        </TouchableOpacity>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
   container: {
     flex: 1,
-    backgroundColor: 'rgba(48, 59, 51, 0.26)',
+    backgroundColor: "#0f172a",
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#0f172a",
   },
   errorText: {
     color: "#ff6b6b",
@@ -1369,15 +1242,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 15,
-    backgroundColor: 'rgba(48, 59, 51, 0.26)',
   },
   content: {
     flex: 1,
     padding: 10,
-    backgroundColor: 'transparent',
   },
   infoCard: {
-    backgroundColor: 'rgba(48, 59, 51, 0.26)',
+    backgroundColor: "#1e293b",
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
@@ -1390,7 +1261,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     borderBottomWidth: 1,
-    borderBottomColor: "#16A34A", // Green accent
+    borderBottomColor: "#16A34A",
     paddingBottom: 5,
   },
   roomNameText: {
@@ -1403,7 +1274,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   detailLabel: {
-    color: "#94a3b8", // Light gray text
+    color: "#94a3b8",
     fontWeight: "bold",
     width: 80,
   },
@@ -1428,16 +1299,16 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   editButton: {
-    backgroundColor: "rgba(22, 163, 74, 0.8)", // Green button
+    backgroundColor: "#3b82f6",
   },
   deleteButton: {
-    backgroundColor: "rgba(239, 68, 68, 0.8)", // Red button
+    backgroundColor: "#ef4444",
   },
   cancelButton: {
-    backgroundColor: "rgba(100, 116, 139, 0.8)", // Gray button
+    backgroundColor: "#64748b",
   },
   saveButton: {
-    backgroundColor: "rgba(22, 163, 74, 0.8)", // Green button
+    backgroundColor: "#10b981",
   },
   sectionTitle: {
     color: "white",
@@ -1448,13 +1319,12 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    color: "#94a3b8", // Light gray text
+    color: "#94a3b8",
     textAlign: "center",
     marginVertical: 20,
   },
   chatContainer: {
     marginBottom: 20,
-    backgroundColor: 'transparent',
   },
   messageBubble: {
     borderRadius: 12,
@@ -1464,16 +1334,16 @@ const styles = StyleSheet.create({
   },
   myMessage: {
     alignSelf: "flex-end",
-    backgroundColor: 'rgba(48, 59, 51, 0.26)',
+    backgroundColor: "#2563eb",
     borderBottomRightRadius: 2,
   },
   otherMessage: {
     alignSelf: "flex-start",
-    backgroundColor: 'rgba(48, 59, 51, 0.26)',
+    backgroundColor: "#334155",
     borderBottomLeftRadius: 2,
   },
   senderName: {
-    color: "#e2e8f0", // Light gray text
+    color: "#e2e8f0",
     fontWeight: "bold",
     fontSize: 12,
     marginBottom: 4,
@@ -1483,13 +1353,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   messageTime: {
-    color: "#cbd5e1", // Light gray text
+    color: "#cbd5e1",
     fontSize: 10,
     alignSelf: "flex-end",
     marginTop: 4,
   },
   postCard: {
-    backgroundColor: "rgba(86, 105, 133, 0.7)", // Dark gray background
+    backgroundColor: "#1e293b",
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
@@ -1507,18 +1377,14 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   postContent: {
-<<<<<<< HEAD
     flex: 1,
   },
   postContentText: {
     color: "#cbd5e1",
-=======
-    color: "#cbd5e1", // Light gray text
->>>>>>> main
     marginBottom: 10,
   },
   postAuthor: {
-    color: "#94a3b8", // Light gray text
+    color: "#94a3b8",
     fontSize: 12,
     fontStyle: "italic",
   },
@@ -1530,10 +1396,9 @@ const styles = StyleSheet.create({
   postForm: {
     marginTop: 20,
     marginBottom: 50,
-    backgroundColor: 'transparent',
   },
   input: {
-    backgroundColor: "rgba(75, 84, 97, 0.7)", 
+    backgroundColor: "#1e293b",
     color: "white",
     padding: 12,
     borderRadius: 8,
@@ -1544,7 +1409,7 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   postButton: {
-    backgroundColor: "rgba(22, 163, 74, 0.8)", // Green button
+    backgroundColor: "#16A34A",
     padding: 15,
     borderRadius: 8,
   },
@@ -1552,13 +1417,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 10,
-    backgroundColor: "rgba(75, 84, 97, 0.7)",
+    backgroundColor: "#1e293b",
     borderTopWidth: 1,
     borderTopColor: "#334155",
   },
   messageInput: {
     flex: 1,
-    backgroundColor: "rgba(49, 58, 70, 0.7)",
+    backgroundColor: "#0f172a",
     color: "white",
     borderRadius: 20,
     paddingHorizontal: 15,
