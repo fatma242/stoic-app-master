@@ -6,6 +6,8 @@ import com.example.stoic.User.DTO.LoginRequest;
 import com.example.stoic.User.DTO.LoginResponse;
 import com.example.stoic.User.Model.UserRole;
 import com.example.stoic.User.Service.UserServiceImpl;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.servlet.http.HttpSession;
 import lombok.Data;
 
@@ -168,6 +170,8 @@ public class UserController {
     @Data
     static class StatusRequest {
         private int userId;
+
+        @JsonProperty("status")
         private OnboardingStatus status;
     }
 
