@@ -1,82 +1,154 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ImageBackground, Alert } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ImageBackground,
+  Alert,
+} from 'react-native';
 import { GiftedChat, IMessage, Bubble } from 'react-native-gifted-chat';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, Entypo } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import chatbotIcon from '../../assets/chatbot.png';
 
 const apiKey = Constants.expoConfig?.extra?.chatbotApiKey;
-const therapyKeywords = ['treatment', 'therapy', 'therapist', 'counseling', 'medication', 'doctor'];
 
 export default function ChatAI() {
   const navigation = useNavigation();
-  const [messages, setMessages] = useState<IMessage[]>([
-    {
-      _id: 1,
-      text: 'Hello! How are you feeling today? 😊',
-      createdAt: new Date(),
-      user: { _id: 2, name: 'Stoic AI', avatar: chatbotIcon },
-    },
-  ]);
+  const [messages, setMessages] = useState<IMessage[]>([]);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [userId, setUserId] = useState<number | null>(null);
+  const [userStatus, setUserStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const id = await AsyncStorage.getItem('userId');
+        if (id) {
+          const numericId = parseInt(id, 10);
+          setUserId(numericId);
+
+          // fetch user status
+          const res = await fetch(`http://192.168.1.6:8100/api/users/status/${id}`);
+          console.log('Fetching user status for ID:', id);
+          const data = await res.json();
+          console.log('User status data:', data);
+          setUserStatus(data);
+
+          // fetch chat history
+          const historyRes = await fetch(`http://192.168.1.6:8100/api/chat/${id}`);
+          const history = await historyRes.json();
+          const formatted = history.map((msg: any) => ({
+            _id: msg.id,
+            text: msg.content,
+            createdAt: new Date(msg.timestamp),
+            user: {
+              _id: msg.sender === 'USER' ? 1 : 2,
+              name: msg.sender === 'USER' ? 'You' : 'Stoic AI',
+              avatar: msg.sender === 'AI' ? chatbotIcon : undefined
+            },
+          }));
+
+          setMessages(formatted);
+        }
+      } catch (err) {
+        console.error('❌ Error:', err);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
+
+  const therapyKeywords = ['treatment', 'therapy', 'therapist', 'counseling', 'medication', 'doctor'];
 
   const handleNewChat = () => {
-    setMessages([
-      {
-        _id: 1,
-        text: 'Hello! How are you feeling today? 😊',
-        createdAt: new Date(),
-        user: { _id: 2, name: 'Stoic AI', avatar: chatbotIcon },
-      },
-    ]);
-    setIsMenuVisible(false);
-  };
-
-  const handleDeleteChat = () => {
     setMessages([]);
     setIsMenuVisible(false);
   };
 
+  const handleDeleteChat = async () => {
+    if (!userId) return;
+    try {
+      await fetch(`http://192.168.1.6:8100/api/chat/${userId}`, { method: 'DELETE' });
+      setMessages([]);
+    } catch (err) {
+      console.error('❌ Error deleting chat:', err);
+    }
+    setIsMenuVisible(false);
+  };
+
+  const saveMessageToBackend = async (sender: 'USER' | 'AI', content: string) => {
+    if (!userId) return;
+    try {
+      await fetch('http://192.168.1.6:8100/api/chat/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, sender, content })
+      });
+    } catch (err) {
+      console.error('💾 Error saving message:', err);
+    }
+  };
+
+  const getCustomPrompt = (status: string) => {
+    const promptPolicy = `
+Always respond in the user's language or accent. Default to English if unsure.
+Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user makes an offensive, racist, or vulgar request, Stoic AI will politely refuse, saying: "I'm here to support you positively, but I can't respond to that request." Always reply in the user's language or accent.
+`;
+
+    const statusNote = `The user is currently classified as: ${status.toUpperCase()}.`;
+
+    switch (status.toUpperCase()) {
+      case 'DEPRESSION':
+        return `${statusNote} You are Stoic AI. Offer emotional support, positivity, and motivational content. Encourage the user with real stories or helpful videos.${promptPolicy}`;
+      case 'STRESS':
+        return `${statusNote} You are Stoic AI. Offer time management tips, relaxation techniques, and stress-relief exercises.${promptPolicy}`;
+      case 'ANXIETY':
+        return `${statusNote} You are Stoic AI. Recommend breathing exercises, guided meditation, and calm encouragement.${promptPolicy}`;
+      case 'SUICIDAL':
+        return `${statusNote} You are Stoic AI. Provide warm support and direct the user to crisis lines like Shezlong or Befrienders.org. Emphasize safety and professional help.${promptPolicy}`;
+      default:
+        return `${statusNote} You are Stoic AI, a positive and supportive companion. Keep the conversation uplifting and helpful.${promptPolicy}`;
+    }
+  };
+
   const onSend = useCallback(async (newMessages: IMessage[] = []) => {
     setMessages(previousMessages => GiftedChat.append(previousMessages, newMessages));
-    const userMessage = newMessages[0]?.text?.toLowerCase();
 
-    if (!userMessage) return;
+    const userMessage = newMessages[0]?.text?.trim();
+    if (!userMessage || !userStatus) return;
 
-    // Handle therapy warning
-    if (therapyKeywords.some(keyword => userMessage.includes(keyword))) {
-      const botResponse = "I'm here as an AI life coach, not a substitute for professional psychological support. I recommend reaching out to a mental health professional or using resources like Shezlong (https://www.shezlong.com/ar) or Befrienders (https://befrienders.org/ar/). 🌼";
-      setMessages(prevMessages =>
-        GiftedChat.append(prevMessages, [
-          {
-            _id: Math.random().toString(),
-            text: botResponse,
-            createdAt: new Date(),
-            user: { _id: 2, name: 'Stoic AI', avatar: chatbotIcon },
-          },
-        ])
-      );
+    await saveMessageToBackend('USER', userMessage);
+
+    if (therapyKeywords.some(keyword => userMessage.toLowerCase().includes(keyword))) {
+      const botResponse = "I'm here as an AI life coach, not a substitute for professional psychological support. I recommend reaching out to a mental health professional or using resources like Shezlong or Befrienders. 🌼";
+      await saveMessageToBackend('AI', botResponse);
+      setMessages(prev => GiftedChat.append(prev, [{
+        _id: Math.random().toString(),
+        text: botResponse,
+        createdAt: new Date(),
+        user: { _id: 2, name: 'Stoic AI', avatar: chatbotIcon },
+      }]));
       return;
     }
 
-    const prompt = `You are Stoic AI, an AI life coach. Classify the user's mental state according to ICD-11 and DSM-5 criteria into:
-    Anxiety: Recommend breathing exercises, meditation, or yoga. Link: https://www.youtube.com/@YogaWithRawda
-    Stress: Suggest relaxation techniques or time management tips.
-    Depression: Offer inspirational stories or mood-boosting support.
-    Suicidal Thoughts: Direct to crisis hotlines and websites: https://www.shezlong.com/ar, https://befrienders.org/ar/, https://www.betterhelp.com/get-started/
-    Normal: Cheer them up and reinforce positive emotions.
-    Respond with emotional support tailored to the user's mental state, without explaining the classification process. Offer encouragement and recommend professional help if necessary.
-    Always respond in the user's language or accent. Default to English if unsure.
-    Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user makes an offensive, racist, or vulgar request, Stoic AI will politely refuse, saying: "I'm here to support you positively, but I can't respond to that request." Always reply in the user's language or accent.
-    classify the user's mental state into at most two categories of the following categories: Anxiety, Stress, Depression, Suicidal Thoughts, Normal.`;
-
-
     try {
-      if (!apiKey) {
-        console.warn('Missing chatbot API key in Constants.');
-        throw new Error("Missing API key.");
-      }
+      if (!apiKey) throw new Error('Missing API key.');
+
+      const prompt = getCustomPrompt(userStatus);
+
+      const history = [
+        { role: 'system', content: prompt },
+        ...messages.map(msg => ({
+          role: msg.user._id === 1 ? 'user' : 'assistant',
+          content: msg.text,
+        })),
+        { role: 'user', content: userMessage },
+      ];
 
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -86,62 +158,40 @@ export default function ChatAI() {
         },
         body: JSON.stringify({
           model: 'deepseek/deepseek-r1:free',
-          messages: [
-            { role: 'system', content: prompt },
-            { role: 'user', content: userMessage }
-          ],
+          messages: history,
           top_p: 1,
           temperature: 0.7,
-          repetition_penalty: 1
+          repetition_penalty: 1,
         }),
       });
 
       const data = await response.json();
-      console.log('API Response:', data);
-
-      if (data.error) {
-        console.error('API error:', data.error.message);
-        throw new Error(data.error.message || 'Unknown API error');
-      }
-
-      if (!data.choices || !data.choices[0]?.message?.content) {
-        throw new Error('Unexpected response from chatbot API');
-      }
+      if (data.error || !data.choices?.[0]?.message?.content) throw new Error(data.error?.message || 'Invalid response');
 
       const botResponse = data.choices[0].message.content;
+      await saveMessageToBackend('AI', botResponse);
 
-      setMessages(prevMessages =>
-        GiftedChat.append(prevMessages, [
-          {
-            _id: Math.random().toString(),
-            text: botResponse,
-            createdAt: new Date(),
-            user: { _id: 2, name: 'Stoic AI', avatar: chatbotIcon },
-          },
-        ])
-      );
+      setMessages(prev => GiftedChat.append(prev, [{
+        _id: Math.random().toString(),
+        text: botResponse,
+        createdAt: new Date(),
+        user: { _id: 2, name: 'Stoic AI', avatar: chatbotIcon },
+      }]));
     } catch (error) {
-      console.error('Chatbot API error:', error);
-      setMessages(prevMessages =>
-        GiftedChat.append(prevMessages, [
-          {
-            _id: Math.random().toString(),
-            text: "I'm having trouble connecting right now. Please try again later.",
-            createdAt: new Date(),
-            user: { _id: 2, name: 'Stoic AI', avatar: chatbotIcon },
-          },
-        ])
-      );
+      console.error('💥 Chatbot API error:', error);
+      const errText = "I'm having trouble connecting right now. Please try again later.";
+      await saveMessageToBackend('AI', errText);
+      setMessages(prev => GiftedChat.append(prev, [{
+        _id: Math.random().toString(),
+        text: errText,
+        createdAt: new Date(),
+        user: { _id: 2, name: 'Stoic AI', avatar: chatbotIcon },
+      }]));
     }
-  }, []);
+  }, [userStatus, messages]);
 
   return (
-    <ImageBackground 
-      source={require('../../assets/background-photo.png')}
-      style={styles.container}
-      resizeMode="cover"
-    >
-      {/* Header */}
+    <ImageBackground source={require('../../assets/background-photo.png')} style={styles.container} resizeMode="cover">
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="white" />
@@ -166,7 +216,6 @@ export default function ChatAI() {
         </TouchableOpacity>
       </View>
 
-      {/* Chat Interface */}
       <GiftedChat
         messages={messages}
         onSend={messages => onSend(messages)}
@@ -174,12 +223,7 @@ export default function ChatAI() {
         placeholder="Type your message..."
         alwaysShowSend
         renderAvatarOnTop
-        textInputStyle={{
-          backgroundColor: 'white',
-          borderRadius: 20,
-          paddingHorizontal: 15,
-          color: '#0a170c'
-        }}
+        textInputStyle={{ backgroundColor: 'white', borderRadius: 20, paddingHorizontal: 15, color: '#0a170c' }}
         renderSend={props => (
           <TouchableOpacity
             style={styles.sendButton}
@@ -237,10 +281,6 @@ const styles = StyleSheet.create({
     padding: 8,
     zIndex: 100,
     elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
   menuItem: {
     paddingVertical: 10,
