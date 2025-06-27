@@ -62,9 +62,7 @@ public class Comment {
     }
 
     public List<User> removelike(User user) {
-        System.out.println("Removing like from user: " + likes.getFirst().getUsername());
         likes.remove(user);
-        System.out.println("Post likes after unliking: " + likes.getFirst().getUsername());
         return likes;
     }
 

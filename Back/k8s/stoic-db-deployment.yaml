@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stoic-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stoic-db
+  template:
+    metadata:
+      labels:
+        app: stoic-db
+    spec:
+      containers:
+        - name: stoic-db
+          image: mysql:8.0
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 3306  # or whatever your DB port is
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "Ahmed2002#"
+            - name: MYSQL_DATABASE
+              value: "stoic"
