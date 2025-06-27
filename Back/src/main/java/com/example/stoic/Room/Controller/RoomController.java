@@ -240,23 +240,23 @@ public class RoomController {
         }
     }
 
-
     @DeleteMapping("/forceDelete/{PostId}")
     public ResponseEntity<String> forceDeletePost(@PathVariable int PostId, HttpSession session) {
         try {
-             User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
-        }
-        
-        if (user.getUserRole() != UserRole.ADMIN) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can force delete posts");
-        }
-        
+            User user = (User) session.getAttribute("user");
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+            }
+
+            if (user.getUserRole() != UserRole.ADMIN) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can force delete posts");
+            }
+
             roomService.PostForceDelete(PostId);
             return new ResponseEntity<>("Post with ID " + PostId + " force deleted.", HttpStatus.NO_CONTENT);
         } catch (Exception e) {
-            return new ResponseEntity<>("Failed to force delete post: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Failed to force delete post: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -272,12 +272,10 @@ public class RoomController {
 
     // --- POSTS CONTROLLER LOGIC SHARING SAME CORS AND BASE PATH ---
 
-
-
     @RestController
     @RequestMapping("/rooms") // Shares the same CORS and base path as RoomController
     @CrossOrigin(origins = {
-           " ${UserIphttp}",
+            " ${UserIphttp}",
             "${UserIPexp}"
     }, allowCredentials = "true")
     class PostsController {
@@ -385,7 +383,7 @@ public class RoomController {
                 }
 
                 // Remove user from room
-                roomService.removeUserFromRoom( userToRemove.getUserId(),roomId);
+                roomService.removeUserFromRoom(userToRemove.getUserId(), roomId);
 
                 return ResponseEntity.ok().body("User removed successfully");
 

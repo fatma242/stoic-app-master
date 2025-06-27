@@ -1,3 +1,4 @@
+import React from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -49,6 +50,9 @@ export default function RootLayout() {
             animation: 'fade'
           }}
         />
+
+        <Stack.Screen name="PrivacyPolicy" options={{ title: 'Privacy Policy', headerShown: false }} />
+        <Stack.Screen name="TermsOfService" options={{ title: 'Terms of Service', headerShown: false }} />
 
         {/* Authenticated tabs */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

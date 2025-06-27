@@ -1,17 +1,23 @@
-import React, { useState, useEffect } from "react";
+import BackgroundVideo from "@/components/BackgroundVideo";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React from "react";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  Alert,
   ActivityIndicator,
+  Alert,
+  BackHandler,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  BackHandler,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Constants from "expo-constants";
@@ -120,6 +126,8 @@ export default function SignUp() {
         await AsyncStorage.setItem("userId", String(data.userId));
         console.log("✅ Stored userId:", data.userId);
       }
+      await AsyncStorage.setItem("UserRole", data.role);
+      await AsyncStorage.setItem("onboardingStatus", data.onboardingStatus);
 
       router.replace("/onboarding");
     } catch (error) {
@@ -134,14 +142,7 @@ export default function SignUp() {
 
   return (
     <View style={styles.container}>
-      <Video
-        source={require("../assets/background.mp4")}
-        style={styles.backgroundVideo}
-        isMuted
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-      />
+      <BackgroundVideo />
       <View style={styles.overlay} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -166,11 +167,18 @@ export default function SignUp() {
                     ]}
                   >
                     <MaterialIcons
-                      name={field.includes("email") ? "email" : "lock"}
+                      name={
+                        field === "username"
+                          ? "person"
+                          : field === "email"
+                          ? "email"
+                          : "lock"
+                      }
                       size={24}
                       color="#16A34A"
                       style={styles.icon}
                     />
+
                     <TextInput
                       style={styles.input}
                       placeholder={
@@ -185,13 +193,14 @@ export default function SignUp() {
                         field === "email" ? "email-address" : "default"
                       }
                       secureTextEntry={
-                        field.includes("password") &&
-                        (field === "password"
+                        field === "password"
                           ? !showPassword
-                          : !showConfirmPassword)
+                          : field === "confirmPassword"
+                          ? !showConfirmPassword
+                          : false
                       }
                     />
-                    {field.includes("password") && (
+                    {(field === "password" || field === "confirmPassword") && (
                       <TouchableOpacity
                         onPress={() =>
                           field === "password"
@@ -202,11 +211,11 @@ export default function SignUp() {
                       >
                         <Ionicons
                           name={
-                            (
-                              field === "password"
-                                ? showPassword
-                                : showConfirmPassword
-                            )
+                            field === "password"
+                              ? showPassword
+                                ? "eye-off"
+                                : "eye"
+                              : showConfirmPassword
                               ? "eye-off"
                               : "eye"
                           }

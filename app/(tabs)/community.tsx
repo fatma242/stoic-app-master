@@ -1,16 +1,20 @@
-import React, { useEffect, useState } from "react";
-import { useFocusEffect } from "@react-navigation/native";
+import BackgroundVideo from "@/components/BackgroundVideo";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import React from "react";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
   ScrollView,
   StyleSheet,
-  Image,
-  Alert,
-  ActivityIndicator,
+  Text,
   TextInput,
-  Modal,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -248,16 +252,7 @@ export default function Community() {
 
   return (
     <View style={styles.container}>
-      <Video
-        source={require("../../assets/background.mp4")}
-        style={styles.backgroundVideo}
-        rate={1.0}
-        volume={1.0}
-        isMuted
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-      />
+      <BackgroundVideo />
       <View style={styles.overlay} />
 
       <ScrollView style={styles.content}>

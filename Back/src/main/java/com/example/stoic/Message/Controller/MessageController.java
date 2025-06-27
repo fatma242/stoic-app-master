@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @CrossOrigin(origins = {
-       " ${UserIphttp}",
+        " ${UserIphttp}",
         "${UserIPexp}"
 }, allowCredentials = "true")
 @RestController
