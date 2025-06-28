@@ -110,7 +110,7 @@ const ProgressScreen = () => {
       <View style={styles.container}>
         <VideoBackground videoRef={videoRef} />
         <View style={styles.overlay}>
-          <Text style={styles.noDataText}>No mood data available</Text>
+          <Text style={styles.noDataText}>Register now weekly check-in survey!!</Text>
         </View>
       </View>
     );

@@ -185,4 +185,25 @@ public class UserController {
         }
     }
 
+    @GetMapping("/age/{userId}")
+    public ResponseEntity<Integer> getAge(@PathVariable int userId) {
+        try {
+            Integer age = userService.getAge(userId);
+            return ResponseEntity.ok(age);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
+    @GetMapping("/gender/{userId}")
+    public ResponseEntity<String> getGender(@PathVariable int userId) {
+        try {
+            String gender = userService.getGender(userId);
+            return ResponseEntity.ok(gender);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }   
+
+    }
+
 }

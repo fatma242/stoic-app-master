@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import chatbotIcon from '../../assets/chatbot.png';
 
 const apiKey = Constants.expoConfig?.extra?.chatbotApiKey;
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export default function ChatAI() {
   const navigation = useNavigation();
@@ -23,6 +24,9 @@ export default function ChatAI() {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
   const [userStatus, setUserStatus] = useState<string | null>(null);
+  const [userAge, setUserAge] = useState<number | null>(null);
+  const [userGender, setUserGender] = useState<string | null>(null);
+
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -33,14 +37,26 @@ export default function ChatAI() {
           setUserId(numericId);
 
           // fetch user status
-          const res = await fetch(`http://192.168.1.6:8100/api/users/status/${id}`);
+          const res = await fetch(`${API_BASE_URL}/api/users/status/${id}`);
           console.log('Fetching user status for ID:', id);
           const data = await res.json();
           console.log('User status data:', data);
           setUserStatus(data);
 
+          // fetch user age
+          const ageRes = await fetch(`${API_BASE_URL}/api/users/age/${id}`);
+          const ageData = await ageRes.json();
+          console.log('User age data:', ageData);
+          setUserAge(ageData);
+
+          // fetch user gender
+          const genderRes = await fetch(`${API_BASE_URL}/api/users/gender/${id}`);
+          const genderData = await genderRes.text();  
+          console.log('User gender data:', genderData);
+          setUserGender(genderData);
+
           // fetch chat history
-          const historyRes = await fetch(`http://192.168.1.6:8100/api/chat/${id}`);
+          const historyRes = await fetch(`${API_BASE_URL}/api/chat/${id}`);
           const history = await historyRes.json();
           const formatted = history.map((msg: any) => ({
             _id: msg.id,
@@ -73,7 +89,7 @@ export default function ChatAI() {
   const handleDeleteChat = async () => {
     if (!userId) return;
     try {
-      await fetch(`http://192.168.1.6:8100/api/chat/${userId}`, { method: 'DELETE' });
+      await fetch(`${API_BASE_URL}/api/chat/${userId}`, { method: 'DELETE' });
       setMessages([]);
     } catch (err) {
       console.error('❌ Error deleting chat:', err);
@@ -84,7 +100,7 @@ export default function ChatAI() {
   const saveMessageToBackend = async (sender: 'USER' | 'AI', content: string) => {
     if (!userId) return;
     try {
-      await fetch('http://192.168.1.6:8100/api/chat/save', {
+      await fetch(`${API_BASE_URL}/api/chat/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, sender, content })
@@ -94,27 +110,32 @@ export default function ChatAI() {
     }
   };
 
-  const getCustomPrompt = (status: string) => {
-    const promptPolicy = `
+  const getCustomPrompt = (status: string, age: number | null, gender: string | null) => {
+  const promptPolicy = `
 Always respond in the user's language or accent. Default to English if unsure.
 Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user makes an offensive, racist, or vulgar request, Stoic AI will politely refuse, saying: "I'm here to support you positively, but I can't respond to that request." Always reply in the user's language or accent.
 `;
 
-    const statusNote = `The user is currently classified as: ${status.toUpperCase()}.`;
+  const statusNote = `The user is currently classified as: ${status.toUpperCase()}.`;
+  const ageNote = age ? ` The user's age is ${age}.` : '';
+  const genderNote = gender ? ` The user's gender is ${gender}.` : '';
 
-    switch (status.toUpperCase()) {
-      case 'DEPRESSION':
-        return `${statusNote} You are Stoic AI. Offer emotional support, positivity, and motivational content. Encourage the user with real stories or helpful videos.${promptPolicy}`;
-      case 'STRESS':
-        return `${statusNote} You are Stoic AI. Offer time management tips, relaxation techniques, and stress-relief exercises.${promptPolicy}`;
-      case 'ANXIETY':
-        return `${statusNote} You are Stoic AI. Recommend breathing exercises, guided meditation, and calm encouragement.${promptPolicy}`;
-      case 'SUICIDAL':
-        return `${statusNote} You are Stoic AI. Provide warm support and direct the user to crisis lines like Shezlong or Befrienders.org. Emphasize safety and professional help.${promptPolicy}`;
-      default:
-        return `${statusNote} You are Stoic AI, a positive and supportive companion. Keep the conversation uplifting and helpful.${promptPolicy}`;
-    }
-  };
+  const context = `${statusNote}${ageNote}${genderNote}`;
+
+  switch (status.toUpperCase()) {
+    case 'DEPRESSION':
+      return `${context} You are Stoic AI. Offer emotional support, positivity, and motivational content. Encourage the user with real stories or helpful videos.${promptPolicy}`;
+    case 'STRESS':
+      return `${context} You are Stoic AI. Offer time management tips, relaxation techniques, and stress-relief exercises.${promptPolicy}`;
+    case 'ANXIETY':
+      return `${context} You are Stoic AI. Recommend breathing exercises, guided meditation, and calm encouragement.${promptPolicy}`;
+    case 'SUICIDAL':
+      return `${context} You are Stoic AI. Provide warm support and direct the user to crisis lines like Shezlong or Befrienders.org. Emphasize safety and professional help.${promptPolicy}`;
+    default:
+      return `${context} You are Stoic AI, a positive and supportive companion. Keep the conversation uplifting and helpful.${promptPolicy}`;
+  }
+};
+
 
   const onSend = useCallback(async (newMessages: IMessage[] = []) => {
     setMessages(previousMessages => GiftedChat.append(previousMessages, newMessages));
@@ -139,7 +160,7 @@ Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user
     try {
       if (!apiKey) throw new Error('Missing API key.');
 
-      const prompt = getCustomPrompt(userStatus);
+      const prompt = getCustomPrompt(userStatus, userAge, userGender);
 
       const history = [
         { role: 'system', content: prompt },

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import BackgroundVideo from "@/components/BackgroundVideo";
 import {
   View,
   Text,
@@ -25,6 +26,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   useEffect(() => {
     AsyncStorage.getItem("userId").then((id) => {
@@ -71,7 +73,7 @@ export default function Login() {
     if (!validateForm()) return;
     setLoading(true);
     try {
-      const resp = await fetch(`http://192.168.1.8:8100/api/users/login`, {
+      const resp = await fetch(`${API_BASE_URL}/api/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -105,16 +107,7 @@ export default function Login() {
 
   return (
       <View style={styles.container}>
-        <Video
-            source={require("../assets/background.mp4")}
-            style={styles.backgroundVideo}
-            rate={1.0}
-            volume={1.0}
-            isMuted
-            resizeMode={ResizeMode.COVER}
-            shouldPlay
-            isLooping
-        />
+        <BackgroundVideo />
         <View style={styles.overlay} />
 
         <KeyboardAvoidingView

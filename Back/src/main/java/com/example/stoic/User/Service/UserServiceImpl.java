@@ -103,4 +103,16 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new NoSuchElementException("User with username " +
                         username + " not found"));
     }
+
+    @Override
+    public int getAge(int userId) {
+        User user = findById(userId);
+        return user.getAge();
+    }
+
+    @Override
+    public String getGender(int userId) {
+        User user = findById(userId);
+        return user.getGender();
+    }
 }

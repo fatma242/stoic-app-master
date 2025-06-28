@@ -14,34 +14,19 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const moods = [
-  { emoji: "😢", score: 1 },
-  { emoji: "😔", score: 2 },
-  { emoji: "😐", score: 3 },
-  { emoji: "😊", score: 4 },
-  { emoji: "😄", score: 5 },
-];
-
-// Helper function to get ISO week number
-function getWeekNumber(d: Date): { year: number; week: number } {
-  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil(
-    ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
-  );
-  return { year: d.getUTCFullYear(), week: weekNo };
-}
+import i18n from "@/constants/i18n";
 
 export default function WeeklyCheckIn() {
-  const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const videoRef = React.useRef(null);
+  const [questions, setQuestions] = useState<string[]>([]);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [status, setStatus] = useState<string | null>(null);
+
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   useEffect(() => {
-    const checkUser = async () => {
+    const fetchStatusAndQuestions = async () => {
       try {
         const userId = await AsyncStorage.getItem("userId");
         if (!userId) {
@@ -50,47 +35,45 @@ export default function WeeklyCheckIn() {
           return;
         }
 
-        // WEEKLY CHECK TEMPORARILY DISABLED FOR TESTING
-        // Commented out to allow multiple submissions during testing
-        /*
-        const response = await axios.get(`http://192.168.1.19:8100/api/mood-logs/${userId}`);
-        const logs = response.data;
+        // Fetch status from backend
+        const response = await axios.get(`${API_BASE_URL}/api/status/${userId}`);
+        const userStatus = response.data.status;
+        console.log("User status from API:", userStatus);
 
-        const now = new Date();
-        const currentWeek = getWeekNumber(now);
+        let statusKey = userStatus?.toLowerCase();
 
-        const hasSubmitted = logs.some((log: any) => {
-          const logDate = new Date(log.timestamp);
-          const logWeek = getWeekNumber(logDate);
-          return logWeek.week === currentWeek.week && logWeek.year === currentWeek.year;
-        });
-
-        if (hasSubmitted) {
-          Alert.alert(
-            "Already Submitted",
-            "You've already completed your weekly check-in.",
-          );
-          router.replace('/progress');
+        let statusQuestions: any = [];
+        if (statusKey === "anxiety") {
+          statusQuestions = i18n.t("weeklyCheckIn.questions.anxiety", { returnObjects: true });
+        } else if (statusKey === "stress") {
+          statusQuestions = i18n.t("weeklyCheckIn.questions.stress", { returnObjects: true });
+        } else if (statusKey === "depression") {
+          statusQuestions = i18n.t("weeklyCheckIn.questions.depression", { returnObjects: true });
         } else {
-          setLoading(false);
+          statusQuestions = i18n.t("weeklyCheckIn.questions.normal", { returnObjects: true });
         }
-        */
 
-        // Bypass the weekly check and always show the form
-        setLoading(false);
+        console.log("Fetched questions object:", statusQuestions);
+
+        const questionTexts = Object.values(statusQuestions);
+        console.log("Question texts array:", questionTexts);
+
+        setQuestions(questionTexts as string[]);
+        setStatus(statusKey);
       } catch (error) {
         console.error(error);
-        Alert.alert("Error", "Failed to initialize check-in");
+        Alert.alert("Error", "Failed to fetch status or questions");
+      } finally {
         setLoading(false);
       }
     };
 
-    checkUser();
+    fetchStatusAndQuestions();
   }, []);
 
   const handleSubmit = async () => {
-    if (selectedMood == null) {
-      Alert.alert("Please select your mood.");
+    if (Object.keys(answers).length !== questions.length) {
+      Alert.alert("Please answer all questions.");
       return;
     }
 
@@ -103,18 +86,26 @@ export default function WeeklyCheckIn() {
         return;
       }
 
-      await axios.post("process.env.EXPO_PUBLIC_API_BASE_URL/api/mood-logs", {
+      // Calculate score like emojis logic
+      let score = 0;
+      Object.values(answers).forEach((ans) => {
+        if (ans === "Yes") score += 2;
+        else if (ans === "Sometimes") score += 1;
+        // No = 0
+      });
+
+      await axios.post(`${API_BASE_URL}/api/mood-logs`, {
         userId: userId,
-        moodScore: selectedMood,
+        moodScore: score,
         timestamp: new Date().toISOString(),
       });
 
-      Alert.alert("Success", "Your mood has been recorded!", [
+      Alert.alert("Success", "Your check-in has been recorded!", [
         { text: "OK", onPress: () => router.replace("/progress") },
       ]);
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "Failed to submit mood. Please try again.");
+      Alert.alert("Error", "Failed to submit check-in. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -131,9 +122,7 @@ export default function WeeklyCheckIn() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-
       <BackgroundVideo />
-
       <View style={styles.overlay} />
 
       <KeyboardAvoidingView behavior="padding" style={styles.contentContainer}>
@@ -142,24 +131,28 @@ export default function WeeklyCheckIn() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.card}>
-            <Text style={styles.title}>How are you feeling today?</Text>
+            <Text style={styles.title}>How are you feeling this week?</Text>
 
-            <View style={styles.moods}>
-              {moods.map((m) => (
-                <TouchableOpacity
-                  key={m.score}
-                  onPress={() => setSelectedMood(m.score)}
-                  disabled={submitting}
-                >
-                  <Text
-                    style={[
-                      styles.emoji,
-                      selectedMood === m.score && styles.selected,
-                    ]}
-                  >
-                    {m.emoji}
-                  </Text>
-                </TouchableOpacity>
+            <View>
+              {questions.map((q, index) => (
+                <View key={index} style={{ marginBottom: 20 }}>
+                  <Text style={{ color: "#fff", fontSize: 16, marginBottom: 8 }}>{q}</Text>
+                  <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
+                    {["Yes", "No", "Sometimes"].map((option) => (
+                      <TouchableOpacity
+                        key={option}
+                        onPress={() => setAnswers((prev) => ({ ...prev, [index]: option }))}
+                        style={{
+                          padding: 10,
+                          backgroundColor: answers[index] === option ? "#16A34A" : "#ffffff30",
+                          borderRadius: 8,
+                        }}
+                      >
+                        <Text style={{ color: "#fff" }}>{option}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
               ))}
             </View>
 
@@ -168,10 +161,7 @@ export default function WeeklyCheckIn() {
               style={styles.submitButton}
               disabled={submitting}
             >
-              <LinearGradient
-                colors={["#16A34A", "#0d4215"]}
-                style={styles.buttonGradient}
-              >
+              <LinearGradient colors={["#16A34A", "#0d4215"]} style={styles.buttonGradient}>
                 {submitting ? (
                   <ActivityIndicator color="white" />
                 ) : (
@@ -190,14 +180,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "transparent",
-  },
-  backgroundVideo: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    right: 0,
-    zIndex: -2,
   },
   overlay: {
     position: "absolute",
@@ -225,7 +207,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 30,
     width: "90%",
-    maxWidth: 350,
+    maxWidth: 380,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -235,38 +217,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    marginBottom: 10,
+    marginBottom: 20,
     fontWeight: "bold",
     color: "#fff",
     textAlign: "center",
   },
-  testNote: {
-    fontSize: 14,
-    marginBottom: 25,
-    color: "#E53935",
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  moods: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 15,
-    marginBottom: 30,
-  },
-  emoji: {
-    fontSize: 40,
-    margin: 10,
-  },
-  selected: {
-    borderBottomWidth: 3,
-    borderColor: "#16A34A",
-    borderRadius: 4,
-    transform: [{ scale: 1.2 }],
-  },
   submitButton: {
     width: "100%",
-    marginTop: 10,
+    marginTop: 20,
     borderRadius: 10,
     overflow: "hidden",
   },

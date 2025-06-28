@@ -26,6 +26,7 @@ public interface UserService {
 
     OnboardingStatus getStatus(int userId);
 
-    User findByUsername(String username);
+    int getAge(int userId);
+    String getGender(int userId);
 
 }

@@ -46,7 +46,7 @@ export default function Home() {
           <Text style={styles.greeting}>Welcome Back!</Text>
         </View>
 
-        {/* Weekly Check-in => فقط للمستخدم REG */}
+        {/* Weekly Check-in =>  REG */}
         {role === 'REG' && (
           <LinearGradient colors={['#16A34A', '#0d4215']} style={styles.card}>
             <Text style={styles.cardTitle}>Weekly Check-in</Text>
@@ -63,7 +63,7 @@ export default function Home() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Access</Text>
           <View style={styles.grid}>
-            {/* Community => للجميع */}
+            {/* Community => All roles */}
             <TouchableOpacity
               onPress={() => router.push('/community')}
               style={styles.gridItem}
@@ -72,7 +72,7 @@ export default function Home() {
               <Text style={styles.gridText}>Community</Text>
             </TouchableOpacity>
 
-            {/* AI Chat => فقط REG */}
+            {/* AI Chat => REG only*/}
             {role === 'REG' && (
               <TouchableOpacity
                 style={styles.gridItem}
@@ -83,7 +83,7 @@ export default function Home() {
               </TouchableOpacity>
             )}
 
-            {/* Progress => فقط REG */}
+            {/* Progress => REG only*/}
             {role === 'REG' && (
               <TouchableOpacity
                 style={styles.gridItem}
@@ -94,7 +94,7 @@ export default function Home() {
               </TouchableOpacity>
             )}
 
-            {/* Settings => للجميع */}
+            {/* Settings => all */}
             <TouchableOpacity
               style={styles.gridItem}
               onPress={() => router.push('/settings')}

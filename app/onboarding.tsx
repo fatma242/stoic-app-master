@@ -37,6 +37,7 @@ export default function Onboarding() {
   const [key, setKey] = useState(0);
   const [history, setHistory] = useState<AnswerKey[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   useEffect(() => {
     global.reloadApp = () => setKey(prev => prev + 1);
@@ -49,7 +50,7 @@ export default function Onboarding() {
       if (!userId) throw new Error('User ID not found');
 
       const res = await axios.post(
-        'http://192.168.1.6:8100/api/users/submit-status',
+        `${API_BASE_URL}/api/users/submit-status`,
         {
           userId: parseInt(userId, 10),
           status: status.toUpperCase()
