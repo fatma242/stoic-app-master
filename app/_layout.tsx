@@ -29,34 +29,28 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        {/* Public screens */}
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        
-        {/* Authentication screens */}
-        <Stack.Screen 
-          name="signup" 
-          options={{ 
-            headerShown: false,
-            animation: 'fade'
-          }} 
-        />
-         <Stack.Screen 
-          name="login"  
-          options={{ 
-            headerShown: false,
-            animation: 'fade'
-          }}
-        />
+        <Stack
+            screenOptions={{
+                headerShown: false,    // hide the native header everywhere
+                animation: 'fade',      // optional: a default animation
+            }}
+        >
+            {/* Public screens */}
+            <Stack.Screen name="index" />
+            <Stack.Screen name="onboarding" />
 
-        {/* Authenticated tabs */}
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        
-        {/* Catch-all route */}
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
+            {/* Authentication screens */}
+            <Stack.Screen name="signup" />
+            <Stack.Screen name="login" />
+
+            {/* Authenticated tabs */}
+            <Stack.Screen name="(tabs)" />
+
+            {/* Catch-all route */}
+            <Stack.Screen name="+not-found" />
+        </Stack>
+
+        <StatusBar style="auto" />
     </ThemeProvider>
   );
 }

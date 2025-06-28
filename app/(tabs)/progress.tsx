@@ -28,7 +28,7 @@ const ProgressScreen = () => {
         }
 
         const response = await axios.get(
-          `http://localhost:8100/api/mood-logs/${userId}`
+          `http://192.168.1.8:8100/api/mood-logs/${userId}`
         );
         setMoodData(response.data);
         setLoading(false);
@@ -173,7 +173,7 @@ const VideoBackground = ({
     ref={videoRef}
     source={require("../../assets/background.mp4")} // Update with your video path
     style={StyleSheet.absoluteFill}
-    resizeMode="cover"
+    // resizeMode="cover"
     shouldPlay
     isLooping
     isMuted

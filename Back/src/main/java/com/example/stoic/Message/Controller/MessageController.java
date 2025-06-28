@@ -2,6 +2,7 @@ package com.example.stoic.Message.Controller;
 
 import com.example.stoic.Message.Model.Message;
 import com.example.stoic.Message.Service.MessageService;
+import com.example.stoic.Room.dto.ChatMessageDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -11,8 +12,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @CrossOrigin(origins = {
-        "http://localhost:8081",
-        "exp://192.168.210.193:8081"
+        "http://localhost:8081",             // for web dev
+        "exp://192.168.1.8:8081",            // Expo Go mobile
+        "http://192.168.1.8:8081"            // Web on phone using LAN
 }, allowCredentials = "true")
 @RestController
 @RequiredArgsConstructor
@@ -34,10 +36,12 @@ public class MessageController {
         return service.save(message);
     }
 
-    // REST: room history
+    // ✅ REST: room history with senderName and sentAt
     @GetMapping("/rooms/{roomId}/history")
-    public List<Message> getRoomHistory(@PathVariable int roomId) {
-        return service.getRoomHistory(roomId);
+    public List<ChatMessageDto> getRoomHistory(@PathVariable int roomId) {
+        return service.getRoomHistory(roomId).stream()
+                .map(ChatMessageDto::fromEntity)
+                .toList();
     }
 
     // REST: by sender
@@ -49,7 +53,7 @@ public class MessageController {
     // REST: between dates
     @GetMapping("/between")
     public List<Message> getBetween(@RequestParam LocalDateTime from,
-            @RequestParam LocalDateTime to) {
+                                    @RequestParam LocalDateTime to) {
         return service.getBetween(from, to);
     }
 }

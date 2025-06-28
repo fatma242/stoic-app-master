@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @CrossOrigin(origins = {
-        "http://localhost:8081",
-        "exp://192.168.210.193:8081",
-        "http://localhost:8081",
+        "http://192.168.1.8:8081",
+        "exp://192.168.1.8:8081",
+        "http://192.168.1.8:8081",
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/users")

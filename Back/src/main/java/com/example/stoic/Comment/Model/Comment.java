@@ -3,19 +3,24 @@ package com.example.stoic.Comment.Model;
 import com.example.stoic.Post.Model.Post;
 
 import com.example.stoic.User.Model.User;
-import jakarta.persistence.Entity;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "comment")
+@Table(name = "comments")
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class Comment {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(unique = true, nullable = false, name = "id")
     private int id;
 
@@ -29,8 +34,9 @@ public class Comment {
     @JoinColumn(name = "user_id", nullable = false)
     private User author;
 
-    @Column(name = "like", nullable = true)
-    private int like;
+    @ManyToMany
+    @JoinTable(name = "comment_likes", joinColumns = @JoinColumn(name = "id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
+    private List<User> likes;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", nullable = false)
