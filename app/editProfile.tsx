@@ -24,7 +24,7 @@ type User = {
   status?: string;
 };
 
-const API_BASE_URL = "http://192.168.1.6:8100";
+const API_BASE_URL = "http://192.168.20.179:8100";
 
 export default function EditProfile() {
   const navigation = useNavigation();

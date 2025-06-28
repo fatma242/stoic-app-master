@@ -1,9 +1,24 @@
 package com.example.stoic.User.Controller;
 
-import com.example.stoic.User.Model.OnboardingStatus;
-import com.example.stoic.User.Model.User;
+import java.util.List;
+import java.util.NoSuchElementException;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.stoic.User.DTO.LoginRequest;
 import com.example.stoic.User.DTO.LoginResponse;
+import com.example.stoic.User.Model.OnboardingStatus;
+import com.example.stoic.User.Model.User;
 import com.example.stoic.User.Model.UserRole;
 import com.example.stoic.User.Service.UserServiceImpl;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -11,15 +26,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.servlet.http.HttpSession;
 import lombok.Data;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-
 @CrossOrigin(origins = {
         "http://192.168.1.6:8081",
+        "http://192.168.20.179:8081",
+        "exp://192.168.20.179:8081",
         "exp://192.168.1.6:8081",
         "exp://192.168.210.193:8081",
         "http://localhost:8081",
