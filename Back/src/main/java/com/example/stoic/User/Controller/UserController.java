@@ -206,4 +206,14 @@ public class UserController {
 
     }
 
+    @GetMapping("/role/{userId}")
+    public ResponseEntity<String> getUserRole(@PathVariable int userId) {
+        try {
+            UserRole role = userService.getUserRole(userId);
+            return ResponseEntity.ok(role.name());
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
 }

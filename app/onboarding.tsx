@@ -86,8 +86,6 @@ export default function Onboarding() {
     console.log('📤 Submitting user status:', status);
     await submitStatus(status);
     setHasSubmitted(true);
-
-    setTimeout(() => router.replace('/login'), 3000);
   };
 
   const handleAnswer = (answer: string) => {
@@ -138,14 +136,25 @@ export default function Onboarding() {
       return (
         <View style={{ alignItems: 'center' }}>
           <Text style={styles.resourceText}>{i18n.t(node.resourcesKey)}</Text>
+
           {currentNode === 'crisis_resources' && (
             <TouchableOpacity onPress={handleEmergencyCall}>
               <Text style={styles.emergencyText}>{i18n.t('onboarding.resources.hopeless')}</Text>
             </TouchableOpacity>
           )}
+
+          <TouchableOpacity
+            style={[styles.navButton, { marginTop: 30, paddingHorizontal: 32 }]}
+            onPress={() => router.replace('/home')}
+          >
+            <Text style={styles.navButtonText}>
+              {i18n.locale.startsWith('ar') ? 'استمرار' : 'Continue'}
+            </Text>
+          </TouchableOpacity>
         </View>
       );
     }
+
 
     return (
       <View style={{ alignItems: 'center', width: '100%' }}>

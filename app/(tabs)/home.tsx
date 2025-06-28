@@ -12,15 +12,24 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export default function Home() {
   const router = useRouter();
   const [role, setRole] = useState<string | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchRole = async () => {
-      const storedRole = await AsyncStorage.getItem('UserRole');
-      setRole(storedRole);
+      const userId = await AsyncStorage.getItem('userId');
+      let numericId: number | null = null;
+      if (userId) {
+        numericId = parseInt(userId, 10);
+        setUserId(numericId);
+      }
+      const res = await fetch(`${API_BASE_URL}/api/users/role/${userId}`);
+      const data = await res.text();
+      setRole(data);
     };
     fetchRole();
   }, []);
@@ -46,7 +55,7 @@ export default function Home() {
           <Text style={styles.greeting}>Welcome Back!</Text>
         </View>
 
-        {/* Weekly Check-in =>  REG */}
+        {/* Weekly Check-in => REG only*/}
         {role === 'REG' && (
           <LinearGradient colors={['#16A34A', '#0d4215']} style={styles.card}>
             <Text style={styles.cardTitle}>Weekly Check-in</Text>
@@ -63,7 +72,7 @@ export default function Home() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Access</Text>
           <View style={styles.grid}>
-            {/* Community => All roles */}
+            {/* Community => all */}
             <TouchableOpacity
               onPress={() => router.push('/community')}
               style={styles.gridItem}
@@ -72,7 +81,7 @@ export default function Home() {
               <Text style={styles.gridText}>Community</Text>
             </TouchableOpacity>
 
-            {/* AI Chat => REG only*/}
+            {/* AI Chat => REG only */}
             {role === 'REG' && (
               <TouchableOpacity
                 style={styles.gridItem}

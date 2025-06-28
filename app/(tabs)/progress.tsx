@@ -2,7 +2,7 @@ import BackgroundVideo from "@/components/BackgroundVideo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Video } from "expo-av";
-import moment from "moment"; // Add moment for date formatting
+import moment from "moment";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,6 +13,8 @@ import {
   View,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 
 const ProgressScreen = () => {
   const [moodData, setMoodData] = useState<MoodLog[]>([]);
@@ -24,9 +26,7 @@ const ProgressScreen = () => {
     const fetchMoodData = async () => {
       try {
         const userId = await AsyncStorage.getItem("userId");
-        if (!userId) {
-          throw new Error("User not found. Please log in again.");
-        }
+        if (!userId) throw new Error("User not found. Please log in again.");
 
         const response = await axios.get(
           `${process.env.EXPO_PUBLIC_API_BASE_URL}/api/mood-logs/${userId}`
@@ -34,38 +34,24 @@ const ProgressScreen = () => {
         setMoodData(response.data);
         setLoading(false);
       } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("Failed to fetch mood data");
-        }
+        setError(err instanceof Error ? err.message : "Failed to fetch mood data");
         setLoading(false);
       }
     };
 
     fetchMoodData();
 
-    if (videoRef.current) {
-      videoRef.current.playAsync();
-    }
-
+    if (videoRef.current) videoRef.current.playAsync();
     return () => {
-      if (videoRef.current) {
-        videoRef.current.pauseAsync();
-      }
+      if (videoRef.current) videoRef.current.pauseAsync();
     };
   }, []);
 
-  // Format dates intelligently to avoid duplicates and show time when needed
   const formatChartLabels = (logs: MoodLog[]) => {
     const formattedLabels: string[] = [];
-
     logs.forEach((log, index) => {
       const currentDate = new Date(log.timestamp);
-      const previousDate =
-        index > 0 ? new Date(logs[index - 1].timestamp) : null;
-
-      // If previous entry exists and is on the same day, show time
+      const previousDate = index > 0 ? new Date(logs[index - 1].timestamp) : null;
       if (
         previousDate &&
         currentDate.getDate() === previousDate.getDate() &&
@@ -73,14 +59,43 @@ const ProgressScreen = () => {
         currentDate.getFullYear() === previousDate.getFullYear()
       ) {
         formattedLabels.push(moment(log.timestamp).format("HH:mm"));
-      }
-      // Otherwise show date only
-      else {
+      } else {
         formattedLabels.push(moment(log.timestamp).format("DD/MM"));
       }
     });
-
     return formattedLabels;
+  };
+
+  const calculateStreak = (logs: MoodLog[]): number => {
+    if (!logs.length) return 0;
+
+    const sortedLogs = [...logs].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    let streak = 0;
+    let currentWeek = moment().startOf("isoWeek");
+
+    const weeksSet = new Set(
+      sortedLogs.map((log) => moment(log.timestamp).startOf("isoWeek").format("YYYY-MM-DD"))
+    );
+
+    while (weeksSet.has(currentWeek.format("YYYY-MM-DD"))) {
+      streak++;
+      currentWeek = currentWeek.subtract(1, "week");
+    }
+
+    return streak;
+  };
+
+  const streak = calculateStreak(moodData);
+  const chartData = {
+    labels: moodData.length ? formatChartLabels(moodData) : ["No Data"],
+    datasets: [
+      {
+        data: moodData.length ? moodData.map((item) => item.moodScore) : [0],
+      },
+    ],
   };
 
   if (loading) {
@@ -105,71 +120,76 @@ const ProgressScreen = () => {
     );
   }
 
-  if (moodData.length === 0) {
-    return (
-      <View style={styles.container}>
-        <VideoBackground videoRef={videoRef} />
-        <View style={styles.overlay}>
-          <Text style={styles.noDataText}>Register now weekly check-in survey!!</Text>
-        </View>
-      </View>
-    );
-  }
-
-  // Use our intelligent formatting function
-  const chartData = {
-    labels: formatChartLabels(moodData),
-    datasets: [
-      {
-        data: moodData.map((item) => item.moodScore),
-      },
-    ],
-  };
-
   return (
     <View style={styles.container}>
       <VideoBackground videoRef={videoRef} />
       <View style={styles.overlay}>
         <ScrollView style={styles.scrollContainer}>
-          <Text style={styles.title}>Mood Progress</Text>
-          <LineChart
-            data={chartData}
-            width={Dimensions.get("window").width - 32}
-            height={220}
-            chartConfig={{
-              backgroundColor: "rgba(255,255,255,0.3)",
-              backgroundGradientFrom: "rgba(201, 245, 216, 0.8)",
-              backgroundGradientTo: "rgba(131, 231, 173, 0.8)",
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(34, 139, 34, ${opacity})`,
-              propsForLabels: {
-                fontWeight: "bold",
-                fontSize: 10, // Smaller font for better fit
-              },
-              propsForDots: {
-                r: "4", // Smaller dots for dense data
-                strokeWidth: "1",
-                stroke: "#166534",
-              },
-            }}
-            style={{ marginVertical: 20, borderRadius: 16 }}
-            bezier
-            fromZero
-            yAxisInterval={1}
-            segments={4}
-          />
+          <Text style={styles.title}>Your Mental Health Journey 🌱</Text>
+
+          {/* Streak Card */}
+          <LinearGradient colors={['#16A34A', '#0d4215']} style={styles.card}>
+            <Text style={styles.cardTitle}>
+              Day Mindfulness Streak! 🔥
+            </Text>
+            <Text style={styles.cardText}>
+              Keep logging your mood weekly to grow your streak
+            </Text>
+            <View style={styles.progressContainer}>
+              <Ionicons name="flame" size={40} color="#FFD700" />
+              <Text style={styles.streakNumber}>{streak}</Text>
+            </View>
+          </LinearGradient>
+
+          {/* Mood Trends */}
+          <LinearGradient colors={['#16A34A20', '#0d421520']} style={styles.card}>
+            <Text style={styles.cardTitle}>Mood Trends</Text>
+            <View style={styles.chartPlaceholder}>
+              <Ionicons name="stats-chart" size={50} color="#16A34A" />
+              <Text style={styles.chartText}>Mood Progress (Last week)</Text>
+            </View>
+            {moodData.length === 0 ? (
+              <Text style={styles.noDataText}>
+                You haven't submitted any check-ins yet.
+              </Text>
+            ) : null}
+            <LineChart
+              data={chartData}
+              width={Dimensions.get("window").width - 48}
+              height={200}
+              chartConfig={{
+                backgroundGradientFrom: "#e6f4ea",
+                backgroundGradientTo: "#d1f7de",
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(22, 101, 52, ${opacity})`,
+                propsForDots: {
+                  r: "5",
+                  strokeWidth: "2",
+                  stroke: "#16A34A",
+                },
+              }}
+              style={{ marginVertical: 10, borderRadius: 16 }}
+              bezier
+              fromZero
+            />
+          </LinearGradient>
         </ScrollView>
       </View>
     </View>
   );
 };
 
-// Video Background Component
-const VideoBackground = ({
-  videoRef,
-}: {
-  videoRef: React.RefObject<Video>;
-}) => <BackgroundVideo />;
+const VideoBackground = ({ videoRef }: { videoRef: React.RefObject<Video> }) => (
+  <BackgroundVideo />
+);
+
+// Interface
+interface MoodLog {
+  id: number;
+  userId: string;
+  moodScore: number;
+  timestamp: string;
+}
 
 // Styles
 const styles = StyleSheet.create({
@@ -179,17 +199,18 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-dark overlay
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   scrollContainer: {
     flex: 1,
-    padding: 16,
+    padding: 15,
   },
   title: {
     fontSize: 22,
     fontWeight: "bold",
     textAlign: "center",
-    marginTop: 20,
+    marginTop: 60,
+    marginBottom: 20,
     color: "white",
     textShadowColor: "rgba(0,0,0,0.5)",
     textShadowOffset: { width: 1, height: 1 },
@@ -197,17 +218,52 @@ const styles = StyleSheet.create({
   },
   noDataText: {
     color: "white",
-    fontSize: 18,
+    fontSize: 16,
     textAlign: "center",
-    marginTop: 20,
+    marginBottom: 10,
+  },
+  card: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 30,
+    marginRight: 4,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 5,
+  },
+  cardText: {
+    fontSize: 14,
+    color: "#e4fbe6",
+  },
+  progressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  streakNumber: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#FFD700",
+    marginLeft: 8,
+  },
+  chartPlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  chartText: {
+    fontSize: 14,
+    color: "#fff",
+    marginTop: 8,
   },
 });
-
-interface MoodLog {
-  id: number;
-  userId: string;
-  moodScore: number;
-  timestamp: string;
-}
 
 export default ProgressScreen;
