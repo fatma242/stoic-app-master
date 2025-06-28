@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Client } from "@stomp/stompjs";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
+import { useEffect, useRef, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
   Alert,
@@ -92,7 +93,7 @@ export default function RoomScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const stompClient = useRef<any>(null);
-  const API_BASE_URL = "http://192.168.20.179:8100";
+  const API_BASE_URL = "http://192.168.1.6:8100";
 
   const scrollViewRef = useRef<ScrollView>(null);
 

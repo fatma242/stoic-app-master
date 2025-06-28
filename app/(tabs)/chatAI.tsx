@@ -1,17 +1,18 @@
-import { Entypo, Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
-import Constants from 'expo-constants';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
   Image,
   ImageBackground,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+  Alert,
 } from 'react-native';
-import { Bubble, GiftedChat, IMessage } from 'react-native-gifted-chat';
+import { GiftedChat, IMessage, Bubble } from 'react-native-gifted-chat';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons, Entypo } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import chatbotIcon from '../../assets/chatbot.png';
 
 const apiKey = Constants.expoConfig?.extra?.chatbotApiKey;
@@ -32,14 +33,14 @@ export default function ChatAI() {
           setUserId(numericId);
 
           // fetch user status
-          const res = await fetch(`http://192.168.20.179:8100/api/users/status/${id}`);
+          const res = await fetch(`http://192.168.1.6:8100/api/users/status/${id}`);
           console.log('Fetching user status for ID:', id);
           const data = await res.json();
           console.log('User status data:', data);
           setUserStatus(data);
 
           // fetch chat history
-          const historyRes = await fetch(`http://192.168.20.179:8100/api/chat/${id}`);
+          const historyRes = await fetch(`http://192.168.1.6:8100/api/chat/${id}`);
           const history = await historyRes.json();
           const formatted = history.map((msg: any) => ({
             _id: msg.id,
@@ -72,7 +73,7 @@ export default function ChatAI() {
   const handleDeleteChat = async () => {
     if (!userId) return;
     try {
-      await fetch(`http://192.168.20.179:8100/api/chat/${userId}`, { method: 'DELETE' });
+      await fetch(`http://192.168.1.6:8100/api/chat/${userId}`, { method: 'DELETE' });
       setMessages([]);
     } catch (err) {
       console.error('❌ Error deleting chat:', err);
@@ -83,7 +84,7 @@ export default function ChatAI() {
   const saveMessageToBackend = async (sender: 'USER' | 'AI', content: string) => {
     if (!userId) return;
     try {
-      await fetch('http://192.168.20.179:8100/api/chat/save', {
+      await fetch('http://192.168.1.6:8100/api/chat/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, sender, content })

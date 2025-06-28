@@ -1,20 +1,21 @@
-import BackgroundVideo from "@/components/BackgroundVideo";
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
+  View,
   Text,
   TouchableOpacity,
-  View,
+  ScrollView,
+  StyleSheet,
+  Image,
+  Alert,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Video, ResizeMode } from "expo-av";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import BackgroundVideo from "@/components/BackgroundVideo";
 
-const API_BASE_URL = "http://192.168.20.179:8100";
+const API_BASE_URL = "http://192.168.1.6:8100";
 
 export default function Settings() {
   const router = useRouter();

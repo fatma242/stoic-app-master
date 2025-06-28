@@ -2,7 +2,8 @@ import BackgroundVideo from "@/components/BackgroundVideo";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -38,7 +39,7 @@ export default function Community() {
   const [roomName, setRoomName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  const API_BASE_URL = "http://192.168.20.179:8100";
+  const API_BASE_URL = "http://192.168.1.6:8100";
 
   useEffect(() => {
     const loadUserData = async () => {

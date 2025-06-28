@@ -1,29 +1,17 @@
 package com.example.stoic.Message.Controller;
 
+import com.example.stoic.Message.Model.Message;
+import com.example.stoic.Message.Service.MessageService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.web.bind.annotation.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.example.stoic.Message.Model.Message;
-import com.example.stoic.Message.Service.MessageService;
-
-import lombok.RequiredArgsConstructor;
-
 @CrossOrigin(origins = {
         "http://192.168.1.6:8081",
-        "http://192.168.20.179:8081",
-        "exp://192.168.20.179:8081",
-        "exp://192.168.1.6:8081",
         "exp://192.168.210.193:8081",
         "http://localhost:8081",
 }, allowCredentials = "true")

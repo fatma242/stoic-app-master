@@ -1,13 +1,14 @@
 import BackgroundVideo from '@/components/BackgroundVideo';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AnswerButtons } from '../components/AnswerButtons';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { AnswerKey, handleEmergencyCall, onboardingFlow } from '../components/OnboardingFlow';
 import i18n from '../constants/i18n';
+import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
 
 const styles = StyleSheet.create({
@@ -48,7 +49,7 @@ export default function Onboarding() {
       if (!userId) throw new Error('User ID not found');
 
       const res = await axios.post(
-        'http://192.168.20.179:8100/api/users/submit-status',
+        'http://192.168.1.6:8100/api/users/submit-status',
         {
           userId: parseInt(userId, 10),
           status: status.toUpperCase()

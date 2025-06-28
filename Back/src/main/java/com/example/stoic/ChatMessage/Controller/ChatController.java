@@ -1,26 +1,18 @@
 package com.example.stoic.ChatMessage.Controller;
 
 
-import java.util.List;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.example.stoic.ChatMessage.Model.ChatMessage;
 import com.example.stoic.ChatMessage.Repo.ChatMessageRepository;
 
+import java.util.List;
+
 
 @CrossOrigin(origins = {
         "http://192.168.1.6:8081",
-        "http://192.168.20.179:8081",
-        "exp://192.168.20.179:8081",
         "exp://192.168.1.6:8081",
         "exp://192.168.210.193:8081",
         "http://localhost:8081",
