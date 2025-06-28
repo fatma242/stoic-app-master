@@ -17,17 +17,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.stoic.Post.Model.Post;
-import com.example.stoic.Post.Service.PostServiceImpl;
-import com.example.stoic.Room.Model.Room;
-import com.example.stoic.Room.Model.RoomType;
-import com.example.stoic.Room.Service.RoomService;
-import com.example.stoic.Room.Service.RoomServiceImpl;
-import com.example.stoic.Room.dto.RoomDTO;
-import com.example.stoic.User.Model.User; // ✅ <-- ADDED THIS IMPORT
-import com.example.stoic.User.Model.UserRole;
-import com.example.stoic.User.Service.UserServiceImpl;
-
 import jakarta.servlet.http.HttpSession;
 
 @CrossOrigin(origins = {
@@ -74,6 +63,7 @@ public class RoomController {
     @PostMapping
     public ResponseEntity<?> createRoom(@RequestBody Room room, HttpSession session) {
         User user = (User) session.getAttribute("user");
+        // Debug logging
         System.out.println("POST rooms: user=" + user + ", payload=" + room);
 
         if (user == null)
@@ -81,7 +71,8 @@ public class RoomController {
         if (user.getUserRole() != UserRole.ADMIN)
             return new ResponseEntity<>("Forbidden", HttpStatus.FORBIDDEN);
 
-        room.setOwnerId(user.getUserId());
+        // Default missing fields
+        room.setOwnerId(user.getUserId()); // ensure ID
         room.setCreatedAt(new Date());
         room.setType(RoomType.PUBLIC);
         Room saved = roomService.createRoom(room);
@@ -96,7 +87,8 @@ public class RoomController {
         if (user.getUserRole() != UserRole.REG)
             return new ResponseEntity<>("Forbidden", HttpStatus.FORBIDDEN);
 
-        room.setOwnerId(user.getUserId());
+        // Default missing fields
+        room.setOwnerId(user.getUserId()); // ensure ID
         room.setCreatedAt(new Date());
         room.setType(RoomType.PRIVATE);
         Room saved = roomService.createRoom(room);
@@ -147,7 +139,7 @@ public class RoomController {
         private final UserServiceImpl userServiceImpl;
 
         public PostsController(PostServiceImpl postService, RoomServiceImpl roomServiceImpl,
-                               UserServiceImpl userServiceImpl) {
+                UserServiceImpl userServiceImpl) {
             this.postService = postService;
             this.roomServiceImpl = roomServiceImpl;
             this.userServiceImpl = userServiceImpl;
@@ -193,13 +185,13 @@ public class RoomController {
                 if (room == null) {
                     return new ResponseEntity<>("Room not found", HttpStatus.NOT_FOUND);
                 }
-
+                
                 Post post = new Post();
                 post.setTitle(title);
                 post.setContent(content);
                 System.out.println("Creating post with title: " + title + ", content: " + content);
                 System.out.println("User: " + user.getUsername() + ", Room ID: " + roomId);
-                post.setLikes(0);
+                post.setLikes(0); // Default likes to 0
                 post.setAuthor(user);
                 post.setDate(LocalDateTime.now());
                 post.setRoom(room);
@@ -228,4 +220,5 @@ public class RoomController {
             return new ResponseEntity<>("Post with ID " + id + " deleted.", HttpStatus.NO_CONTENT);
         }
     }
+
 }
