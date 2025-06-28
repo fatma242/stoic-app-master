@@ -33,14 +33,14 @@ export default function ChatAI() {
           setUserId(numericId);
 
           // fetch user status
-          const res = await fetch(`http://192.168.1.6:8100/api/users/status/${id}`);
+          const res = await fetch(`http://192.168.1.8:8081/api/users/status/${id}`);
           console.log('Fetching user status for ID:', id);
           const data = await res.json();
           console.log('User status data:', data);
           setUserStatus(data);
 
           // fetch chat history
-          const historyRes = await fetch(`http://192.168.1.6:8100/api/chat/${id}`);
+          const historyRes = await fetch(`http://192.168.1.8:8100/api/chat/${id}`);
           const history = await historyRes.json();
           const formatted = history.map((msg: any) => ({
             _id: msg.id,
@@ -73,7 +73,7 @@ export default function ChatAI() {
   const handleDeleteChat = async () => {
     if (!userId) return;
     try {
-      await fetch(`http://192.168.1.6:8100/api/chat/${userId}`, { method: 'DELETE' });
+      await fetch(`http://192.168.1.8:8081/api/chat/${userId}`, { method: 'DELETE' });
       setMessages([]);
     } catch (err) {
       console.error('❌ Error deleting chat:', err);
@@ -84,7 +84,7 @@ export default function ChatAI() {
   const saveMessageToBackend = async (sender: 'USER' | 'AI', content: string) => {
     if (!userId) return;
     try {
-      await fetch('http://192.168.1.6:8100/api/chat/save', {
+      await fetch('http://192.168.1.8:8081/api/chat/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, sender, content })
@@ -191,62 +191,62 @@ Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user
   }, [userStatus, messages]);
 
   return (
-    <ImageBackground source={require('../../assets/background-photo.png')} style={styles.container} resizeMode="cover">
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-        <Image source={chatbotIcon} style={styles.avatar} />
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.headerTitle}>Stoic AI</Text>
-          <Text style={styles.headerStatus}>Active now</Text>
-        </View>
-        <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuVisible(!isMenuVisible)}>
-          <Entypo name="dots-three-vertical" size={20} color="white" />
-          {isMenuVisible && (
-            <View style={styles.menuOptions}>
-              <TouchableOpacity style={styles.menuItem} onPress={handleNewChat}>
-                <Text style={styles.menuText}>New Chat</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={handleDeleteChat}>
-                <Text style={styles.menuText}>Delete Chat</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <GiftedChat
-        messages={messages}
-        onSend={messages => onSend(messages)}
-        user={{ _id: 1 }}
-        placeholder="Type your message..."
-        alwaysShowSend
-        renderAvatarOnTop
-        textInputStyle={{ backgroundColor: 'white', borderRadius: 20, paddingHorizontal: 15, color: '#0a170c' }}
-        renderSend={props => (
-          <TouchableOpacity
-            style={styles.sendButton}
-            onPress={() => props.onSend && props.onSend({ text: props.text?.trim() }, true)}
-          >
-            <Text style={{ color: '#7CFC00', fontSize: 18 }}>Send</Text>
+      <ImageBackground source={require('../../assets/background-photo.png')} style={styles.container} resizeMode="cover">
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
-        )}
-        renderBubble={props => (
-          <Bubble
-            {...props}
-            wrapperStyle={{
-              right: { backgroundColor: '#16A34A' },
-              left: { backgroundColor: '#FFFFFF' },
-            }}
-            textStyle={{
-              right: { color: 'white' },
-              left: { color: 'black' },
-            }}
-          />
-        )}
-      />
-    </ImageBackground>
+          <Image source={chatbotIcon} style={styles.avatar} />
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Stoic AI</Text>
+            <Text style={styles.headerStatus}>Active now</Text>
+          </View>
+          <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuVisible(!isMenuVisible)}>
+            <Entypo name="dots-three-vertical" size={20} color="white" />
+            {isMenuVisible && (
+                <View style={styles.menuOptions}>
+                  <TouchableOpacity style={styles.menuItem} onPress={handleNewChat}>
+                    <Text style={styles.menuText}>New Chat</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.menuItem} onPress={handleDeleteChat}>
+                    <Text style={styles.menuText}>Delete Chat</Text>
+                  </TouchableOpacity>
+                </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <GiftedChat
+            messages={messages}
+            onSend={messages => onSend(messages)}
+            user={{ _id: 1 }}
+            placeholder="Type your message..."
+            alwaysShowSend
+            renderAvatarOnTop
+            textInputStyle={{ backgroundColor: 'white', borderRadius: 20, paddingHorizontal: 15, color: '#0a170c' }}
+            renderSend={props => (
+                <TouchableOpacity
+                    style={styles.sendButton}
+                    onPress={() => props.onSend && props.onSend({ text: props.text?.trim() }, true)}
+                >
+                  <Text style={{ color: '#7CFC00', fontSize: 18 }}>Send</Text>
+                </TouchableOpacity>
+            )}
+            renderBubble={props => (
+                <Bubble
+                    {...props}
+                    wrapperStyle={{
+                      right: { backgroundColor: '#16A34A' },
+                      left: { backgroundColor: '#FFFFFF' },
+                    }}
+                    textStyle={{
+                      right: { color: 'white' },
+                      left: { color: 'black' },
+                    }}
+                />
+            )}
+        />
+      </ImageBackground>
   );
 }
 

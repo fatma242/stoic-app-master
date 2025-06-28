@@ -29,7 +29,7 @@ function getWeekNumber(d: Date): { year: number; week: number } {
   d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   const weekNo = Math.ceil(
-    ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+      ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
   );
   return { year: d.getUTCFullYear(), week: weekNo };
 }
@@ -103,7 +103,7 @@ export default function WeeklyCheckIn() {
         return;
       }
 
-      await axios.post("process.env.EXPO_PUBLIC_API_BASE_URL/api/mood-logs", {
+      await axios.post("http://192.168.1.8:8081/api/mood-logs", {
         userId: userId,
         moodScore: selectedMood,
         timestamp: new Date().toISOString(),
@@ -122,67 +122,67 @@ export default function WeeklyCheckIn() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#16A34A" />
-      </View>
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color="#16A34A" />
+        </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
 
-      <BackgroundVideo />
+        <BackgroundVideo />
 
-      <View style={styles.overlay} />
+        <View style={styles.overlay} />
 
-      <KeyboardAvoidingView behavior="padding" style={styles.contentContainer}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.card}>
-            <Text style={styles.title}>How are you feeling today?</Text>
+        <KeyboardAvoidingView behavior="padding" style={styles.contentContainer}>
+          <ScrollView
+              contentContainerStyle={styles.scrollContainer}
+              keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.card}>
+              <Text style={styles.title}>How are you feeling today?</Text>
 
-            <View style={styles.moods}>
-              {moods.map((m) => (
-                <TouchableOpacity
-                  key={m.score}
-                  onPress={() => setSelectedMood(m.score)}
+              <View style={styles.moods}>
+                {moods.map((m) => (
+                    <TouchableOpacity
+                        key={m.score}
+                        onPress={() => setSelectedMood(m.score)}
+                        disabled={submitting}
+                    >
+                      <Text
+                          style={[
+                            styles.emoji,
+                            selectedMood === m.score && styles.selected,
+                          ]}
+                      >
+                        {m.emoji}
+                      </Text>
+                    </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                  onPress={handleSubmit}
+                  style={styles.submitButton}
                   disabled={submitting}
-                >
-                  <Text
-                    style={[
-                      styles.emoji,
-                      selectedMood === m.score && styles.selected,
-                    ]}
-                  >
-                    {m.emoji}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              onPress={handleSubmit}
-              style={styles.submitButton}
-              disabled={submitting}
-            >
-              <LinearGradient
-                colors={["#16A34A", "#0d4215"]}
-                style={styles.buttonGradient}
               >
-                {submitting ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={styles.buttonText}>Submit</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+                <LinearGradient
+                    colors={["#16A34A", "#0d4215"]}
+                    style={styles.buttonGradient}
+                >
+                  {submitting ? (
+                      <ActivityIndicator color="white" />
+                  ) : (
+                      <Text style={styles.buttonText}>Submit</Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
   );
 }
 
