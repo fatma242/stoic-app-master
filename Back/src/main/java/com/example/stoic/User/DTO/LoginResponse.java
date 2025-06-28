@@ -4,10 +4,12 @@ package com.example.stoic.User.DTO;
 public class LoginResponse {
     private final String userId;
     private final String email;
+    private final String role;
 
-    public LoginResponse(String userId, String email) {
+    public LoginResponse(String userId, String email, String role) {
         this.userId = userId;
         this.email = email;
+        this.role = role;   
     }
 
     public String getUserId() {
@@ -16,5 +18,9 @@ public class LoginResponse {
 
     public String getEmail() {
         return email;
+    }
+
+    public String getRole() {
+        return role;
     }
 }

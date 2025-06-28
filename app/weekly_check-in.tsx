@@ -1,20 +1,19 @@
-import React, { useState, useEffect } from "react";
+import BackgroundVideo from "@/components/BackgroundVideo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient";
+import { router, Stack } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
-import { Video, ResizeMode } from "expo-av";
-import { LinearGradient } from "expo-linear-gradient";
-import { Stack } from "expo-router";
 
 const moods = [
   { emoji: "😢", score: 1 },
@@ -54,11 +53,7 @@ export default function WeeklyCheckIn() {
         // WEEKLY CHECK TEMPORARILY DISABLED FOR TESTING
         // Commented out to allow multiple submissions during testing
         /*
-<<<<<<< HEAD
         const response = await axios.get(`http://192.168.1.19:8100/api/mood-logs/${userId}`);
-=======
-        const response = await axios.get(`http://192.168.1.19:8100/api/mood-logs/${userId}`);
->>>>>>> 349eb05d8d6c7a20e92e8fcb1e820f998151b3e3
         const logs = response.data;
 
         const now = new Date();
@@ -108,7 +103,7 @@ export default function WeeklyCheckIn() {
         return;
       }
 
-      await axios.post("http://192.168.1.19:8100/api/mood-logs", {
+      await axios.post("process.env.EXPO_PUBLIC_API_BASE_URL/api/mood-logs", {
         userId: userId,
         moodScore: selectedMood,
         timestamp: new Date().toISOString(),
@@ -137,17 +132,7 @@ export default function WeeklyCheckIn() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <Video
-        ref={videoRef}
-        source={require("../assets/background.mp4")}
-        style={styles.backgroundVideo}
-        rate={1.0}
-        volume={1.0}
-        isMuted={true}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-      />
+      <BackgroundVideo />
 
       <View style={styles.overlay} />
 

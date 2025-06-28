@@ -1,6 +1,8 @@
 package com.example.stoic.Room.Model;
 
+import com.example.stoic.Post.Model.Post;
 import com.example.stoic.User.Model.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -9,6 +11,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+
+import org.hibernate.annotations.Cascade;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Data
 @NoArgsConstructor
@@ -33,14 +39,21 @@ public class Room {
     @Column(name = "type")
     private RoomType type;
 
+    @JsonIgnore
     @Column(name = "created_at")
     private Date createdAt;
 
+    // @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval =
+    // true)
+    // @OnDelete(action = OnDeleteAction.CASCADE)
+    // private List<Post> posts = new ArrayList<>();
+    @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Post> posts = new ArrayList<>();
     // New unique join code for users
     @Column(name = "join_code", unique = true, updatable = false, nullable = false)
     private String join_code;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "user_rooms", joinColumns = @JoinColumn(name = "room_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
     private List<User> Users;
 

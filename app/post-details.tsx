@@ -55,6 +55,8 @@ interface Comment {
     postId: number;
   };
   report?: number;
+  likes?: User[]; // or number, depending on your backend response
+  isLikedByUser?: boolean;
 }
 
 export default function PostDetailsScreen() {
@@ -68,6 +70,14 @@ export default function PostDetailsScreen() {
   const [isCommenting, setIsCommenting] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [likingPostIds, setLikingPostIds] = useState<Set<number>>(new Set());
+  const [reportingCommentIds, setReportingCommentIds] = useState<Set<number>>(
+    new Set()
+  );
+  const [reportedComments, setReportedComments] = useState<Set<number>>(
+    new Set()
+  );
+  const [refreshCount, setRefreshCount] = useState(0);
 
   // Animation refs
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -77,17 +87,23 @@ export default function PostDetailsScreen() {
   const commentScaleAnim = useRef(new Animated.Value(0.9)).current;
   const commentOpacityAnim = useRef(new Animated.Value(0)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
+  const reportScaleAnim = useRef(new Animated.Value(1)).current;
 
-  const API_BASE_URL = "http://192.168.1.8:8100";
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
+  // 1) Load userId once on mount
   useEffect(() => {
     loadUserData();
-    if (postId) {
-      fetchPostDetails();
-      fetchComments();
-    }
+  }, []);
 
-    // Start entrance animations
+  // 2) Fetch post details, comments, and run entrance animations
+  //    only after we know postId AND userId, or when refreshCount changes.
+  useEffect(() => {
+    if (!postId || userId === null) return;
+
+    fetchPostDetails();
+    fetchComments();
+
     Animated.parallel([
       Animated.timing(headerAnim, {
         toValue: 0,
@@ -108,7 +124,7 @@ export default function PostDetailsScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [postId]);
+  }, [postId, userId, refreshCount]);
 
   const loadUserData = async () => {
     try {
@@ -120,7 +136,25 @@ export default function PostDetailsScreen() {
       console.error("Error loading user data:", error);
     }
   };
+  const handleLikeComment = async (commentId: number) => {
+    if (userId === null) return;
 
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/Comments/likes/${commentId}`,
+        {
+          method: "PUT",
+          credentials: "include",
+        }
+      );
+      if (!response.ok) throw new Error("Failed to toggle like");
+
+      // Trigger a refresh to get updated like state (just like posts)
+      setRefreshCount((prev) => prev + 1);
+    } catch (error) {
+      Alert.alert("Error", "Could not toggle like on comment.");
+    }
+  };
   const fetchPostDetails = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`, {
@@ -130,8 +164,23 @@ export default function PostDetailsScreen() {
         },
       });
       if (!response.ok) throw new Error("Failed to fetch post");
-      const data: Post = await response.json();
-      setPost(data);
+
+      const data: any = await response.json();
+
+      // Process the likes data similar to room.tsx
+      const likesArray = Array.isArray(data.likes)
+        ? (data.likes as User[])
+        : [];
+      const likedByMe =
+        userId !== null && likesArray.some((u: User) => u.userId === userId);
+
+      const processedPost: Post = {
+        ...data,
+        likes: new Set(likesArray),
+        isLikedByUser: likedByMe, // This is the key fix
+      };
+
+      setPost(processedPost);
     } catch (error) {
       console.error("Error fetching post details:", error);
       Alert.alert("Error", "Could not load post details");
@@ -143,7 +192,6 @@ export default function PostDetailsScreen() {
 
     setCommentsLoading(true);
     try {
-      // Updated endpoint to match your Spring Boot controller
       const response = await fetch(
         `${API_BASE_URL}/api/Comments/comments/${postId}`,
         {
@@ -164,7 +212,15 @@ export default function PostDetailsScreen() {
       }
 
       const data: Comment[] = await response.json();
-      setComments(Array.isArray(data) ? data : []);
+      // Set isLikedByUser for each comment
+      const processedComments = data.map((comment) => ({
+        ...comment,
+        isLikedByUser:
+          userId !== null && Array.isArray(comment.likes)
+            ? comment.likes.some((u: User) => u.userId === userId)
+            : false,
+      }));
+      setComments(processedComments);
 
       // Animate comments in
       Animated.stagger(100, [
@@ -182,7 +238,6 @@ export default function PostDetailsScreen() {
       ]).start();
     } catch (error) {
       console.error("Error fetching comments:", error);
-      // Don't show alert for comments fetch failure, just log it
       setComments([]);
     } finally {
       setCommentsLoading(false);
@@ -190,8 +245,8 @@ export default function PostDetailsScreen() {
     }
   };
 
-  const handleLike = async () => {
-    if (!post || isLiking) return;
+  const handleLike = async (postId: number) => {
+    if (likingPostIds.has(postId) || userId === null) return;
 
     // Like animation
     Animated.sequence([
@@ -209,44 +264,120 @@ export default function PostDetailsScreen() {
       }),
     ]).start();
 
-    setIsLiking(true);
+    setLikingPostIds((prev) => new Set(prev).add(postId));
+
     try {
-      const response = await fetch(`${API_BASE_URL}/posts/${postId}/like`, {
-        method: "POST",
+      const response = await fetch(`${API_BASE_URL}/rooms/likes/${postId}`, {
+        method: "PUT",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
+      if (!response.ok) throw new Error("Failed to toggle like");
 
-      if (!response.ok) throw new Error("Failed to like post");
-
-      setPost((prev) =>
-        prev
-          ? {
-              ...prev,
-              likes: (() => {
-                if (!userId) return prev.likes;
-                const newLikes = new Set(prev.likes);
-                if (prev.isLikedByUser) {
-                  newLikes.forEach((user) => {
-                    if (user.userId === userId) newLikes.delete(user);
-                  });
-                } else {
-                  newLikes.add({ userId, username: "You", email: "" });
-                }
-                return newLikes;
-              })(),
-              isLikedByUser: !prev.isLikedByUser,
-            }
-          : null
-      );
+      // Trigger a refresh to get updated like state
+      setRefreshCount((prev) => prev + 1);
     } catch (error) {
-      console.error("Error liking post:", error);
-      Alert.alert("Error", "Could not like post");
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Could not toggle like"
+      );
     } finally {
-      setIsLiking(false);
+      setLikingPostIds((prev) => {
+        const copy = new Set(prev);
+        copy.delete(postId);
+        return copy;
+      });
     }
+  };
+
+  const handleReportComment = async (commentId: number) => {
+    if (reportingCommentIds.has(commentId) || reportedComments.has(commentId))
+      return;
+
+    // Show confirmation dialog
+    Alert.alert(
+      "Report Comment",
+      "Are you sure you want to report this comment for inappropriate content?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Report",
+          style: "destructive",
+          onPress: async () => {
+            // Report animation
+            Animated.sequence([
+              Animated.timing(reportScaleAnim, {
+                toValue: 0.8,
+                duration: 100,
+                easing: Easing.bezier(0.34, 1.56, 0.64, 1),
+                useNativeDriver: true,
+              }),
+              Animated.timing(reportScaleAnim, {
+                toValue: 1,
+                duration: 150,
+                easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+                useNativeDriver: true,
+              }),
+            ]).start();
+
+            setReportingCommentIds((prev) => new Set(prev).add(commentId));
+
+            try {
+              const response = await fetch(
+                `${API_BASE_URL}/api/Comments/Report`,
+                {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    commentID: commentId,
+                  }),
+                  credentials: "include",
+                }
+              );
+
+              if (!response.ok) {
+                throw new Error("Failed to report comment");
+              }
+
+              const responseText = await response.text();
+
+              // Mark comment as reported
+              setReportedComments((prev) => new Set(prev).add(commentId));
+
+              if (responseText.includes("deleted")) {
+                Alert.alert(
+                  "Success",
+                  "Comment has been removed due to multiple reports"
+                );
+                // Refresh comments to remove the deleted comment
+                fetchComments();
+              } else {
+                Alert.alert(
+                  "Success",
+                  "Comment has been reported successfully"
+                );
+              }
+            } catch (error) {
+              console.error("Error reporting comment:", error);
+              Alert.alert(
+                "Error",
+                "Could not report comment. Please try again."
+              );
+            } finally {
+              setReportingCommentIds((prev) => {
+                const copy = new Set(prev);
+                copy.delete(commentId);
+                return copy;
+              });
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleAddComment = async () => {
@@ -325,6 +456,12 @@ export default function PostDetailsScreen() {
     extrapolate: "clamp",
   });
 
+  useEffect(() => {
+    if (userId !== null) {
+      fetchPostDetails();
+    }
+  }, [userId, refreshCount]);
+
   if (loading) {
     return (
       <LinearGradient
@@ -397,12 +534,13 @@ export default function PostDetailsScreen() {
 
       <Animated.ScrollView
         style={styles.content}
-        contentContainerStyle={styles.scrollViewContent} // Add this line
+        contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
-        )}
+        )
+        }
         scrollEventThrottle={16}
       >
         {/* Post Details Card */}
@@ -455,7 +593,7 @@ export default function PostDetailsScreen() {
                   styles.likeButton,
                   post.isLikedByUser && styles.likeButtonActive,
                 ]}
-                onPress={handleLike}
+                onPress={() => handleLike(post.id)}
                 disabled={isLiking}
                 activeOpacity={0.8}
               >
@@ -468,9 +606,9 @@ export default function PostDetailsScreen() {
                   style={styles.likeButtonGradient}
                 >
                   <Ionicons
-                    name={post.isLikedByUser ? "heart" : "heart-outline"}
-                    size={20}
-                    color={post.isLikedByUser ? "#fff" : "#10b981"}
+                    name={post?.isLikedByUser ? "heart" : "heart-outline"}
+                    size={24}
+                    color={post?.isLikedByUser ? "#ef4444" : "#94a3b8"}
                   />
                   <Text
                     style={[
@@ -593,28 +731,129 @@ export default function PostDetailsScreen() {
                     style={styles.commentGradient}
                   >
                     <View style={styles.commentHeader}>
-                      <View style={styles.commentAvatar}>
-                        <LinearGradient
-                          colors={["#10b981", "#059669"]}
-                          style={styles.commentAvatarGradient}
-                        >
-                          <Text style={styles.commentAvatarText}>
-                            {comment.author?.username
-                              ?.charAt(0)
-                              .toUpperCase() || "A"}
+                      <View style={styles.commentLeftSection}>
+                        <View style={styles.commentAvatar}>
+                          <LinearGradient
+                            colors={["#10b981", "#059669"]}
+                            style={styles.commentAvatarGradient}
+                          >
+                            <Text style={styles.commentAvatarText}>
+                              {comment.author?.username
+                                ?.charAt(0)
+                                .toUpperCase() || "A"}
+                            </Text>
+                          </LinearGradient>
+                        </View>
+                        <View style={styles.commentMeta}>
+                          <Text style={styles.commentAuthor}>
+                            {comment.author?.username || "Anonymous"}
                           </Text>
-                        </LinearGradient>
+                          <Text style={styles.commentDate}>
+                            {formatDate(comment.date)}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={styles.commentMeta}>
-                        <Text style={styles.commentAuthor}>
-                          {comment.author?.username || "Anonymous"}
-                        </Text>
-                        <Text style={styles.commentDate}>
-                          {formatDate(comment.date)}
-                        </Text>
-                      </View>
+
+                      {/* Report Button */}
+                      <Animated.View
+                        style={[{ transform: [{ scale: reportScaleAnim }] }]}
+                      >
+                        <TouchableOpacity
+                          style={[
+                            styles.reportButton,
+                            reportedComments.has(comment.id) &&
+                              styles.reportButtonReported,
+                          ]}
+                          onPress={() => handleReportComment(comment.id)}
+                          disabled={
+                            reportingCommentIds.has(comment.id) ||
+                            reportedComments.has(comment.id)
+                          }
+                          activeOpacity={0.7}
+                        >
+                          <LinearGradient
+                            colors={
+                              reportedComments.has(comment.id)
+                                ? ["#ef4444", "#dc2626"]
+                                : [
+                                    "rgba(239, 68, 68, 0.1)",
+                                    "rgba(220, 38, 38, 0.1)",
+                                  ]
+                            }
+                            style={styles.reportButtonGradient}
+                          >
+                            {reportingCommentIds.has(comment.id) ? (
+                              <ActivityIndicator size="small" color="#ef4444" />
+                            ) : (
+                              <Ionicons
+                                name={
+                                  reportedComments.has(comment.id)
+                                    ? "flag"
+                                    : "flag-outline"
+                                }
+                                size={16}
+                                color={
+                                  reportedComments.has(comment.id)
+                                    ? "#fff"
+                                    : "#ef4444"
+                                }
+                              />
+                            )}
+                          </LinearGradient>
+                        </TouchableOpacity>
+                      </Animated.View>
                     </View>
                     <Text style={styles.commentContent}>{comment.content}</Text>
+
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        marginTop: 8,
+                      }}
+                    >
+                      {/* Like Button */}
+                      <TouchableOpacity
+                        onPress={() => handleLikeComment(comment.id)}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          marginRight: 12,
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={
+                            comment.isLikedByUser ? "heart" : "heart-outline"
+                          }
+                          size={18}
+                          color={comment.isLikedByUser ? "#ef4444" : "#64748b"}
+                        />
+                        <Text
+                          style={{
+                            color: "#fff",
+                            fontSize: 13,
+                            marginLeft: 4,
+                          }}
+                        >
+                          {comment.likes ? comment.likes.length : 0}
+                        </Text>
+                      </TouchableOpacity>
+
+                      {/* Report Button ... */}
+                    </View>
+
+                    {/* Report Status Indicator */}
+                    {reportedComments.has(comment.id) && (
+                      <View style={styles.reportStatusContainer}>
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={14}
+                          color="#10b981"
+                        />
+                        <Text style={styles.reportStatusText}>Reported</Text>
+                      </View>
+                    )}
                   </LinearGradient>
                 </Animated.View>
               ))}
@@ -785,8 +1024,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   scrollViewContent: {
-    flexGrow: 1, // This ensures content can grow beyond screen height
-    paddingBottom: 50, // Extra padding at bottom
+    flexGrow: 1,
+    paddingBottom: 50,
   },
   likeButtonActive: {
     elevation: 6,
@@ -798,163 +1037,202 @@ const styles = StyleSheet.create({
   likeButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 25,
   },
   likeCount: {
-    color: "#10b981",
     marginLeft: 8,
+    color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   likeCountActive: {
-    color: "#fff",
+    color: "#ef4444",
   },
   commentCount: {
     flexDirection: "row",
     alignItems: "center",
+    marginLeft: 16,
+    backgroundColor: "rgba(16, 185, 129, 0.08)",
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   commentCountText: {
-    color: "#64748b",
+    color: "#10b981",
+    fontWeight: "700",
     marginLeft: 6,
     fontSize: 14,
-    fontWeight: "500",
   },
   commentsSection: {
-    flex: 1,
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 16,
     justifyContent: "space-between",
-    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
     color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
   },
   addCommentContainer: {
     marginBottom: 24,
   },
   commentInputContainer: {
     flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1e293b",
     borderRadius: 16,
-    padding: 16,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   commentInput: {
     flex: 1,
     color: "#fff",
-    fontSize: 16,
-    maxHeight: 120,
-    minHeight: 44,
-    paddingVertical: 0,
+    fontSize: 15,
+    minHeight: 36,
+    maxHeight: 100,
+    paddingRight: 10,
   },
   addCommentButton: {
-    marginLeft: 12,
-    borderRadius: 22,
+    marginLeft: 8,
+    borderRadius: 16,
     overflow: "hidden",
   },
   addCommentButtonDisabled: {
     opacity: 0.5,
   },
   addCommentButtonGradient: {
-    width: 44,
-    height: 44,
-    justifyContent: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
     alignItems: "center",
+    justifyContent: "center",
   },
   commentsList: {
-    gap: 16,
+    gap: 18,
   },
   commentItem: {
+    marginBottom: 12,
     borderRadius: 16,
     overflow: "hidden",
-    elevation: 3,
-    shadowColor: "#000",
+    elevation: 2,
+    shadowColor: "#10b981",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
   },
   commentGradient: {
-    padding: 20,
+    padding: 16,
   },
   commentHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 8,
+    justifyContent: "space-between",
+  },
+  commentLeftSection: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   commentAvatar: {
-    marginRight: 12,
+    marginRight: 10,
   },
   commentAvatarGradient: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
+    justifyContent: "center",
   },
   commentAvatarText: {
     color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
+    fontSize: 15,
   },
   commentMeta: {
-    flex: 1,
+    justifyContent: "center",
   },
   commentAuthor: {
-    fontSize: 15,
-    fontWeight: "600",
     color: "#10b981",
-  },
-  commentContent: {
+    fontWeight: "700",
     fontSize: 15,
-    color: "#e2e8f0",
-    lineHeight: 22,
   },
   commentDate: {
-    fontSize: 12,
     color: "#64748b",
+    fontSize: 12,
     marginTop: 2,
+  },
+  commentContent: {
+    color: "#e2e8f0",
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 6,
+  },
+  reportButton: {
+    borderRadius: 14,
+    overflow: "hidden",
+    marginLeft: 8,
+  },
+  reportButtonGradient: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reportButtonReported: {
+    opacity: 0.7,
+  },
+  reportStatusContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  reportStatusText: {
+    color: "#10b981",
+    fontSize: 12,
+    marginLeft: 4,
+    fontWeight: "600",
   },
   emptyComments: {
     alignItems: "center",
-    paddingVertical: 40,
+    marginTop: 32,
+    marginBottom: 24,
   },
   emptyCommentsText: {
     color: "#64748b",
     fontSize: 18,
-    fontWeight: "600",
-    marginTop: 16,
+    fontWeight: "700",
+    marginTop: 12,
   },
   emptyCommentsSubtext: {
-    color: "#4b5563",
+    color: "#64748b",
     fontSize: 14,
     marginTop: 4,
   },
   errorText: {
     color: "#ef4444",
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
     marginTop: 16,
+    textAlign: "center",
   },
   retryButton: {
     marginTop: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
     backgroundColor: "#10b981",
-    borderRadius: 25,
+    borderRadius: 20,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
   },
   retryButtonText: {
     color: "#fff",
+    fontWeight: "700",
     fontSize: 16,
-    fontWeight: "600",
   },
 });

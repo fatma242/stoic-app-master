@@ -13,7 +13,9 @@ import com.example.stoic.User.Model.User;
 import com.example.stoic.User.Model.UserRole;
 import com.example.stoic.User.Service.UserServiceImpl;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpSession;
+import jakarta.transaction.Transactional;
 
 import org.checkerframework.checker.units.qual.s;
 import org.springframework.http.HttpStatus;
@@ -26,18 +28,18 @@ import java.util.List;
 import java.util.Map;
 
 @CrossOrigin(origins = {
-        "http://192.168.1.8:8081",
-        "exp://192.168.1.8:8081"
+        "${UserIphttp}",
+        "${UserIPexp}"
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/rooms")
 public class RoomController {
 
-    private final RoomService roomService;
+    private final RoomServiceImpl roomService;
     private final PostRepo postRepo;
     private final UserServiceImpl uServiceImpl;
 
-    public RoomController(RoomService roomService, PostRepo postRepo, UserServiceImpl uServiceImpl) {
+    public RoomController(RoomServiceImpl roomService, PostRepo postRepo, UserServiceImpl uServiceImpl) {
         this.roomService = roomService;
         this.postRepo = postRepo;
         this.uServiceImpl = uServiceImpl;
@@ -174,7 +176,6 @@ public class RoomController {
                 // Like the post
                 post.getLikes().add(user);
             }
-
             Post savedPost = postRepo.save(post);
 
             // Return the updated post data
@@ -197,7 +198,7 @@ public class RoomController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRoom(@PathVariable int id) {
-        roomService.deleteRoomById(id);
+        roomService.deleteRoom(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
@@ -239,13 +240,43 @@ public class RoomController {
         }
     }
 
+    @DeleteMapping("/forceDelete/{PostId}")
+    public ResponseEntity<String> forceDeletePost(@PathVariable int PostId, HttpSession session) {
+        try {
+            User user = (User) session.getAttribute("user");
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+            }
+
+            if (user.getUserRole() != UserRole.ADMIN) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can force delete posts");
+            }
+
+            roomService.PostForceDelete(PostId);
+            return new ResponseEntity<>("Post with ID " + PostId + " force deleted.", HttpStatus.NO_CONTENT);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Failed to force delete post: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @DeleteMapping("/delete/{PostId}/{userId}")
+    public ResponseEntity<String> deletePost(@PathVariable int PostId, @PathVariable int userId) {
+        try {
+            roomService.PostDelete(PostId, userId);
+            return new ResponseEntity<>("Post with ID " + PostId + " deleted.", HttpStatus.NO_CONTENT);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Failed to delete post: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     // --- POSTS CONTROLLER LOGIC SHARING SAME CORS AND BASE PATH ---
 
     @RestController
     @RequestMapping("/rooms") // Shares the same CORS and base path as RoomController
     @CrossOrigin(origins = {
-            "http://192.168.1.8:8081",
-            "exp://192.168.1.8:8081"
+            " ${UserIphttp}",
+            "${UserIPexp}"
     }, allowCredentials = "true")
     class PostsController {
 
@@ -304,9 +335,8 @@ public class RoomController {
                 Post post = new Post();
                 post.setTitle(title);
                 post.setContent(content);
-                System.out.println("Creating post with title: " + title + ", content: " + content);
-                System.out.println("User: " + user.getUsername() + ", Room ID: " + roomId);
-                post.setAuthor(user);
+                User temp = user;
+                post.setAuthor(temp);
                 post.setDate(LocalDateTime.now());
                 post.setRoom(room);
 
@@ -333,7 +363,6 @@ public class RoomController {
 
                 // Verify the current user is the owner of the room
                 Room room = roomService.findRoomById(roomId);
-
                 if (room == null) {
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Room not found");
                 }
@@ -354,7 +383,7 @@ public class RoomController {
                 }
 
                 // Remove user from room
-                roomService.removeUserFromRoom(roomId, userToRemove.getUserId());
+                roomService.removeUserFromRoom(userToRemove.getUserId(), roomId);
 
                 return ResponseEntity.ok().body("User removed successfully");
 

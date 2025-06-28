@@ -2,8 +2,7 @@ spring.application.name=Stoic
 
 spring.datasource.url=jdbc:mysql://localhost:3306/stoic?useSSL=false&serverTimezone=UTC
 spring.datasource.username=root
-spring.datasource.password=fadycrux123
-
+spring.datasource.password=Adelra122@122
 
 spring.security.user.name=admin
 spring.security.user.password=admin
@@ -17,3 +16,5 @@ logging.level.org.hibernate.SQL=DEBUG
 
 
 server.port=8100
+UserIphttp= http://192.168.1.19:8081
+UserIPexp=exp://192.168.1.19:8081

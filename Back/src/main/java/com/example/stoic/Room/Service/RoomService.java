@@ -31,6 +31,15 @@ public interface RoomService {
     Void joinRoom(User user, String join_code);
 
     List<User> findUsersByRoomId(int id);
+
     void removeUserFromRoom(int userId, int roomId);
-    // void HandleReq();
+
+    void PostForceDelete(int PostId);
+
+    void PostDelete(int PostId, int userId);
+
+    void deleteRoom(int roomId);
+
 }
+
+// void HandleReq();
