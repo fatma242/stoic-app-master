@@ -21,9 +21,8 @@ import com.example.stoic.User.Model.UserRole;
 import com.example.stoic.User.Service.UserServiceImpl;
 
 @CrossOrigin(origins = {
-        "http://192.168.1.6:8081",
-        "exp://192.168.210.193:8081",
-        "http://localhost:8081",
+        " ${UserIphttp}",
+        "${UserIPexp}"
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/posts")

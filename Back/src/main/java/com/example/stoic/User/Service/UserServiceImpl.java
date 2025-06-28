@@ -86,7 +86,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void submitStatus(int userId, OnboardingStatus moodKey) {
-        User user = findById(userId); 
+        User user = findById(userId);
         user.setStatus(moodKey);
         userRepo.save(user);
     }
@@ -97,4 +97,10 @@ public class UserServiceImpl implements UserService {
         return user.getStatus();
     }
 
+    @Override
+    public User findByUsername(String username) {
+        return userRepo.findByUsername(username)
+                .orElseThrow(() -> new NoSuchElementException("User with username " +
+                        username + " not found"));
+    }
 }

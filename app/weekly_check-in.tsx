@@ -53,7 +53,7 @@ export default function WeeklyCheckIn() {
         // WEEKLY CHECK TEMPORARILY DISABLED FOR TESTING
         // Commented out to allow multiple submissions during testing
         /*
-        const response = await axios.get(`http://localhost:8100/api/mood-logs/${userId}`);
+        const response = await axios.get(`http://192.168.1.19:8100/api/mood-logs/${userId}`);
         const logs = response.data;
 
         const now = new Date();
@@ -103,7 +103,7 @@ export default function WeeklyCheckIn() {
         return;
       }
 
-      await axios.post("http://192.168.1.6:8100/api/mood-logs", {
+      await axios.post("process.env.EXPO_PUBLIC_API_BASE_URL/api/mood-logs", {
         userId: userId,
         moodScore: selectedMood,
         timestamp: new Date().toISOString(),

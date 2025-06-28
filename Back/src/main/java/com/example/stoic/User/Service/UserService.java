@@ -8,13 +8,24 @@ import java.util.List;
 public interface UserService {
 
     List<User> findAll();
+
     User findById(int id);
+
     User save(User user);
+
     void deleteById(int id);
+
     User update(User user);
+
     User register(User user);
+
     User login(String email, String password);
+    User findByUsername(String username);
+
     void submitStatus(int userId, OnboardingStatus moodKey);
+
     OnboardingStatus getStatus(int userId);
+
+    User findByUsername(String username);
 
 }

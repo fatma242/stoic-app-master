@@ -13,9 +13,10 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 import BackgroundVideo from "@/components/BackgroundVideo";
 
-const API_BASE_URL = "http://192.168.1.6:8100";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export default function Settings() {
   const router = useRouter();
@@ -100,23 +101,26 @@ export default function Settings() {
           </TouchableOpacity>
         </LinearGradient>
 
-        <LinearGradient
-          colors={['#16A34A', '#0d4215']}
-          style={styles.card}
-        >
+        <LinearGradient colors={["#16A34A", "#0d4215"]} style={styles.card}>
           <Text style={styles.cardTitle}>App Information</Text>
-          
+
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Version</Text>
             <Text style={styles.infoValue}>1.0.0</Text>
           </View>
 
-          <TouchableOpacity style={styles.infoItem} onPress={() => router.push('/PrivacyPolicy')}>
+          <TouchableOpacity
+            style={styles.infoItem}
+            onPress={() => router.push("/PrivacyPolicy")}
+          >
             <Text style={styles.infoLabel}>Privacy Policy</Text>
             <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.infoItem} onPress={() => router.push('/TermsOfService')}>
+          <TouchableOpacity
+            style={styles.infoItem}
+            onPress={() => router.push("/TermsOfService")}
+          >
             <Text style={styles.infoLabel}>Terms of Service</Text>
             <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
           </TouchableOpacity>
@@ -174,21 +178,21 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   infoItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: 15,
-      borderBottomWidth: 1,
-      borderBottomColor: '#ffffff20',
-    },
-    infoLabel: {
-      color: '#fff',
-      fontSize: 16,
-    },
-    infoValue: {
-      color: '#7CFC00',
-      fontSize: 16,
-    },
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ffffff20",
+  },
+  infoLabel: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  infoValue: {
+    color: "#7CFC00",
+    fontSize: 16,
+  },
   dangerText: {
     color: "#FFF",
     marginLeft: 15,

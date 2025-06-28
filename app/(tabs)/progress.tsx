@@ -29,7 +29,7 @@ const ProgressScreen = () => {
         }
 
         const response = await axios.get(
-          `http://192.168.1.6:8100/api/mood-logs/${userId}`
+          `${process.env.EXPO_PUBLIC_API_BASE_URL}/api/mood-logs/${userId}`
         );
         setMoodData(response.data);
         setLoading(false);
@@ -169,9 +169,7 @@ const VideoBackground = ({
   videoRef,
 }: {
   videoRef: React.RefObject<Video>;
-}) => (
-  <BackgroundVideo />
-);
+}) => <BackgroundVideo />;
 
 // Styles
 const styles = StyleSheet.create({

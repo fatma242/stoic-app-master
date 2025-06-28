@@ -19,10 +19,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 @CrossOrigin(origins = {
-        "http://192.168.1.6:8081",
-        "exp://192.168.1.6:8081",
-        "exp://192.168.210.193:8081",
-        "http://localhost:8081",
+        " ${UserIphttp}",
+        "${UserIPexp}",
+        " ${UserIphttp}",
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/users")
@@ -90,8 +89,7 @@ public class UserController {
                     registeredUser.getUsername(),
                     registeredUser.getEmail(),
                     registeredUser.getUserRole().name(),
-                    registeredUser.getOnboardingStatus().name()
-            ));
+                    registeredUser.getOnboardingStatus().name()));
 
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
@@ -104,7 +102,8 @@ public class UserController {
             HttpSession session) {
         User u = userService.login(req.getEmail(), req.getPassword());
         session.setAttribute("user", u);
-        return ResponseEntity.ok(new LoginResponse(String.valueOf(u.getUserId()), u.getEmail(), u.getUserRole().name()));
+        return ResponseEntity
+                .ok(new LoginResponse(String.valueOf(u.getUserId()), u.getEmail(), u.getUserRole().name()));
     }
 
     static class UserSessionResponse {
@@ -133,7 +132,8 @@ public class UserController {
         public String role;
         public String onboardingStatus;
 
-        public RegisterResponse(String message, int userId, String username, String email, String role, String onboardingStatus) {
+        public RegisterResponse(String message, int userId, String username, String email, String role,
+                String onboardingStatus) {
             this.message = message;
             this.userId = userId;
             this.username = username;

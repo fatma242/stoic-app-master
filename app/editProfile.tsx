@@ -1,7 +1,7 @@
 import BackgroundVideo from "@/components/BackgroundVideo";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation } from "@react-navigation/native";
-import { useRouter } from "expo-router";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { useNavigation } from "@react-navigation/native";
+// import { useRouter } from "expo-router";
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import {
   Alert,
@@ -12,7 +12,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { Video, ResizeMode } from "expo-av";
+import { useNavigation } from "@react-navigation/native";
+import Constants from "expo-constants";
 
 type User = {
   id: string;
@@ -24,7 +28,7 @@ type User = {
   status?: string;
 };
 
-const API_BASE_URL = "http://192.168.1.6:8100";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export default function EditProfile() {
   const navigation = useNavigation();
@@ -120,7 +124,7 @@ export default function EditProfile() {
         email,
         password: newPassword || user?.password || "",
         userRole: user?.userRole || "REG",
-        status: status, 
+        status: status,
       };
 
       const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {

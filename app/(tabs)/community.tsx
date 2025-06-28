@@ -1,7 +1,7 @@
 import BackgroundVideo from "@/components/BackgroundVideo";
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+// import { Ionicons } from "@expo/vector-icons";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { useRouter } from "expo-router";
 import React from "react";
 import { useEffect, useState } from "react";
 import {
@@ -16,6 +16,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Video, ResizeMode } from "expo-av";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+import { useFocusEffect } from "@react-navigation/native";
 
 // Type definitions
 type RoomType = "PUBLIC" | "PRIVATE";
@@ -27,11 +34,15 @@ interface RoomDTO {
   roomName: string;
   type: RoomType;
   createdAt: string;
+  // Assuming backend returns join_code as joinCode
+  joinCode?: string;
 }
 
 export default function Community() {
   const router = useRouter();
-  const [rooms, setRooms] = useState<RoomDTO[]>([]);
+  const [publicRooms, setPublicRooms] = useState<RoomDTO[]>([]);
+  const [ownerRooms, setOwnerRooms] = useState<RoomDTO[]>([]);
+  const [nonOwnerRooms, setNonOwnerRooms] = useState<RoomDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
@@ -39,42 +50,93 @@ export default function Community() {
   const [roomName, setRoomName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  const API_BASE_URL = "http://192.168.1.6:8100";
+  // New state for join code
+  const [joinCode, setJoinCode] = useState("");
 
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const storedUserId = await AsyncStorage.getItem("userId");
-        if (!storedUserId) {
-          router.replace("/login");
-          return;
-        }
-
-        setUserId(parseInt(storedUserId));
-
-        // Fetch user role from API
-        const response = await fetch(
-          `${API_BASE_URL}/api/users/${storedUserId}`,
-          {
-            credentials: "include",
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+  console.log("API_BASE_URL:", API_BASE_URL);
+  // Replace the existing useEffect with useFocusEffect to refresh data when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadUserData = async () => {
+        try {
+          console.log("useFocusEffect running");
+          const storedUserId = await AsyncStorage.getItem("userId");
+          if (!storedUserId) {
+            router.replace("/login");
+            return;
           }
-        );
-        const userData = await response.json();
-        setUserRole(userData.userRole);
+          setUserId(parseInt(storedUserId));
 
-        // Fetch visible rooms
-        await fetchVisibleRooms();
-      } catch (error) {
-        Alert.alert("Error", "Failed to load user data");
-      } finally {
-        setLoading(false);
-      }
-    };
+          // Fetch user role from API
+          const response = await fetch(
+            `${API_BASE_URL}/api/users/${storedUserId}`,
+            {
+              credentials: "include",
+            }
+          );
+          const userData = await response.json();
+          setUserRole(userData.userRole);
 
-    loadUserData();
-  }, []);
+          // Fetch both owner and non-owner rooms
+          await fetchOwnerRooms();
+          await fetchNonOwnerRooms();
+          if (userData.userRole !== "ADMIN") {
+            await fetchPublicRooms();
+          }
+        } catch (error) {
+          Alert.alert("Error", "Failed to load user data");
+        } finally {
+          setLoading(false);
+        }
+      };
 
-  const fetchVisibleRooms = async () => {
+      loadUserData();
+    }, [])
+  );
+
+  const fetchPublicRooms = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/rooms/getPub`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch public rooms");
+      const data = await response.json();
+      setPublicRooms(data);
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Could not load public rooms"
+      );
+    }
+  };
+  const filteredPublicRooms = publicRooms.filter(
+    (room) =>
+      room.ownerId !== userId &&
+      !nonOwnerRooms.some((r) => r.roomId === room.roomId) &&
+      !ownerRooms.some((r) => r.roomId === room.roomId)
+  );
+
+  const fetchOwnerRooms = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/rooms/visible/owner`, {
+        credentials: "include",
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch owner rooms");
+
+      const data = await response.json();
+      console.log("Owner rooms:", data);
+      setOwnerRooms(data);
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Could not load owner rooms"
+      );
+    }
+  };
+
+  const fetchNonOwnerRooms = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/rooms/visible`, {
         credentials: "include",
@@ -83,7 +145,8 @@ export default function Community() {
       if (!response.ok) throw new Error("Failed to fetch rooms");
 
       const data = await response.json();
-      setRooms(data);
+      console.log("Non-owner rooms:", data);
+      setNonOwnerRooms(data);
     } catch (error) {
       Alert.alert(
         "Error",
@@ -103,7 +166,7 @@ export default function Community() {
       const endpoint =
         userRole === "ADMIN"
           ? `${API_BASE_URL}/rooms`
-          : `${API_BASE_URL}/rooms/createPR`;
+          : `${API_BASE_URL}/rooms/createPR/${userId}`;
 
       // Create a complete room object
       const roomData = {
@@ -128,7 +191,8 @@ export default function Community() {
       }
 
       const newRoom = await response.json();
-      setRooms((prev) => [...prev, newRoom]);
+      // Add to owner rooms since the user created it
+      setOwnerRooms((prev) => [...prev, newRoom]);
       setShowModal(false);
       setRoomName("");
     } catch (error) {
@@ -138,6 +202,37 @@ export default function Community() {
       );
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  // New join room function that uses the /rooms/joinPR endpoint
+  const joinRoom = async () => {
+    if (!joinCode.trim()) {
+      Alert.alert("Error", "Join code is required");
+      return;
+    }
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/rooms/joinPR?joinCode=${joinCode}`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to join room: ${response.status} ${errorText}`);
+      }
+      Alert.alert("Success", "Joined room successfully!");
+      // Refresh both room lists
+      await fetchOwnerRooms();
+      await fetchNonOwnerRooms();
+      setJoinCode("");
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Error joining room"
+      );
     }
   };
 
@@ -168,7 +263,7 @@ export default function Community() {
             style={styles.logo}
           />
           <Text style={styles.greeting}>
-            {userRole === "ADMIN" ? "Admin Community" : "Your Private Rooms"}
+            {userRole === "ADMIN" ? "Admin Community" : "Your Community"}
           </Text>
 
           <TouchableOpacity
@@ -182,33 +277,152 @@ export default function Community() {
                 : "Create Private Room"}
             </Text>
           </TouchableOpacity>
-        </View>
 
-        <View style={styles.roomsSection}>
-          <Text style={styles.sectionTitle}>
-            {userRole === "ADMIN" ? "Public Rooms" : "Your Rooms"}
-          </Text>
-
-          {rooms.length === 0 ? (
-            <Text style={styles.emptyText}>No rooms available</Text>
-          ) : (
-            rooms.map((room) => (
+          {/* New Join Room Section */}
+          {userRole === "REG" && (
+            <View style={styles.joinRoomContainer}>
+              <TextInput
+                style={styles.joinRoomInput}
+                placeholder="Enter room join code"
+                placeholderTextColor="#888"
+                value={joinCode}
+                onChangeText={setJoinCode}
+              />
               <TouchableOpacity
-                key={room.roomId}
-                style={styles.roomItem}
-                onPress={() => handleRoomPress(room.roomId)}
+                style={styles.joinRoomButton}
+                onPress={joinRoom}
               >
-                <Text style={styles.roomName}>{room.roomName}</Text>
-                <Text style={styles.roomDetails}>
-                  {room.type === "PUBLIC" ? "Public" : "Private"} •
-                  {room.ownerId === userId
-                    ? " Your Room"
-                    : ` Owner: ${room.ownerId}`}
-                </Text>
+                <Text style={styles.joinRoomButtonText}>Join Room</Text>
               </TouchableOpacity>
-            ))
+            </View>
           )}
         </View>
+
+        {userRole !== "ADMIN" && (
+          <>
+            {/* Rooms You Own */}
+            <View style={styles.roomsSection}>
+              <Text style={styles.sectionTitle}>Rooms You Own</Text>
+              {ownerRooms.length === 0 ? (
+                <Text style={styles.emptyText}>No rooms owned yet</Text>
+              ) : (
+                ownerRooms.map((room) => (
+                  <View
+                    key={room.roomId}
+                    style={[
+                      styles.roomItem,
+                      styles.ownerRoomItem,
+                      {
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      },
+                    ]}
+                  >
+                    <TouchableOpacity
+                      style={{ flex: 1 }}
+                      onPress={() => handleRoomPress(room.roomId)}
+                    >
+                      <View style={styles.roomHeader}>
+                        <Text style={styles.roomName}>{room.roomName}</Text>
+                        <Ionicons name="star" size={16} color="#FFD700" />
+                      </View>
+                      <Text style={styles.roomDetails}>
+                        {room.type === "PUBLIC" ? "Public" : "Private"} • Owner
+                        {room.joinCode && ` • Code: ${room.joinCode}`}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        Alert.alert(
+                          "Delete Room",
+                          "Are you sure you want to delete this room? This will delete all posts in the room.",
+                          [
+                            { text: "Cancel", style: "cancel" },
+                            {
+                              text: "Delete",
+                              style: "destructive",
+                              onPress: async () => {
+                                try {
+                                  const response = await fetch(
+                                    `${API_BASE_URL}/rooms/${room.roomId}`,
+                                    {
+                                      method: "DELETE",
+                                      credentials: "include",
+                                    }
+                                  );
+                                  if (!response.ok)
+                                    throw new Error("Failed to delete room");
+                                  setOwnerRooms((prev) =>
+                                    prev.filter((r) => r.roomId !== room.roomId)
+                                  );
+                                  Alert.alert("Success", "Room deleted!");
+                                } catch (error) {
+                                  Alert.alert(
+                                    "Error",
+                                    error instanceof Error
+                                      ? error.message
+                                      : "Could not delete room"
+                                  );
+                                }
+                              },
+                            },
+                          ]
+                        );
+                      }}
+                      style={{ marginLeft: 10, padding: 8 }}
+                    >
+                      <Ionicons name="trash" size={22} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </View>
+
+            {/* Joined Rooms */}
+            <View style={styles.roomsSection}>
+              <Text style={styles.sectionTitle}>Joined Rooms</Text>
+              {nonOwnerRooms.length === 0 ? (
+                <Text style={styles.emptyText}>No joined rooms yet</Text>
+              ) : (
+                nonOwnerRooms.map((room) => (
+                  <TouchableOpacity
+                    key={room.roomId}
+                    style={styles.roomItem}
+                    onPress={() => handleRoomPress(room.roomId)}
+                  >
+                    <Text style={styles.roomName}>{room.roomName}</Text>
+                    <Text style={styles.roomDetails}>
+                      {room.type === "PUBLIC" ? "Public" : "Private"} • Owner:{" "}
+                      {room.ownerId}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+
+            {/* Public Rooms */}
+            <View style={styles.roomsSection}>
+              <Text style={styles.sectionTitle}>Public Rooms</Text>
+              {filteredPublicRooms.length === 0 ? (
+                <Text style={styles.emptyText}>No public rooms available</Text>
+              ) : (
+                filteredPublicRooms.map((room) => (
+                  <TouchableOpacity
+                    key={room.roomId}
+                    style={styles.roomItem}
+                    onPress={() => handleRoomPress(room.roomId)}
+                  >
+                    <Text style={styles.roomName}>{room.roomName}</Text>
+                    <Text style={styles.roomDetails}>
+                      Public • Owner: {room.ownerId}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {/* Create Room Modal */}
@@ -314,10 +528,34 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 16,
   },
+  joinRoomContainer: {
+    marginTop: 15,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  joinRoomInput: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    color: "white",
+    padding: 12,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  joinRoomButton: {
+    backgroundColor: "#334155",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  joinRoomButtonText: {
+    color: "white",
+    fontWeight: "600",
+  },
   roomsSection: {
     borderRadius: 15,
     padding: 15,
     backgroundColor: "rgba(255,255,255,0.1)",
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
@@ -331,11 +569,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
   },
+  ownerRoomItem: {
+    backgroundColor: "rgba(255,215,0,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255,215,0,0.3)",
+  },
+  roomHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 5,
+  },
   roomName: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "500",
-    marginBottom: 5,
+    flex: 1,
   },
   roomDetails: {
     color: "#ffffffaa",
