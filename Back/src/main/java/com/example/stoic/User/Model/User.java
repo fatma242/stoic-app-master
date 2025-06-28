@@ -30,6 +30,10 @@ public class User {
 
     @Column(name = "password", nullable = false)
     private String password;
+    @Column(name = "age", nullable = false)
+    private int age;
+    @Column(name = "gender", nullable = false)
+    private String gender;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "userRole", columnDefinition = "ENUM('REG','ADMIN') DEFAULT 'REG'")
@@ -42,6 +46,7 @@ public class User {
     public void setStatus(OnboardingStatus status) {
         this.onboardingStatus = status;
     }
+
     public OnboardingStatus getStatus() {
         return onboardingStatus;
     }
@@ -49,7 +54,5 @@ public class User {
     @JsonIgnore
     @ManyToMany(mappedBy = "Users")
     private List<Room> rooms;
-
-    
 
 }
