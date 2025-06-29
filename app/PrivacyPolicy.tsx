@@ -1,26 +1,50 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import BackgroundVideo from '@/components/BackgroundVideo';
+import i18n from "../constants/i18n";
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export default function PrivacyPolicy() {
+  const isRTL = i18n.locale === 'ar';
+  const textAlign = isRTL ? 'right' : 'left';
+  const titleStyle = isRTL ? styles.rtlTitle : styles.title;
+  const [key, setKey] = useState(0);
+
+  useEffect(() => {
+    global.reloadApp = () => setKey(prev => prev + 1);
+    return () => {
+      global.reloadApp = undefined;
+    };
+  }, []);
+
   return (
     <View style={styles.container}>
+      <View style={{ marginTop: 40 , marginRight: 10, alignSelf: "flex-end" }}>
+        <LanguageSwitcher />
+      </View>
       <BackgroundVideo />
-
+      <View style={styles.overlay} />
+      
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Your Privacy Matters</Text>
-
-        <Text style={styles.paragraph}>
-          Stoic is your friendly AI companion, here to support your mental well-being and personal growth journey. Think of me as a supportive guide - not a replacement for professional therapists or healthcare providers.
+        <Text style={[titleStyle, { color: '#05a843' }]}>
+          {i18n.t('privacyPolicy.title')}
         </Text>
 
-        <Text style={styles.paragraph}>
-          Your privacy is sacred to us. We never access sensitive personal information without your clear permission, and any data we use to improve your experience is completely anonymous.
-        </Text>
-
-        <Text style={styles.paragraph}>
-          If you're ever experiencing significant emotional distress or a mental health crisis, please reach out to a licensed professional or local support services. Your well-being is our highest priority.
-        </Text>
+        {Array.isArray(i18n.t('privacyPolicy.paragraphs', { returnObjects: true }))
+          ? (i18n.t('privacyPolicy.paragraphs', { returnObjects: true }) as string[]).map((paragraph: string, index: number) => (
+              <Text 
+                key={index} 
+                style={[styles.paragraph, { textAlign }]}
+              >
+                {paragraph}
+              </Text>
+            ))
+          : (
+              <Text style={[styles.paragraph, { textAlign }]}>
+                {i18n.t('privacyPolicy.paragraphs')}
+              </Text>
+            )
+        }
       </ScrollView>
     </View>
   );
@@ -29,17 +53,29 @@ export default function PrivacyPolicy() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   content: {
     paddingHorizontal: 20,
     paddingVertical: 30,
+    zIndex: 2,
   },
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#05a843',
     marginBottom: 24,
     textAlign: 'center',
+  },
+  rtlTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 24,
+    textAlign: 'center',
+    fontFamily: 'Cairo-Bold', 
   },
   paragraph: {
     fontSize: 17,

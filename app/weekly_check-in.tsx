@@ -14,7 +14,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import i18n from "@/constants/i18n";
+import i18n from "../constants/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const getWeekNumber = (date: Date) => {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -33,19 +34,34 @@ export default function WeeklyCheckIn() {
   const [status, setStatus] = useState<string | null>(null);
 
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+  const [key, setKey] = useState(0);
+
+  const isRTL = i18n.locale === 'ar';
+  const textAlign = isRTL ? 'right' : 'left';
+  const flexDirection = isRTL ? 'row-reverse' : 'row';
+
+  useEffect(() => {
+    global.reloadApp = () => setKey(prev => prev + 1);
+    return () => {
+      global.reloadApp = undefined;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const userId = await AsyncStorage.getItem("userId");
         if (!userId) {
-          Alert.alert("Error", "User not found. Please log in again.");
+          Alert.alert(
+            i18n.t('weeklyCheckIn.errors.userNotFound'),
+            i18n.t('weeklyCheckIn.errors.userNotFound')
+          );
           router.replace("/login");
           return;
         }
 
         // Check if user already submitted this week's check-in
-        const response = await axios.get(`${API_BASE_URL}/api/mood-logs/${userId}`);
+        /*const response = await axios.get(`${API_BASE_URL}/api/mood-logs/${userId}`);
         const logs = response.data;
         const now = new Date();
         const currentWeek = getWeekNumber(now);
@@ -57,10 +73,13 @@ export default function WeeklyCheckIn() {
         });
 
         if (hasSubmitted) {
-          Alert.alert("Already Submitted", "You've already completed your weekly check-in.");
+          Alert.alert(
+            i18n.t('weeklyCheckIn.alerts.alreadySubmitted'),
+            i18n.t('weeklyCheckIn.alerts.alreadySubmitted')
+          );
           router.replace("/progress");
           return;
-        }
+        }*/
 
         // Fetch user status
         const res = await fetch(`${API_BASE_URL}/api/users/status/${userId}`);
@@ -82,7 +101,10 @@ export default function WeeklyCheckIn() {
         setQuestions(questionTexts as string[]);
       } catch (error) {
         console.error(error);
-        Alert.alert("Error", "Failed to fetch data");
+        Alert.alert(
+          i18n.t('weeklyCheckIn.errors.fetchFailed'),
+          i18n.t('weeklyCheckIn.errors.fetchFailed')
+        );
       } finally {
         setLoading(false);
       }
@@ -93,7 +115,7 @@ export default function WeeklyCheckIn() {
 
   const handleSubmit = async () => {
     if (Object.keys(answers).length !== questions.length) {
-      Alert.alert("Please answer all questions.");
+      Alert.alert(i18n.t('weeklyCheckIn.errors.incompleteAnswers'));
       return;
     }
 
@@ -101,14 +123,17 @@ export default function WeeklyCheckIn() {
     try {
       const userId = await AsyncStorage.getItem("userId");
       if (!userId) {
-        Alert.alert("Error", "User not found. Please log in again.");
+        Alert.alert(
+          i18n.t('weeklyCheckIn.errors.userNotFound'),
+          i18n.t('weeklyCheckIn.errors.userNotFound')
+        );
         return;
       }
 
       let score = 0;
       Object.values(answers).forEach((ans) => {
-        if (ans === "Yes") score += 2;
-        else if (ans === "Sometimes") score += 1;
+        if (ans === i18n.t('weeklyCheckIn.answers.yes')) score += 2;
+        else if (ans === i18n.t('weeklyCheckIn.answers.sometimes')) score += 1;
       });
 
       await axios.post(`${API_BASE_URL}/api/mood-logs`, {
@@ -117,12 +142,19 @@ export default function WeeklyCheckIn() {
         timestamp: new Date().toISOString(),
       });
 
-      Alert.alert("Success", "Your check-in has been recorded!", [
-        { text: "OK", onPress: () => router.replace("/progress") },
-      ]);
+      Alert.alert(
+        i18n.t('weeklyCheckIn.alerts.success'),
+        i18n.t('weeklyCheckIn.alerts.success'),
+        [
+          { text: "OK", onPress: () => router.replace("/progress") },
+        ]
+      );
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "Failed to submit check-in. Please try again.");
+      Alert.alert(
+        i18n.t('weeklyCheckIn.errors.submitFailed'),
+        i18n.t('weeklyCheckIn.errors.submitFailed')
+      );
     } finally {
       setSubmitting(false);
     }
@@ -139,21 +171,27 @@ export default function WeeklyCheckIn() {
   const currentQuestion = questions[currentQuestionIndex];
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} key={key}>
       <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.languageContainer, { marginTop: 40, marginRight: 10 }]}>
+        <LanguageSwitcher />
+      </View>
       <BackgroundVideo />
       <View style={styles.overlay} />
 
       <KeyboardAvoidingView behavior="padding" style={styles.contentContainer}>
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
-            <Text style={styles.title}>How are you feeling this week?</Text>
 
             <View style={{ marginBottom: 20 }}>
-              <Text style={{ color: "#fff", fontSize: 16, marginBottom: 8 }}>{currentQuestion}</Text>
+              <Text style={[styles.questionText, { textAlign }]}>{currentQuestion}</Text>
 
-              <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
-                {["Yes", "No", "Sometimes"].map((option) => (
+              <View style={[styles.optionsContainer, { flexDirection }]}>
+                {[
+                  i18n.t('weeklyCheckIn.answers.yes'),
+                  i18n.t('weeklyCheckIn.answers.no'),
+                  i18n.t('weeklyCheckIn.answers.sometimes')
+                ].map((option) => (
                   <TouchableOpacity
                     key={option}
                     onPress={() => {
@@ -162,26 +200,26 @@ export default function WeeklyCheckIn() {
                         setCurrentQuestionIndex((prev) => prev + 1);
                       }
                     }}
-                    style={{
-                      padding: 10,
-                      backgroundColor:
-                        answers[currentQuestionIndex] === option ? "#16A34A" : "#ffffff30",
-                      borderRadius: 8,
-                    }}
+                    style={[
+                      styles.optionButton,
+                      answers[currentQuestionIndex] === option && styles.selectedOption
+                    ]}
                   >
-                    <Text style={{ color: "#fff" }}>{option}</Text>
+                    <Text style={styles.optionText}>{option}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
 
-            <View style={styles.navigationContainer}>
+            <View style={[styles.navigationContainer, { flexDirection }]}>
               {currentQuestionIndex > 0 && (
                 <TouchableOpacity 
                   onPress={() => setCurrentQuestionIndex(prev => prev - 1)}
                   style={styles.previousButton}
                 >
-                  <Text style={styles.previousText}>Previous</Text>
+                  <Text style={styles.previousText}>
+                    {i18n.t('weeklyCheckIn.navigation.previous')}
+                  </Text>
                 </TouchableOpacity>
               )}
 
@@ -199,7 +237,9 @@ export default function WeeklyCheckIn() {
                       {submitting ? (
                         <ActivityIndicator color="white" />
                       ) : (
-                        <Text style={styles.buttonText}>Submit</Text>
+                        <Text style={styles.buttonText}>
+                          {i18n.t('weeklyCheckIn.navigation.submit')}
+                        </Text>
                       )}
                     </LinearGradient>
                   </TouchableOpacity>
@@ -224,7 +264,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0)",
+    backgroundColor: "rgba(0, 0, 0, 0.52)",
     zIndex: -1,
   },
   contentContainer: {
@@ -232,6 +272,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     width: "100%",
+  },
+  languageContainer: {
+    alignSelf: "flex-end",
+    zIndex: 2,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -256,18 +300,41 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontWeight: "bold",
     color: "#fff",
-    textAlign: "center",
+  },
+  questionText: {
+    color: "#fff",
+    fontSize: 18,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  optionsContainer: {
+    justifyContent: "space-around",
+    width: '100%',
+  },
+  optionButton: {
+    padding: 12,
+    backgroundColor: "#ffffff30",
+    borderRadius: 8,
+    marginVertical: 5,
+    alignItems: 'center',
+    minWidth: 100,
+  },
+  selectedOption: {
+    backgroundColor: "#16A34A",
+  },
+  optionText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: '500',
   },
   navigationContainer: {
-    flexDirection: 'row',
     width: '100%',
     marginTop: 20,
-    justifyContent: 'center',
-    position: 'relative',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   previousButton: {
-    position: 'absolute',
-    left: 0,
+    padding: 10,
   },
   previousText: {
     color: '#ccc',

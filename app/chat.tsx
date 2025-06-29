@@ -39,8 +39,7 @@ export default function ChatScreen() {
 
     const scrollRef = useRef<ScrollView>(null);
     const stompClient = useRef<Client | null>(null);
-    const API_BASE_URL = 'http://192.168.1.8:8100';
-
+    const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
     useEffect(() => {
         AsyncStorage.getItem('userId').then(u => {
             if (u) setUserId(parseInt(u));

@@ -12,12 +12,22 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import i18n from "../../constants/i18n";
 
 export default function Home() {
+  const [key, setKey] = useState(0);
   const router = useRouter();
   const [role, setRole] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+
+  useEffect(() => {
+    global.reloadApp = () => setKey(prev => prev + 1);
+    return () => {
+      global.reloadApp = undefined;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchRole = async () => {
@@ -34,43 +44,60 @@ export default function Home() {
     fetchRole();
   }, []);
 
+  const isRTL = i18n.locale === 'ar';
+  const textAlign = isRTL ? 'right' : 'left';
+
   if (!role) {
     return (
       <View style={styles.container}>
         <Text style={{ color: '#fff', marginTop: 50, textAlign: 'center' }}>
-          Loading...
+          {i18n.t('home.loading')}
         </Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} key={key}>
+      <View style={{ marginTop: 30 , marginRight: 10, alignSelf: "flex-end" }}>
+        <LanguageSwitcher />
+      </View>
+      
       <BackgroundVideo />
       <View style={styles.overlay} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Image source={require('../../assets/logo.png')} style={styles.logo} />
-          <Text style={styles.greeting}>Welcome Back!</Text>
+          <Text style={[styles.greeting, { textAlign }]}>
+            {i18n.t('home.welcomeBack')}
+          </Text>
         </View>
 
         {/* Weekly Check-in => REG only*/}
         {role === 'REG' && (
           <LinearGradient colors={['#16A34A', '#0d4215']} style={styles.card}>
-            <Text style={styles.cardTitle}>Weekly Check-in</Text>
-            <Text style={styles.cardText}>How are you feeling now?</Text>
+            <Text style={[styles.cardTitle, { textAlign }]}>
+              {i18n.t('home.weeklyCheckin')}
+            </Text>
+            <Text style={[styles.cardText, { textAlign }]}>
+              {i18n.t('home.howAreYou')}
+            </Text>
             <TouchableOpacity
               style={styles.checkinButton}
               onPress={() => router.push('/weekly_check-in')}
             >
-              <Text style={styles.buttonText}>Start Check-in</Text>
+              <Text style={styles.buttonText}>
+                {i18n.t('home.startCheckin')}
+              </Text>
             </TouchableOpacity>
           </LinearGradient>
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Access</Text>
+          <Text style={[styles.sectionTitle, { textAlign }]}>
+            {i18n.t('home.quickAccess')}
+          </Text>
           <View style={styles.grid}>
             {/* Community => all */}
             <TouchableOpacity
@@ -78,7 +105,9 @@ export default function Home() {
               style={styles.gridItem}
             >
               <Ionicons name="people" size={32} color="#16A34A" />
-              <Text style={styles.gridText}>Community</Text>
+              <Text style={[styles.gridText, { textAlign: 'center' }]}>
+                {i18n.t('home.community')}
+              </Text>
             </TouchableOpacity>
 
             {/* AI Chat => REG only */}
@@ -88,7 +117,9 @@ export default function Home() {
                 onPress={() => router.push('/chatAI')}
               >
                 <Ionicons name="chatbubbles" size={32} color="#16A34A" />
-                <Text style={styles.gridText}>AI Chat</Text>
+                <Text style={[styles.gridText, { textAlign: 'center' }]}>
+                  {i18n.t('home.aiChat')}
+                </Text>
               </TouchableOpacity>
             )}
 
@@ -99,7 +130,9 @@ export default function Home() {
                 onPress={() => router.push('/progress')}
               >
                 <Ionicons name="stats-chart" size={32} color="#16A34A" />
-                <Text style={styles.gridText}>Progress</Text>
+                <Text style={[styles.gridText, { textAlign: 'center' }]}>
+                  {i18n.t('home.progress')}
+                </Text>
               </TouchableOpacity>
             )}
 
@@ -109,7 +142,9 @@ export default function Home() {
               onPress={() => router.push('/settings')}
             >
               <Ionicons name="settings" size={32} color="#16A34A" />
-              <Text style={styles.gridText}>Settings</Text>
+              <Text style={[styles.gridText, { textAlign: 'center' }]}>
+                {i18n.t('home.settings')}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -121,26 +156,19 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#000',
   },
-  backgroundVideo: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    right: 0,
+  languageContainerRTL: {
+    right: undefined,
+    left: 15,
   },
   overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   content: {
     padding: 20,
-    paddingTop: 50,
+    paddingTop: 80,
   },
   header: {
     alignItems: 'center',
@@ -149,31 +177,30 @@ const styles = StyleSheet.create({
   logo: {
     width: 100,
     height: 100,
+    borderRadius: 50,
     marginBottom: 15,
   },
   greeting: {
-    fontSize: 24,
     color: '#fff',
-    fontWeight: '600',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 10,
   },
   card: {
     borderRadius: 15,
     padding: 20,
-    marginBottom: 20,
+    marginBottom: 25,
   },
   cardTitle: {
-    fontSize: 20,
     color: '#fff',
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: 'bold',
     marginBottom: 10,
   },
   cardText: {
     color: '#fff',
-    opacity: 0.8,
-    marginBottom: 15,
+    fontSize: 16,
+    marginBottom: 20,
   },
   checkinButton: {
     backgroundColor: '#7CFC00',
@@ -182,16 +209,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
-    color: '#000',
-    fontWeight: '600',
+    color: '#0f0f0f',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   section: {
-    marginBottom: 25,
+    marginBottom: 30,
   },
   sectionTitle: {
-    fontSize: 20,
     color: '#fff',
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: 'bold',
     marginBottom: 15,
   },
   grid: {
@@ -202,26 +230,17 @@ const styles = StyleSheet.create({
   gridItem: {
     width: '48%',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
+    borderRadius: 15,
     padding: 20,
-    alignItems: 'center',
     marginBottom: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(22, 163, 74, 0.3)',
   },
   gridText: {
     color: '#fff',
     marginTop: 10,
-    fontWeight: '500',
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ffffff20',
-  },
-  activityText: {
-    color: '#fff',
-    marginLeft: 10,
-    flex: 1,
+    fontSize: 14,
   },
 });

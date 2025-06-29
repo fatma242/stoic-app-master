@@ -69,7 +69,7 @@ export default function ChatAI() {
             },
           }));
 
-          setMessages(formatted);
+          setMessages(formatted.reverse());
         }
       } catch (err) {
         console.error('❌ Error:', err);

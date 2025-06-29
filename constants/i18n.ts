@@ -78,7 +78,6 @@ const translations = {
     },
     weeklyCheckIn: {
       questions: {
-        initial: "How are you feeling this week?",
         stress: {
           q1: "Have you felt under pressure or overwhelmed recently?",
           q2: "Have you struggled to manage daily responsibilities?",
@@ -118,10 +117,20 @@ const translations = {
         yes: 'Yes',
         no: 'No',
         sometimes: 'Sometimes',
-        fear: "Fear",
-        sadness: "Sadness",
-        worry: "Worry",
-        justCheckingIn: "Just checking in"
+      },
+      errors: {
+        userNotFound: "User not found. Please log in again.",
+        fetchFailed: "Failed to fetch data",
+        submitFailed: "Failed to submit check-in. Please try again.",
+        incompleteAnswers: "Please answer all questions."
+      },
+      alerts: {
+        alreadySubmitted: "You've already completed your weekly check-in.",
+        success: "Your check-in has been recorded!"
+      },
+      navigation: {
+        previous: "Previous",
+        submit: "Submit"
       }
     },
     landing: {
@@ -156,6 +165,13 @@ const translations = {
       gender_required: "Please select your gender",
       age_required: "Age is required",
       age_invalid: "Please enter a valid age (13-120)",
+      emptyFields: "Username and email cannot be empty.",
+      invalidEmail: "Email must end with .com, .org, or .edu",
+      shortPassword: "Password must be at least 6 characters.",
+      userIdMissing: "User ID is missing.",
+      success: "Profile updated successfully.",
+      error: "Failed to update profile.",
+      fetchError: "Failed to fetch user data."
     },
     signup: {
       title: "Create a New Account",
@@ -177,7 +193,121 @@ const translations = {
       alreadyMember: "Already part of our community?",
       welcomeBack: "Welcome back",
     },
-
+    home: {
+      welcomeBack: "Welcome Back!",
+      weeklyCheckin: "Weekly Check-in",
+      howAreYou: "How are you feeling now?",
+      startCheckin: "Start Check-in",
+      quickAccess: "Quick Access",
+      community: "Community",
+      aiChat: "AI Chat",
+      progress: "Progress",
+      settings: "Settings",
+      loading: "Loading..."
+    },
+    settings: {
+      title: "Settings",
+      accountSettings: "Account Settings",
+      editProfile: "Edit Profile",
+      appInformation: "App Information",
+      version: "Version",
+      privacyPolicy: "Privacy Policy",
+      termsOfService: "Terms of Service",
+      logOut: "Log Out",
+      deleteAccount: "Delete Account",
+      confirm: "Confirm",
+      confirmDelete: "Are you sure you want to delete your account?",
+      delete: "Delete",
+      cancel: "Cancel",
+      logoutError: "Logout Error",
+      logoutFailed: "Failed to log out",
+      deleteError: "Error",
+      deleteFailed: "Failed to delete account",
+      userIdNotFound: "User ID not found"
+    },
+    editProfile: {
+      title: "Edit Profile",
+      usernamePlaceholder: "Username",
+      emailPlaceholder: "Email",
+      passwordPlaceholder: "New Password (optional)",
+      saveButton: "Save Changes",
+    },
+    progress: {
+      title: "Your Mental Health Journey 🌱",
+      streakTitle: "Day Mindfulness Streak! 🔥",
+      streakText: "Keep logging your mood weekly to grow your streak",
+      moodTrends: "Mood Trends",
+      moodProgress: "Mood Progress (Last week)",
+      noData: "You haven't submitted any check-ins yet.",
+      errors: {
+        userNotFound: "User not found. Please log in again.",
+        fetchFailed: "Failed to fetch mood data"
+      }
+    },
+    privacyPolicy: {
+      title: "Your Privacy Matters",
+      paragraphs: [
+        "Stoic is your friendly AI companion, here to support your mental well-being and personal growth journey. Think of me as a supportive guide - not a replacement for professional therapists or healthcare providers.",
+        "Your privacy is sacred to us. We never access sensitive personal information without your clear permission, and any data we use to improve your experience is completely anonymous.",
+        "If you're ever experiencing significant emotional distress or a mental health crisis, please reach out to a licensed professional or local support services. Your well-being is our highest priority."
+      ]
+    },
+    termsOfService: {
+      title: "Our Commitment to You",
+      paragraphs: [
+        "Stoic is your supportive AI companion, here to help with your mental well-being and personal growth journey. Please remember I'm designed as a guide - not a replacement for professional therapists or healthcare providers.",
+        "Your privacy is deeply respected. We only use information you choose to share with us, and any data that helps improve your experience is carefully anonymized to protect your identity.",
+        "If you ever face significant emotional challenges or a mental health crisis, we encourage you to connect with licensed professionals or local support services. Your safety and well-being come first."
+      ]
+    },
+    community: {
+      adminCommunity: "Admin Community",
+      yourCommunity: "Your Community",
+      createPublicRoom: "Create Public Room",
+      createPrivateRoom: "Create Private Room",
+      enterJoinCode: "Enter room join code",
+      joinRoom: "Join Room",
+      roomsYouOwn: "Rooms You Own",
+      noRoomsOwned: "No rooms owned yet",
+      joinedRooms: "Joined Rooms",
+      noJoinedRooms: "No joined rooms yet",
+      publicRooms: "Public Rooms",
+      noPublicRooms: "No public rooms available",
+      public: "Public",
+      private: "Private",
+      owner: "Owner",
+      code: "Code",
+      deleteRoom: "Delete Room",
+      deleteRoomConfirmation: "Are you sure you want to delete this room? This will delete all posts in the room.",
+      roomNamePlaceholder: "Room name",
+      errors: {
+        userNotFound: "User not found. Please log in again.",
+        failedToLoadUserData: "Failed to load user data",
+        failedFetchPublicRooms: "Failed to fetch public rooms",
+        couldNotLoadPublicRooms: "Could not load public rooms",
+        failedFetchOwnerRooms: "Failed to fetch owner rooms",
+        couldNotLoadOwnerRooms: "Could not load owner rooms",
+        failedFetchNonOwnerRooms: "Failed to fetch non-owner rooms",
+        couldNotLoadRooms: "Could not load rooms",
+        roomNameRequired: "Room name is required",
+        joinCodeRequired: "Join code is required",
+        roomCreationFailed: "Room creation failed",
+        couldNotCreateRoom: "Could not create room",
+        failedToJoinRoom: "Failed to join room",
+        errorJoiningRoom: "Error joining room",
+        failedToDeleteRoom: "Failed to delete room",
+        couldNotDeleteRoom: "Could not delete room"
+      },
+      success: {
+        joinedRoom: "Joined room successfully!",
+        roomDeleted: "Room deleted!"
+      }
+    },
+    common: {
+      cancel: "Cancel",
+      create: "Create",
+      delete: "Delete"
+    },
   },
   ar: {
     onboarding: {
@@ -253,7 +383,6 @@ const translations = {
     },
     weeklyCheckIn: {
       questions: {
-        initial: "كيف تشعر هذا الأسبوع؟",
         stress: {
           q1: "هل شعرت بالضغط أو الإرهاق مؤخرًا؟",
           q2: "هل واجهت صعوبة في التعامل مع مسؤولياتك اليومية؟",
@@ -293,10 +422,20 @@ const translations = {
         yes: 'نعم',
         no: 'لا',
         sometimes: 'أحياناً',
-        fear: "خوف ",
-        sadness: "حزن",
-        worry: "قلق",
-        justCheckingIn: "فقط أتحقق من حالتي"
+      },
+      errors: {
+        userNotFound: "المستخدم غير موجود. يرجى تسجيل الدخول مرة أخرى.",
+        fetchFailed: "فشل جلب البيانات",
+        submitFailed: "فشل إرسال الفحص. يرجى المحاولة مرة أخرى.",
+        incompleteAnswers: "يرجى الإجابة على جميع الأسئلة."
+      },
+      alerts: {
+        alreadySubmitted: "لقد أكملت فحصك الأسبوعي بالفعل.",
+        success: "تم تسجيل فحصك بنجاح!"
+      },
+      navigation: {
+        previous: "السابق",
+        submit: "إرسال"
       }
     },
     landing: {
@@ -331,6 +470,13 @@ const translations = {
       gender_required: "يرجى تحديد النوع",
       age_required: "العمر مطلوب",
       age_invalid: "يرجى إدخال عمر صالح (من 13 إلى 120)",
+      emptyFields: "لا يمكن ترك اسم المستخدم أو البريد الإلكتروني فارغاً.",
+      invalidEmail: "يجب أن ينتهي البريد الإلكتروني بـ .com أو .org أو .edu",
+      shortPassword: "يجب أن تكون كلمة المرور 6 أحرف على الأقل.",
+      userIdMissing: "معرف المستخدم مفقود.",
+      success: "تم تحديث الملف الشخصي بنجاح.",
+      error: "فشل تحديث الملف الشخصي.",
+      fetchError: "فشل في جلب بيانات المستخدم."
     },
     signup: {
       title: "إنشاء حساب جديد",
@@ -351,6 +497,121 @@ const translations = {
       back: "رجوع",
       alreadyMember: "هل لديك حساب بالفعل؟",
       welcomeBack: "مرحباً بعودتك",
+    },
+    home: {
+      welcomeBack: "مرحباً بعودتك!",
+      weeklyCheckin: "الفحص الأسبوعي",
+      howAreYou: "كيف تشعر الآن؟",
+      startCheckin: "بدء الفحص",
+      quickAccess: "وصول سريع",
+      community: "المجتمع",
+      aiChat: "دردشة الذكاء الاصطناعي",
+      progress: "التقدم",
+      settings: "الإعدادات",
+      loading: "جار التحميل..."
+    },
+    settings: {
+      title: "الإعدادات",
+      accountSettings: "إعدادات الحساب",
+      editProfile: "تعديل الملف الشخصي",
+      appInformation: "معلومات التطبيق",
+      version: "الإصدار",
+      privacyPolicy: "سياسة الخصوصية",
+      termsOfService: "شروط الخدمة",
+      logOut: "تسجيل الخروج",
+      deleteAccount: "حذف الحساب",
+      confirm: "تأكيد",
+      confirmDelete: "هل أنت متأكد أنك تريد حذف حسابك؟",
+      delete: "حذف",
+      cancel: "إلغاء",
+      logoutError: "خطأ في تسجيل الخروج",
+      logoutFailed: "فشل في تسجيل الخروج",
+      deleteError: "خطأ",
+      deleteFailed: "فشل في حذف الحساب",
+      userIdNotFound: "لم يتم العثور على معرف المستخدم"
+    },
+    editProfile: {
+      title: "تعديل الملف الشخصي",
+      usernamePlaceholder: "اسم المستخدم",
+      emailPlaceholder: "البريد الإلكتروني",
+      passwordPlaceholder: "كلمة مرور جديدة (اختياري)",
+      saveButton: "حفظ التغييرات",
+    },
+    progress: {
+      title: "رحلتك نحو الصحة النفسية 🌱",
+      streakTitle: "تتابع اليقظة الذهنية! 🔥",
+      streakText: "استمر في تسجيل حالتك المزاجية أسبوعياً لزيادة تتابعك",
+      moodTrends: "اتجاهات المزاج",
+      moodProgress: "تقدم المزاج (الأسبوع الماضي)",
+      noData: "لم تقم بتسجيل أي فحوصات بعد.",
+      errors: {
+        userNotFound: "المستخدم غير موجود. يرجى تسجيل الدخول مرة أخرى.",
+        fetchFailed: "فشل جلب بيانات المزاج"
+      }
+    },
+    privacyPolicy: {
+      title: "خصوصيتك تهمنا",
+      paragraphs: [
+        "ستويك هو رفيقك الودود للذكاء الاصطناعي، هنا لدعم رحلتك نحو الصحة النفسية والنمو الشخصي. اعتبرني دليلاً داعماً - وليس بديلاً عن المعالجين المحترفين أو مقدمي الرعاية الصحية.",
+        "خصوصيتك مقدسة بالنسبة لنا. نحن لا نصل أبداً إلى المعلومات الشخصية الحساسة دون إذن واضح منك، وأي بيانات نستخدمها لتحسين تجربتك تكون مجهولة تماماً.",
+        "إذا كنت تعاني من ضغوط عاطفية كبيرة أو أزمة صحية نفسية، يرجى التواصل مع محترف مرخص أو خدمات الدعم المحلية. رفاهيتك هي أولويتنا القصوى."
+      ]
+    },
+    termsOfService: {
+      title: "التزامنا تجاهك",
+      paragraphs: [
+        "ستويك هو رفيقك الداعم للذكاء الاصطناعي، هنا لمساعدتك في رحلتك نحو الصحة النفسية والنمو الشخصي. يرجى تذكر أنني مصمم كدليل - وليس بديلاً عن المعالجين المحترفين أو مقدمي الرعاية الصحية.",
+        "خصوصيتك تحظى باحترام عميق. نحن نستخدم فقط المعلومات التي تختار مشاركتها معنا، وأي بيانات تساعد في تحسين تجربتك يتم إخفاء هويتها بعناية لحماية هويتك.",
+        "إذا واجهت أي تحديات عاطفية كبيرة أو أزمة صحية نفسية، نشجعك على التواصل مع محترفين مرخصين أو خدمات الدعم المحلية. سلامتك ورفاهيتك تأتي في المقام الأول."
+      ]
+    },
+    community: {
+      adminCommunity: "مجتمع المشرفين",
+      yourCommunity: "مجتمعك",
+      createPublicRoom: "إنشاء غرفة عامة",
+      createPrivateRoom: "إنشاء غرفة خاصة",
+      enterJoinCode: "أدخل رمز الانضمام للغرفة",
+      joinRoom: "انضم للغرفة",
+      roomsYouOwn: "الغرف التي تمتلكها",
+      noRoomsOwned: "لا توجد غرف تمتلكها بعد",
+      joinedRooms: "الغرف المنضم إليها",
+      noJoinedRooms: "لا توجد غرف منضم إليها بعد",
+      publicRooms: "الغرف العامة",
+      noPublicRooms: "لا توجد غرف عامة متاحة",
+      public: "عامة",
+      private: "خاصة",
+      owner: "المالك",
+      code: "الكود",
+      deleteRoom: "حذف الغرفة",
+      deleteRoomConfirmation: "هل أنت متأكد أنك تريد حذف هذه الغرفة؟ سيؤدي هذا إلى حذف جميع المنشورات في الغرفة.",
+      roomNamePlaceholder: "اسم الغرفة",
+      errors: {
+        userNotFound: "المستخدم غير موجود. يرجى تسجيل الدخول مرة أخرى.",
+        failedToLoadUserData: "فشل تحميل بيانات المستخدم",
+        failedFetchPublicRooms: "فشل جلب الغرف العامة",
+        couldNotLoadPublicRooms: "تعذر تحميل الغرف العامة",
+        failedFetchOwnerRooms: "فشل جلب الغرف المملوكة",
+        couldNotLoadOwnerRooms: "تعذر تحميل الغرف المملوكة",
+        failedFetchNonOwnerRooms: "فشل جلب الغرف غير المملوكة",
+        couldNotLoadRooms: "تعذر تحميل الغرف",
+        roomNameRequired: "اسم الغرفة مطلوب",
+        joinCodeRequired: "رمز الانضمام مطلوب",
+        roomCreationFailed: "فشل إنشاء الغرفة",
+        couldNotCreateRoom: "تعذر إنشاء الغرفة",
+        failedToJoinRoom: "فشل الانضمام للغرفة",
+        errorJoiningRoom: "خطأ في الانضمام للغرفة",
+        failedToDeleteRoom: "فشل حذف الغرفة",
+        couldNotDeleteRoom: "تعذر حذف الغرفة"
+      },
+      success: {
+        joinedRoom: "تم الانضمام للغرفة بنجاح!",
+        roomDeleted: "تم حذف الغرفة!"
+      }
+    },
+    common: {
+      cancel: "إلغاء",
+      create: "إنشاء",
+      delete: "حذف"
     },
   }
 };

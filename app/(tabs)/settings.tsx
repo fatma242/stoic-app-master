@@ -1,26 +1,33 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  ScrollView, 
+  Text, 
+  TouchableOpacity, 
+  Image, 
   StyleSheet,
-  Image,
-  Alert,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { Video, ResizeMode } from "expo-av";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import Constants from "expo-constants";
-import BackgroundVideo from "@/components/BackgroundVideo";
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+  Alert
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import BackgroundVideo from '@/components/BackgroundVideo';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import i18n from "../../constants/i18n";
 
 export default function Settings() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
+  const [key, setKey] = useState(0);
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+
+  useEffect(() => {
+    global.reloadApp = () => setKey(prev => prev + 1);
+    return () => {
+      global.reloadApp = undefined;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchUserId = async () => {
@@ -46,39 +53,58 @@ export default function Settings() {
       await AsyncStorage.removeItem("userEmail");
       router.replace("/login");
     } catch (error) {
-      Alert.alert("Logout Error", "Failed to log out.");
+      Alert.alert(
+        i18n.t('settings.logoutError'),
+        i18n.t('settings.logoutFailed')
+      );
     }
   };
 
   const handleDeleteAccount = async () => {
     if (!userId) {
-      Alert.alert("Error", "User ID not found");
+      Alert.alert(i18n.t('settings.deleteError'), i18n.t('settings.userIdNotFound'));
       return;
     }
 
-    Alert.alert("Confirm", "Are you sure you want to delete your account?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await fetch(`${API_BASE_URL}/api/users/${userId}`, {
-              method: "DELETE",
-            });
-            await AsyncStorage.clear();
-            router.replace("/login");
-          } catch (error) {
-            Alert.alert("Error", "Failed to delete account.");
-          }
+    Alert.alert(
+      i18n.t('settings.confirm'),
+      i18n.t('settings.confirmDelete'),
+      [
+        { 
+          text: i18n.t('settings.cancel'), 
+          style: "cancel" 
         },
-      },
-    ]);
+        {
+          text: i18n.t('settings.delete'),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+                method: "DELETE",
+              });
+              await AsyncStorage.clear();
+              router.replace("/login");
+            } catch (error) {
+              Alert.alert(
+                i18n.t('settings.deleteError'), 
+                i18n.t('settings.deleteFailed')
+              );
+            }
+          },
+        },
+      ]
+    );
   };
+  const isRTL = i18n.locale === 'ar';
+  const textAlign = isRTL ? 'right' : 'left';
+  const flexDirection = isRTL ? 'row-reverse' : 'row';
 
   return (
-    <View style={styles.container}>
-      <BackgroundVideo></BackgroundVideo>
+    <View style={styles.container} key={key}>
+      <View style={[styles.languageContainer, { marginTop: 10 }]}>
+        <LanguageSwitcher />
+      </View>
+      <BackgroundVideo />
       <View style={styles.overlay} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
@@ -86,42 +112,56 @@ export default function Settings() {
             source={require("../../assets/logo.png")}
             style={styles.logo}
           />
-          <Text style={styles.greeting}>Settings</Text>
+          <Text style={[styles.greeting, { textAlign }]}>
+            {i18n.t('settings.title')}
+          </Text>
         </View>
 
         <LinearGradient colors={["#16A34A", "#0d4215"]} style={styles.card}>
-          <Text style={styles.cardTitle}>Account Settings</Text>
+          <Text style={[styles.cardTitle, { textAlign }]}>
+            {i18n.t('settings.accountSettings')}
+          </Text>
           <TouchableOpacity
-            style={styles.settingItem}
+            style={[styles.settingItem, { flexDirection }]}
             onPress={() => router.push("../editProfile")}
           >
             <Ionicons name="person" size={24} color="#7CFC00" />
-            <Text style={styles.settingText}>Edit Profile</Text>
+            <Text style={[styles.settingText, { textAlign }]}>
+              {i18n.t('settings.editProfile')}
+            </Text>
             <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
           </TouchableOpacity>
         </LinearGradient>
 
         <LinearGradient colors={["#16A34A", "#0d4215"]} style={styles.card}>
-          <Text style={styles.cardTitle}>App Information</Text>
+          <Text style={[styles.cardTitle, { textAlign }]}>
+            {i18n.t('settings.appInformation')}
+          </Text>
 
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Version</Text>
+          <View style={[styles.infoItem, { flexDirection }]}>
+            <Text style={[styles.infoLabel, { textAlign }]}>
+              {i18n.t('settings.version')}
+            </Text>
             <Text style={styles.infoValue}>1.0.0</Text>
           </View>
 
           <TouchableOpacity
-            style={styles.infoItem}
+            style={[styles.infoItem, { flexDirection }]}
             onPress={() => router.push("/PrivacyPolicy")}
           >
-            <Text style={styles.infoLabel}>Privacy Policy</Text>
+            <Text style={[styles.infoLabel, { textAlign }]}>
+              {i18n.t('settings.privacyPolicy')}
+            </Text>
             <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.infoItem}
+            style={[styles.infoItem, { flexDirection }]}
             onPress={() => router.push("/TermsOfService")}
           >
-            <Text style={styles.infoLabel}>Terms of Service</Text>
+            <Text style={[styles.infoLabel, { textAlign }]}>
+              {i18n.t('settings.termsOfService')}
+            </Text>
             <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
           </TouchableOpacity>
         </LinearGradient>
@@ -130,16 +170,23 @@ export default function Settings() {
           colors={["#FF4444", "#8B0000"]}
           style={[styles.card, { marginTop: 20 }]}
         >
-          <TouchableOpacity style={styles.dangerItem} onPress={handleLogout}>
+          <TouchableOpacity 
+            style={[styles.dangerItem, { flexDirection }]} 
+            onPress={handleLogout}
+          >
             <Ionicons name="log-out" size={24} color="#FFF" />
-            <Text style={styles.dangerText}>Log Out</Text>
+            <Text style={[styles.dangerText, { textAlign }]}>
+              {i18n.t('settings.logOut')}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.dangerItem}
+            style={[styles.dangerItem, { flexDirection }]}
             onPress={handleDeleteAccount}
           >
             <Ionicons name="trash" size={24} color="#FFF" />
-            <Text style={styles.dangerText}>Delete Account</Text>
+            <Text style={[styles.dangerText, { textAlign }]}>
+              {i18n.t('settings.deleteAccount')}
+            </Text>
           </TouchableOpacity>
         </LinearGradient>
       </ScrollView>
@@ -148,55 +195,96 @@ export default function Settings() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  backgroundVideo: { ...StyleSheet.absoluteFillObject },
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  languageContainer: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    zIndex: 20,
+  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
-  content: { padding: 20, paddingTop: 60 },
-  header: { alignItems: "center", marginBottom: 30 },
-  logo: { width: 100, height: 100, marginBottom: 15 },
-  greeting: { fontSize: 24, color: "#fff", fontWeight: "600" },
-  card: { borderRadius: 15, padding: 20, marginBottom: 20 },
-  cardTitle: {
-    fontSize: 20,
-    color: "#fff",
-    fontWeight: "600",
+  content: {
+    padding: 20,
+    paddingTop: 80,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     marginBottom: 15,
   },
-  settingItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 15,
+  greeting: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 10,
   },
-  settingText: { color: "#fff", flex: 1, marginLeft: 15, fontSize: 16 },
-  dangerItem: {
-    flexDirection: "row",
-    alignItems: "center",
+  card: {
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 25,
+  },
+  cardTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  settingText: {
+    color: '#fff',
+    fontSize: 16,
+    flex: 1,
+    marginHorizontal: 15,
   },
   infoItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 15,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#ffffff20",
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   infoLabel: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 16,
+    flex: 1,
   },
   infoValue: {
-    color: "#7CFC00",
+    color: '#7CFC00',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  dangerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   dangerText: {
-    color: "#FFF",
-    marginLeft: 15,
+    color: '#FFF',
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: 'bold',
+    flex: 1,
+    marginHorizontal: 15,
   },
 });

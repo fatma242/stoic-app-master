@@ -10,6 +10,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ImageBackground
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -20,7 +21,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
-// Type definitions
 interface User {
   userId: number;
   username: string;
@@ -74,38 +74,24 @@ export default function RoomScreen() {
   const [userId, setUserId] = useState<number | null>(null);
   const [username, setUsername] = useState<string>("");
   const [isOwner, setIsOwner] = useState(false);
-
-  // Chat state
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-
-  // Posts state
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
   const [isCreatingPost, setIsCreatingPost] = useState(false);
-
-  // Room management
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Notifications
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-
-  // Users in the room
   const [roomUsers, setRoomUsers] = useState<User[]>([]);
-
-  // Add this after your existing state declarations
   const [likingPostIds, setLikingPostIds] = useState<Set<number>>(new Set());
   const [refreshCount, setRefreshCount] = useState(0);
   const [userRole, setUserRole] = useState<string>("");
-  const [deletingPostIds, setDeletingPostIds] = useState<Set<number>>(
-    new Set()
-  );
+  const [deletingPostIds, setDeletingPostIds] = useState<Set<number>>(new Set());
 
   const stompClient = useRef<any>(null);
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -129,7 +115,6 @@ export default function RoomScreen() {
           }
         );
 
-        // Subscribe to notifications
         stompClient.current.subscribe(
           `/user/${userId}/queue/notifications`,
           (message: any) => {
@@ -157,37 +142,11 @@ export default function RoomScreen() {
       if (!response.ok) throw new Error("Failed to fetch room");
 
       const data: Room = await response.json();
-      console.log("Fetched room:", data);
       setRoom(data);
       setEditedName(data.roomName);
-
-      // Calculate owner status immediately with the current userId
       const ownerStatus = currentUserId === data.ownerId;
       setIsOwner(ownerStatus);
-      console.log(
-        "Owner check: userId",
-        currentUserId,
-        "room.ownerId",
-        data.ownerId,
-        "isOwner:",
-        ownerStatus
-      );
 
-      // Optional: Fetch owner details if needed
-      try {
-        const response2 = await fetch(
-          `${API_BASE_URL}/api/users/${data.ownerId}`,
-          {
-            credentials: "include",
-          }
-        );
-        const ownerData: User = await response2.json();
-        console.log("Fetched room owner:", ownerData.userId);
-      } catch (error) {
-        console.log("Could not fetch owner details:", error);
-      }
-
-      // Fetch user role for admin privileges
       try {
         const userResponse = await fetch(
           `${API_BASE_URL}/api/users/${currentUserId}`,
@@ -285,8 +244,6 @@ export default function RoomScreen() {
 
       const data: Notification[] = await response.json();
       setNotifications(data);
-
-      // Count unread notifications
       const unread = data.filter((n) => !n.read).length;
       setUnreadCount(unread);
     } catch (error) {
@@ -302,35 +259,21 @@ export default function RoomScreen() {
   const fetchRoomUsers = async () => {
     if (!roomId) return;
     try {
-      console.log("Fetching room users for roomId:", roomId);
-
-      // Fix the API endpoint - should be room-specific
       const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
         credentials: "include",
       });
 
-      console.log("Room users response status:", response.status);
-      console.log("Room users response ok:", response.ok);
-
       if (!response.ok) throw new Error("Failed to fetch room users");
 
       const data = await response.json();
-      console.log("Raw room users response:", data);
-
-      // Handle different response formats
       let users = [];
       if (Array.isArray(data)) {
-        // Direct array response
         users = data;
       } else if (data._embedded?.users) {
-        // HAL format response
         users = data._embedded.users;
       } else if (data.users) {
-        // Nested users property
         users = data.users;
       }
-
-      console.log("Processed users:", users);
       setRoomUsers(Array.isArray(users) ? users : []);
     } catch (error) {
       console.error("Error fetching room users:", error);
@@ -519,7 +462,6 @@ export default function RoomScreen() {
     }
   };
 
-  // Use useFocusEffect to reload data every time the screen is focused
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
@@ -528,7 +470,6 @@ export default function RoomScreen() {
         try {
           setLoading(true);
 
-          // First, load user data from AsyncStorage
           const storedUserId = await AsyncStorage.getItem("userId");
           const storedUsername = await AsyncStorage.getItem("username");
 
@@ -538,25 +479,18 @@ export default function RoomScreen() {
           }
 
           const parsedUserId = parseInt(storedUserId);
-          console.log("Loading user data - userId:", parsedUserId);
-
-          // Set user data immediately
           setUserId(parsedUserId);
           if (storedUsername) {
             setUsername(storedUsername);
           }
 
-          // Only proceed if we have a valid roomId and the component is still active
           if (roomId && isActive) {
-            // Fetch room data with the current userId to determine ownership immediately
             await fetchRoom(parsedUserId);
             await fetchMessages();
-            // pass the parsedUserId here:
             await fetchPosts(parsedUserId);
             await fetchNotifications(parsedUserId);
             await fetchRoomUsers();
 
-            // Connect WebSocket after all data is loaded
             if (isActive) {
               connectWebSocket();
             }
@@ -573,7 +507,6 @@ export default function RoomScreen() {
 
       loadData();
 
-      // Cleanup function
       return () => {
         isActive = false;
         if (stompClient.current) {
@@ -582,8 +515,6 @@ export default function RoomScreen() {
       };
     }, [roomId])
   );
-
-  // Add this useEffect after your existing state declarations and before useFocusEffect
 
   useEffect(() => {
     if (userId !== null && roomId) {
@@ -600,7 +531,6 @@ export default function RoomScreen() {
 
   const handleLike = async (postId: number) => {
     if (likingPostIds.has(postId) || userId === null) return;
-    // mark this post as pending
     setLikingPostIds((prev) => new Set(prev).add(postId));
 
     try {
@@ -609,8 +539,6 @@ export default function RoomScreen() {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to toggle like");
-
-      // Trigger a refresh of all posts to get updated counts
       setRefreshCount((prev) => prev + 1);
     } catch (error) {
       Alert.alert(
@@ -618,7 +546,6 @@ export default function RoomScreen() {
         error instanceof Error ? error.message : "Could not toggle like"
       );
     } finally {
-      // clear pending flag
       setLikingPostIds((prev) => {
         const copy = new Set(prev);
         copy.delete(postId);
@@ -640,7 +567,6 @@ export default function RoomScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              console.log("Attempting to remove user:", roomId);
               const response = await fetch(
                 `${API_BASE_URL}/rooms/${roomId}/remove-user/${username}`,
                 {
@@ -648,12 +574,7 @@ export default function RoomScreen() {
                   credentials: "include",
                 }
               );
-              console.log("Removing user:", username);
-              console.log("responce:" + response.status);
-
               if (!response.ok) throw new Error("Failed to remove user");
-              else console.log("User removed successfully:", username);
-              // Refresh the room users list
               await fetchRoomUsers();
               Alert.alert(
                 "Success",
@@ -703,7 +624,6 @@ export default function RoomScreen() {
                 throw new Error(errorText || "Failed to delete post");
               }
 
-              // Remove the post from the local state
               setPosts((prev) => prev.filter((post) => post.id !== postId));
               Alert.alert("Success", "Post deleted successfully");
             } catch (error) {
@@ -730,7 +650,6 @@ export default function RoomScreen() {
       return;
     }
 
-    // Find the post and verify ownership
     const post = posts.find((p) => p.id === postId);
     if (!post || post.author?.userId !== userId) {
       Alert.alert("Error", "You can only delete your own posts");
@@ -763,7 +682,6 @@ export default function RoomScreen() {
                 throw new Error(errorText || "Failed to delete post");
               }
 
-              // Remove the post from the local state
               setPosts((prev) => prev.filter((post) => post.id !== postId));
               Alert.alert("Success", "Post deleted successfully");
             } catch (error) {
@@ -784,86 +702,6 @@ export default function RoomScreen() {
     );
   };
 
-  // Update your posts mapping section (around line 1000) to include owner delete button
-
-  {
-    posts.map((post) => (
-      <View key={`post-${post.id}`} style={styles.postItem}>
-        <TouchableOpacity
-          onPress={() => handlePostPress(post.id)}
-          style={styles.postContent}
-        >
-          <Text style={styles.postTitle}>{post.title}</Text>
-          <Text style={styles.postContentText}>{post.content}</Text>
-          <Text style={styles.postAuthor}>
-            By: {post.author?.username || "Unknown Author"}
-          </Text>
-          <Text style={styles.postDate}>
-            {new Date(post.date).toLocaleDateString()}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Like Button, Comment Button, and Delete Buttons */}
-        <View style={styles.postActions}>
-          <TouchableOpacity
-            style={styles.likeButton}
-            onPress={() => handleLike(post.id)}
-            disabled={likingPostIds.has(post.id)}
-          >
-            {likingPostIds.has(post.id) ? (
-              <ActivityIndicator size="small" color="#ef4444" />
-            ) : (
-              <Ionicons
-                name={post.isLikedByUser ? "heart" : "heart-outline"}
-                size={20}
-                color={post.isLikedByUser ? "#ef4444" : "#94a3b8"}
-              />
-            )}
-            <Text style={styles.likeCount}>{post.likes}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.commentButton}
-            onPress={() => handlePostPress(post.id)}
-          >
-            <Ionicons name="chatbubble-outline" size={20} color="#94a3b8" />
-            <Text style={styles.commentText}>Comment</Text>
-          </TouchableOpacity>
-
-          {/* Owner Delete Button - Show if current user is the post author */}
-          {post.author?.userId === userId && (
-            <TouchableOpacity
-              style={styles.ownerDeleteButton}
-              onPress={() => handleOwnerDeletePost(post.id, post.title)}
-              disabled={deletingPostIds.has(post.id)}
-            >
-              {deletingPostIds.has(post.id) ? (
-                <ActivityIndicator size="small" color="#f59e0b" />
-              ) : (
-                <Ionicons name="trash-outline" size={20} color="#f59e0b" />
-              )}
-            </TouchableOpacity>
-          )}
-
-          {/* Admin Delete Button - Show if current user is admin */}
-          {userRole === "ADMIN" && (
-            <TouchableOpacity
-              style={styles.adminDeleteButton}
-              onPress={() => handleAdminDeletePost(post.id, post.title)}
-              disabled={deletingPostIds.has(post.id)}
-            >
-              {deletingPostIds.has(post.id) ? (
-                <ActivityIndicator size="small" color="#ef4444" />
-              ) : (
-                <Ionicons name="trash" size={20} color="#ef4444" />
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    ));
-  }
-
   if (loading) {
     return (
       <View style={styles.center}>
@@ -879,24 +717,20 @@ export default function RoomScreen() {
       </View>
     );
   }
-  // Replace line 605-606 with:
-  console.log(
-    "First post likes count:",
-    posts.length > 0 ? posts[0].likes || 0 : 0
-  );
 
-  console.log("Current userRole:", userRole);
-  console.log("Is userRole ADMIN?", userRole === "ADMIN");
-  console.log("Posts count:", posts.length);
-  // console.log("Number of posts with likes:", posts.filter(post => post.likes && post.likes.size > 0).length);
   return (
-    <View style={styles.container}>
+    <ImageBackground 
+      source={require('../assets/background-photo.png')} 
+      style={styles.container} 
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
+      
       <ScrollView
         style={styles.content}
         ref={scrollViewRef}
         onContentSizeChange={() => scrollToBottom()}
       >
-        {/* Back button and notifications at top of content */}
         <View style={styles.topBar}>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="white" />
@@ -912,7 +746,6 @@ export default function RoomScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Room Info */}
         <View style={styles.infoCard}>
           <View style={styles.roomNameContainer}>
             {isEditing ? (
@@ -967,7 +800,6 @@ export default function RoomScreen() {
                       {user.userId === userId && " (You)"}
                       {user.userId === room?.ownerId && " (Owner)"}
                     </Text>
-                    {/* Show remove button only if current user is owner and target user is not owner or self */}
                     {isOwner &&
                       user.userId !== userId &&
                       user.userId !== room?.ownerId && (
@@ -990,7 +822,6 @@ export default function RoomScreen() {
             </View>
           </View>
 
-          {/* Owner actions - will only show if isOwner is true */}
           {isOwner && (
             <View style={styles.actionsContainer}>
               {isEditing ? (
@@ -1039,7 +870,6 @@ export default function RoomScreen() {
           )}
         </View>
 
-        {/* Chat Section */}
         <Text style={styles.sectionTitle}>Chat</Text>
         <View style={styles.chatContainer}>
           {messages.length === 0 ? (
@@ -1070,7 +900,6 @@ export default function RoomScreen() {
           )}
         </View>
 
-        {/* Posts Section */}
         <Text style={styles.sectionTitle}>Posts</Text>
         {posts.length === 0 ? (
           <Text style={styles.emptyText}>No posts yet</Text>
@@ -1091,7 +920,6 @@ export default function RoomScreen() {
                 </Text>
               </TouchableOpacity>
 
-              {/* Like Button, Comment Button, and Delete Buttons */}
               <View style={styles.postActions}>
                 <TouchableOpacity
                   style={styles.likeButton}
@@ -1122,7 +950,6 @@ export default function RoomScreen() {
                   <Text style={styles.commentText}>Comment</Text>
                 </TouchableOpacity>
 
-                {/* Owner Delete Button - Show if current user is the post author */}
                 {post.author?.userId === userId && (
                   <TouchableOpacity
                     style={styles.ownerDeleteButton}
@@ -1141,7 +968,6 @@ export default function RoomScreen() {
                   </TouchableOpacity>
                 )}
 
-                {/* Admin Delete Button - Show if current user is admin */}
                 {userRole === "ADMIN" && (
                   <TouchableOpacity
                     style={styles.adminDeleteButton}
@@ -1160,7 +986,6 @@ export default function RoomScreen() {
           ))
         )}
 
-        {/* Create Post Form */}
         <View style={styles.postForm}>
           <Text style={styles.sectionTitle}>Create New Post</Text>
           <TextInput
@@ -1193,7 +1018,6 @@ export default function RoomScreen() {
         </View>
       </ScrollView>
 
-      {/* Message Input */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.messageInputContainer}
@@ -1218,20 +1042,22 @@ export default function RoomScreen() {
           />
         </TouchableOpacity>
       </KeyboardAvoidingView>
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f172a",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#0f172a",
   },
   errorText: {
     color: "#ff6b6b",
@@ -1248,7 +1074,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   infoCard: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "rgba(47, 53, 61, 0.8)",
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
@@ -1317,7 +1143,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 10,
   },
-
   emptyText: {
     color: "#94a3b8",
     textAlign: "center",
@@ -1358,14 +1183,8 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
     marginTop: 4,
   },
-  postCard: {
-    backgroundColor: "#1e293b",
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-  },
   postItem: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "rgba(30, 41, 59, 0.8)",
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
@@ -1398,7 +1217,7 @@ const styles = StyleSheet.create({
     marginBottom: 50,
   },
   input: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "rgba(30, 41, 59, 0.8)",
     color: "white",
     padding: 12,
     borderRadius: 8,
@@ -1417,13 +1236,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 10,
-    backgroundColor: "#1e293b",
+    backgroundColor: "rgba(30, 41, 59, 0.8)",
     borderTopWidth: 1,
     borderTopColor: "#334155",
   },
   messageInput: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: "rgba(15, 23, 42, 0.8)",
     color: "white",
     borderRadius: 20,
     paddingHorizontal: 15,
@@ -1465,7 +1284,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: "#334155",
-    flexWrap: "wrap", // Allow wrapping if too many buttons
+    flexWrap: "wrap",
   },
   likeButton: {
     flexDirection: "row",
@@ -1493,7 +1312,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 4,
   },
-
   removeUserButton: {
     padding: 4,
     marginLeft: 8,
@@ -1505,7 +1323,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#1e293b",
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: "#ef4444", // Red color for admin delete
+    borderColor: "#ef4444",
   },
   ownerDeleteButton: {
     flexDirection: "row",
@@ -1514,6 +1332,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#1e293b",
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: "#f59e0b", // Orange color for owner delete
+    borderColor: "#f59e0b",
   },
 });
