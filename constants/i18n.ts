@@ -1,3 +1,4 @@
+import SignUp from '@/app/signup';
 import * as Localization from 'expo-localization';
 import { I18n } from 'i18n-js';
 
@@ -122,7 +123,60 @@ const translations = {
         worry: "Worry",
         justCheckingIn: "Just checking in"
       }
-    }
+    },
+    landing: {
+      subtitle: "Your daily mental wellness companion",
+      google: "Continue with Google",
+      email: "Sign up with Email",
+      haveAccount: "Already have an account?",
+      login: "Log in"
+    },
+    login: {
+      title: "Welcome Back",
+      subtitle: "Continue your wellness journey",
+      email: "Email",
+      password: "Password",
+      login: "Log In",
+      dontHaveAccount: "Don't have an account?",
+      signUp: "Sign up",
+      emailRequired: "Email is required",
+      emailInvalid: "Enter a valid email",
+      passwordRequired: "Password is required",
+      passwordShort: "Password must be at least 6 characters",
+      errorTitle: "Login Error"
+    },
+    validation: {
+      username_required: "Username is required",
+      username_short: "Username must be at least 3 characters",
+      email_required: "Email is required",
+      email_invalid: "Please enter a valid email",
+      password_required: "Password is required",
+      password_short: "Password must be at least 6 characters",
+      confirm_password_mismatch: "Passwords don't match",
+      gender_required: "Please select your gender",
+      age_required: "Age is required",
+      age_invalid: "Please enter a valid age (13-120)",
+    },
+    signup: {
+      title: "Create a New Account",
+      subtitle: "Start your journey to mental wellness",
+      username: "Username",
+      email: "Email",
+      password: "Password",
+      passwordtitle1: "Secure Your Space",
+      passwordtitle2: "Create a safe sanctuary for your thoughts",
+      confirmPassword: "Confirm Password",
+      age: "Your Age",
+      identity: "Identity",
+      subtitle2: "Help us tailor your healing experience",
+      female: "Female",
+      male: "Male",
+      continue: "Continue",
+      beginJourney: "Begin Your Journey",
+      back: "Back",
+      alreadyMember: "Already part of our community?",
+      welcomeBack: "Welcome back",
+    },
 
   },
   ar: {
@@ -244,7 +298,60 @@ const translations = {
         worry: "قلق",
         justCheckingIn: "فقط أتحقق من حالتي"
       }
-    }
+    },
+    landing: {
+      subtitle: "رفيقك اليومي للصحة النفسية",
+      google: "الدخول باستخدام جوجل",
+      email: "إنشاء حساب بالبريد الإلكتروني",
+      haveAccount: "هل لديك حساب بالفعل؟",
+      login: "تسجيل الدخول"
+    },
+    login: {
+      title: "مرحباً بعودتك",
+      subtitle: "تابع رحلتك نحو العافية",
+      email: "البريد الإلكتروني",
+      password: "كلمة المرور",
+      login: "تسجيل الدخول",
+      dontHaveAccount: "ليس لديك حساب؟",
+      signUp: "إنشاء حساب",
+      emailRequired: "البريد الإلكتروني مطلوب",
+      emailInvalid: "يرجى إدخال بريد إلكتروني صحيح",
+      passwordRequired: "كلمة المرور مطلوبة",
+      passwordShort: "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+      errorTitle: "خطأ في تسجيل الدخول"
+    },
+    validation: {
+      username_required: "اسم المستخدم مطلوب",
+      username_short: "يجب أن يكون اسم المستخدم 3 أحرف على الأقل",
+      email_required: "البريد الإلكتروني مطلوب",
+      email_invalid: "يرجى إدخال بريد إلكتروني صالح",
+      password_required: "كلمة المرور مطلوبة",
+      password_short: "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+      confirm_password_mismatch: "كلمتا المرور غير متطابقتين",
+      gender_required: "يرجى تحديد النوع",
+      age_required: "العمر مطلوب",
+      age_invalid: "يرجى إدخال عمر صالح (من 13 إلى 120)",
+    },
+    signup: {
+      title: "إنشاء حساب جديد",
+      subtitle: "ابدأ رحلتك نحو العافية النفسية",
+      username: "اسم المستخدم",
+      email: "البريد الإلكتروني",
+      password: "كلمة المرور",
+      passwordtitle1: "تأمين المساحة الخاصة بك",
+      passwordtitle2: "إنشاء مكان آمن لأفكارك",
+      confirmPassword: "تأكيد كلمة المرور",
+      age: "عمرك",
+      identity: "الهوية",
+      subtitle2: "ساعدنا في تخصيص تجربتك العلاجية",
+      female: "أنثى",
+      male: "ذكر",
+      continue: "استمرار",
+      beginJourney: "ابدأ رحلتك",
+      back: "رجوع",
+      alreadyMember: "هل لديك حساب بالفعل؟",
+      welcomeBack: "مرحباً بعودتك",
+    },
   }
 };
 

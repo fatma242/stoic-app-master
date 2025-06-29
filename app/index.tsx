@@ -1,9 +1,11 @@
 import BackgroundVideo from "@/components/BackgroundVideo";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import i18n from "@/constants/i18n";
 import { AntDesign, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import { useEffect, useRef } from "react";
 import { Animated, BackHandler, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -11,6 +13,14 @@ export default function Landing() {
   const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   // const sound = useRef(new Audio.Sound()); // Sound ref commented out
+  const [key, setKey] = useState(0);
+  
+  useEffect(() => {
+    global.reloadApp = () => setKey(prev => prev + 1);
+    return () => {
+      global.reloadApp = undefined;
+    };
+  }, []);
 
   useEffect(() => {
     // Commented out sound functionality
@@ -60,33 +70,36 @@ useEffect(() => {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <BackgroundVideo />
-      <View style={styles.overlay} />
-      <Image source={require("../assets/logo.png")} style={styles.logo} />
-      <Text style={styles.subtitle}>Your daily mental wellness companion</Text>
+    <><View style={{ marginTop: 40 , marginRight: 10, alignSelf: "flex-end" }}>
+      <LanguageSwitcher />
+    </View><View style={styles.container}>
+        <BackgroundVideo />
+        <View style={styles.overlay} />
+        <Image source={require("../assets/logo.png")} style={styles.logo} />
+        <Text style={styles.subtitle}>{i18n.t("landing.subtitle")}</Text>
 
-      <Animated.View style={[styles.buttonContainer, { opacity: fadeAnim }]}>
-        <TouchableOpacity style={styles.googleButton}>
-          <AntDesign name="google" size={24} color="black" />
-          <Text style={styles.googleText}>Continue with Google</Text>
-        </TouchableOpacity>
+        <Animated.View style={[styles.buttonContainer, { opacity: fadeAnim }]}>
+          <TouchableOpacity style={styles.googleButton}>
+            <AntDesign name="google" size={24} color="black" />
+            <Text style={styles.googleText}>{i18n.t("landing.google")}</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.emailButton} onPress={() => router.push("/signup")}>
-          <LinearGradient colors={["#16A34A", "#0d4215"]} style={styles.emailButtonGradient}>
-            <MaterialIcons name="email" size={24} color="white" />
-            <Text style={styles.emailText}>Sign up with Email</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </Animated.View>
+          <TouchableOpacity style={styles.emailButton} onPress={() => router.push("/signup")}>
+            <LinearGradient colors={["#16A34A", "#0d4215"]} style={styles.emailButtonGradient}>
+              <MaterialIcons name="email" size={24} color="white" />
+              <Text style={styles.emailText}>{i18n.t("landing.email")}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
 
-      <Text style={styles.loginText}>
-        Already have an account?
-        <Text style={styles.loginLink} onPress={() => router.replace("/login")}>
-          {" "}Log in
+
+        <Text style={styles.loginText}>
+          {i18n.t("landing.haveAccount")}
+          <Text style={styles.loginLink} onPress={() => router.replace("/login")}>
+            {" "}{i18n.t("landing.login")}
+          </Text>
         </Text>
-      </Text>
-    </View>
+      </View></>
   );
 }
 const styles = StyleSheet.create({
@@ -99,7 +112,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.2)", // Subtle overlay for better contrast
+    backgroundColor: "rgba(0, 0, 0, 0.2)", 
   },
 
   logo: { width: 170, height: 170, marginBottom: 15 },
