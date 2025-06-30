@@ -48,10 +48,10 @@ public class RoomServiceImpl implements RoomService {
     @Transactional
     public void deleteRoom(int roomId) {
         Room room = roomRepo.findById(roomId)
-            .orElseThrow(() -> new EntityNotFoundException("Room not found: " + roomId));
+                .orElseThrow(() -> new EntityNotFoundException("Room not found: " + roomId));
 
         // 1) for each post in the room, clear its likes & comments so that
-        //    Hibernate doesn’t attempt to null-out author or orphan them
+        // Hibernate doesn’t attempt to null-out author or orphan them
         room.getPosts().forEach(post -> {
             post.getLikes().clear();
             post.getComments().clear();
@@ -65,11 +65,13 @@ public class RoomServiceImpl implements RoomService {
     public void removeUserFromRoom(int userId, int roomId) {
         try {
             // Room room = roomRepo.findById(roomId)
-            //         .orElseThrow(() -> new RuntimeException("Room not found with id: " + roomId));
+            // .orElseThrow(() -> new RuntimeException("Room not found with id: " +
+            // roomId));
             // User user = userRepo.findById(userId)
-            //         .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+            // .orElseThrow(() -> new RuntimeException("User not found with id: " +
+            // userId));
             // room.removeUser(user);
-            roomRepo.deleteUserFromRoom(userId, roomId);    
+            roomRepo.deleteUserFromRoom(userId, roomId);
             System.out.println("User removed from room successfully: " + userId + " from room " + roomId);
             // roomRepo.save(room);
 
@@ -119,7 +121,7 @@ public class RoomServiceImpl implements RoomService {
             throw new RuntimeException("Failed to delete post with id: " + PostId, e);
         }
     }
-    
+
     @Override
     public Room createRoom(Room room) {
         try {
