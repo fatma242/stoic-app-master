@@ -61,7 +61,7 @@ export default function WeeklyCheckIn() {
         }
 
         // Check if user already submitted this week's check-in
-        /*const response = await axios.get(`${API_BASE_URL}/api/mood-logs/${userId}`);
+        const response = await axios.get(`${API_BASE_URL}/api/mood-logs/${userId}`);
         const logs = response.data;
         const now = new Date();
         const currentWeek = getWeekNumber(now);
@@ -79,7 +79,7 @@ export default function WeeklyCheckIn() {
           );
           router.replace("/progress");
           return;
-        }*/
+        }
 
         // Fetch user status
         const res = await fetch(`${API_BASE_URL}/api/users/status/${userId}`);

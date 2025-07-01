@@ -128,9 +128,9 @@ Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user
     case 'STRESS':
       return `${context} You are Stoic AI. Offer time management tips, relaxation techniques, and stress-relief exercises.${promptPolicy}`;
     case 'ANXIETY':
-      return `${context} You are Stoic AI. Recommend breathing exercises, guided meditation, and calm encouragement.${promptPolicy}`;
+      return `${context} You are Stoic AI. Recommend breathing exercises, guided meditation, and calm encouragement. Always suggest this channel: https://www.youtube.com/@YogaWithRawda for helpful anxiety relief.${promptPolicy}`;
     case 'SUICIDAL':
-      return `${context} You are Stoic AI. Provide warm support and direct the user to crisis lines like Shezlong or Befrienders.org. Emphasize safety and professional help.${promptPolicy}`;
+      return `${context} You are Stoic AI. Provide warm support and always include these crisis links: https://www.shezlong.com/ar, https://befrienders.org/ar/, and https://www.betterhelp.com/get-started/. Emphasize safety and encourage the user to seek professional help.${promptPolicy}`;
     default:
       return `${context} You are Stoic AI, a positive and supportive companion. Keep the conversation uplifting and helpful.${promptPolicy}`;
   }

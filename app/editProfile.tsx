@@ -70,8 +70,8 @@ export default function EditProfile() {
         const userIdint = parseInt(userID, 10);
         if (isNaN(userIdint)) {
           Alert.alert(
-            i18n.t('editProfile.validation.error'),
-            i18n.t('editProfile.validation.userIdMissing')
+            i18n.t('validation.error'),
+            i18n.t('validation.userIdMissing')
           );
           return;
         }
@@ -98,8 +98,8 @@ export default function EditProfile() {
       } catch (error) {
         console.error("❌ fetchUser failed:", error);
         Alert.alert(
-          i18n.t('editProfile.validation.error'),
-          i18n.t('editProfile.validation.fetchError')
+          i18n.t('validation.error'),
+          i18n.t('validation.fetchError')
         );
       }
     };
@@ -110,8 +110,8 @@ export default function EditProfile() {
   const handleUpdate = async () => {
     if (!name.trim() || !email.trim()) {
       Alert.alert(
-        i18n.t('editProfile.validation.error'),
-        i18n.t('editProfile.validation.emptyFields')
+        i18n.t('validation.error'),
+        i18n.t('validation.emptyFields')
       );
       return;
     }
@@ -122,16 +122,16 @@ export default function EditProfile() {
 
     if (!emailRegex.test(email) || !allowedDomains.includes(domain)) {
       Alert.alert(
-        i18n.t('editProfile.validation.error'),
-        i18n.t('editProfile.validation.invalidEmail')
+        i18n.t('validation.error'),
+        i18n.t('validation.invalidEmail')
       );
       return;
     }
 
     if (newPassword && newPassword.length < 6) {
       Alert.alert(
-        i18n.t('editProfile.validation.error'),
-        i18n.t('editProfile.validation.shortPassword')
+        i18n.t('validation.error'),
+        i18n.t('validation.shortPassword')
       );
       return;
     }
@@ -140,8 +140,8 @@ export default function EditProfile() {
       const userId = await AsyncStorage.getItem("userId");
       if (!userId) {
         Alert.alert(
-          i18n.t('editProfile.validation.error'),
-          i18n.t('editProfile.validation.userIdMissing')
+          i18n.t('validation.error'),
+          i18n.t('validation.userIdMissing')
         );
         return;
       }
@@ -164,8 +164,8 @@ export default function EditProfile() {
 
       await AsyncStorage.setItem("userEmail", email);
       Alert.alert(
-        i18n.t('editProfile.validation.success'),
-        i18n.t('editProfile.validation.success'),
+        i18n.t('validation.success'),
+        i18n.t('validation.success'),
         [
           { 
             text: "OK", 
@@ -175,8 +175,8 @@ export default function EditProfile() {
       );
     } catch (error) {
       Alert.alert(
-        i18n.t('editProfile.validation.error'),
-        i18n.t('editProfile.validation.error')
+        i18n.t('validation.error'),
+        i18n.t('validation.error')
       );
     }
   };

@@ -79,10 +79,6 @@ useEffect(() => {
         <Text style={styles.subtitle}>{i18n.t("landing.subtitle")}</Text>
 
         <Animated.View style={[styles.buttonContainer, { opacity: fadeAnim }]}>
-          <TouchableOpacity style={styles.googleButton}>
-            <AntDesign name="google" size={24} color="black" />
-            <Text style={styles.googleText}>{i18n.t("landing.google")}</Text>
-          </TouchableOpacity>
 
           <TouchableOpacity style={styles.emailButton} onPress={() => router.push("/signup")}>
             <LinearGradient colors={["#16A34A", "#0d4215"]} style={styles.emailButtonGradient}>

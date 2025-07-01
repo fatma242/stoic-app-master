@@ -150,6 +150,7 @@ const translations = {
       signUp: "Sign up",
       emailRequired: "Email is required",
       emailInvalid: "Enter a valid email",
+      userNotExist: "User does not exist",
       passwordRequired: "Password is required",
       passwordShort: "Password must be at least 6 characters",
       errorTitle: "Login Error"
@@ -455,6 +456,7 @@ const translations = {
       signUp: "إنشاء حساب",
       emailRequired: "البريد الإلكتروني مطلوب",
       emailInvalid: "يرجى إدخال بريد إلكتروني صحيح",
+      userNotExist: "المستخدم غير موجود",
       passwordRequired: "كلمة المرور مطلوبة",
       passwordShort: "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
       errorTitle: "خطأ في تسجيل الدخول"
@@ -471,7 +473,7 @@ const translations = {
       age_required: "العمر مطلوب",
       age_invalid: "يرجى إدخال عمر صالح (من 13 إلى 120)",
       emptyFields: "لا يمكن ترك اسم المستخدم أو البريد الإلكتروني فارغاً.",
-      invalidEmail: "يجب أن ينتهي البريد الإلكتروني بـ .com أو .org أو .edu",
+      invalidEmail: "يجب أن ينتهي البريد الإلكتروني بنطاق معرف",
       shortPassword: "يجب أن تكون كلمة المرور 6 أحرف على الأقل.",
       userIdMissing: "معرف المستخدم مفقود.",
       success: "تم تحديث الملف الشخصي بنجاح.",
