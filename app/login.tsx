@@ -22,7 +22,6 @@ import {
 import i18n from "../constants/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
-const API_BASE_URL = "http://192.168.1.6:8100";
 
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
   console.log("API_BASE_URL:", API_BASE_URL);

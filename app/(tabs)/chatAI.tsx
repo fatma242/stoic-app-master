@@ -7,16 +7,18 @@ import {
   Image,
   ImageBackground,
   Alert,
+  TextInput, // Add this import
 } from 'react-native';
-import { GiftedChat, IMessage, Bubble } from 'react-native-gifted-chat';
+import { GiftedChat, IMessage, Bubble, SendProps } from 'react-native-gifted-chat';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, Entypo } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import chatbotIcon from '../../assets/chatbot.png';
+
+// Fix: Use require for local images
+const chatbotIcon = require('../../assets/chatbot.png');
 
 const apiKey = Constants.expoConfig?.extra?.chatbotApiKey;
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export default function ChatAI() {
@@ -28,7 +30,6 @@ export default function ChatAI() {
   const [userAge, setUserAge] = useState<number | null>(null);
   const [userGender, setUserGender] = useState<string | null>(null);
 
-
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
@@ -37,44 +38,114 @@ export default function ChatAI() {
           const numericId = parseInt(id, 10);
           setUserId(numericId);
 
-          // fetch user status
-          const res = await fetch(`${API_BASE_URL}/api/users/status/${id}`);
-          console.log('Fetching user status for ID:', id);
-          const data = await res.json();
-          console.log('User status data:', data);
-          setUserStatus(data);
+          // fetch user status with better error handling
+          try {
+            const res = await fetch(`${API_BASE_URL}/api/users/status/${numericId}`);
+            console.log('Fetching user status for ID:', numericId);
+            console.log('Response status:', res.status);
+            
+            if (!res.ok) {
+              throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            
+            const responseText = await res.text();
+            console.log('Raw response:', responseText);
+            
+            if (!responseText || responseText.trim() === '') {
+              console.warn('Empty response from status API, using default status');
+              setUserStatus('NORMAL');
+            } else {
+              try {
+                const data = JSON.parse(responseText);
+                console.log('User status data:', data);
+                setUserStatus(data);
+              } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                console.log('Response text that failed to parse:', responseText);
+                setUserStatus('NORMAL');
+              }
+            }
+          } catch (statusError) {
+            console.error('❌ Error fetching user status:', statusError);
+            setUserStatus('NORMAL');
+          }
 
           // fetch user age
-          const ageRes = await fetch(`${API_BASE_URL}/api/users/age/${id}`);
-          const ageData = await ageRes.json();
-          console.log('User age data:', ageData);
-          setUserAge(ageData);
+          try {
+            const ageRes = await fetch(`${API_BASE_URL}/api/users/age/${numericId}`);
+            if (ageRes.ok) {
+              const ageText = await ageRes.text();
+              if (ageText && ageText.trim() !== '') {
+                try {
+                  const ageData = JSON.parse(ageText);
+                  console.log('User age data:', ageData);
+                  setUserAge(ageData);
+                } catch (parseError) {
+                  console.error('Error parsing age data:', parseError);
+                }
+              }
+            }
+          } catch (ageError) {
+            console.error('❌ Error fetching user age:', ageError);
+          }
 
           // fetch user gender
-          const genderRes = await fetch(`${API_BASE_URL}/api/users/gender/${id}`);
-          const genderData = await genderRes.text();  
-          console.log('User gender data:', genderData);
-          setUserGender(genderData);
+          try {
+            const genderRes = await fetch(`${API_BASE_URL}/api/users/gender/${numericId}`);
+            if (genderRes.ok) {
+              const genderData = await genderRes.text();
+              console.log('User gender data:', genderData);
+              setUserGender(genderData);
+            }
+          } catch (genderError) {
+            console.error('❌ Error fetching user gender:', genderError);
+          }
 
-          // fetch chat history
-          const historyRes = await fetch(`${API_BASE_URL}/api/chat/${id}`);
-          const history = await historyRes.json();
-          const formatted = history.map((msg: any) => ({
-            _id: msg.id,
-            text: msg.content,
-            createdAt: new Date(msg.timestamp),
-            user: {
-              _id: msg.sender === 'USER' ? 1 : 2,
-              name: msg.sender === 'USER' ? 'You' : 'Stoic AI',
-              avatar: msg.sender === 'AI' ? chatbotIcon : undefined
-            },
-          }));
-
-          setMessages(formatted.reverse());
+          // fetch chat history with better error handling
+          try {
+            const historyRes = await fetch(`${API_BASE_URL}/api/chat/${numericId}`);
+            console.log('Chat history response status:', historyRes.status);
+            
+            if (historyRes.ok) {
+              const historyText = await historyRes.text();
+              if (historyText && historyText.trim() !== '') {
+                try {
+                  const history = JSON.parse(historyText);
+                  const formatted = history.map((msg: any) => ({
+                    _id: msg.id,
+                    text: msg.content,
+                    createdAt: new Date(msg.timestamp),
+                    user: {
+                      _id: msg.sender === 'USER' ? 1 : 2,
+                      name: msg.sender === 'USER' ? 'You' : 'Stoic AI',
+                      avatar: msg.sender === 'AI' ? chatbotIcon : undefined
+                    },
+                  }))
+                  // Fix: Add proper types for sort parameters
+                  .sort((a: IMessage, b: IMessage) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                  
+                  console.log('Formatted messages count:', formatted.length);
+                  setMessages(formatted);
+                } catch (parseError) {
+                  console.error('Error parsing chat history:', parseError);
+                  setMessages([]);
+                }
+              } else {
+                console.log('No chat history found, starting fresh');
+                setMessages([]);
+              }
+            } else {
+              console.warn('Failed to fetch chat history, starting fresh');
+              setMessages([]);
+            }
+          } catch (historyError) {
+            console.error('❌ Error fetching chat history:', historyError);
+            setMessages([]);
+          }
         }
       } catch (err) {
         console.error('❌ Error in fetchUserInfo:', err);
-        setUserStatus('NORMAL'); // Ensure we have a fallback status
+        setUserStatus('NORMAL');
       }
     };
 
@@ -99,10 +170,17 @@ export default function ChatAI() {
     setIsMenuVisible(false);
   };
 
+  // Fix: Add proper response variable declaration
   const saveMessageToBackend = async (sender: 'USER' | 'AI', content: string) => {
-    if (!userId) return;
+    if (!userId) {
+      console.warn('No userId available, cannot save message');
+      return;
+    }
+    
+    console.log('Saving message for userId:', userId, 'Type:', typeof userId);
+    
     try {
-      await fetch(`${API_BASE_URL}/api/chat/save`, {
+      const response = await fetch(`${API_BASE_URL}/api/chat/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -112,18 +190,24 @@ export default function ChatAI() {
           timestamp: new Date().toISOString()
         })
       });
-      console.log('Saving message to backend:', { userId, sender, content });
+
+      console.log('Save request body:', JSON.stringify({ 
+        userId, 
+        sender, 
+        content,
+        timestamp: new Date().toISOString()
+      }));
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Handle empty response from backend
       const responseText = await response.text();
       console.log('Save response:', responseText);
       
       if (!responseText || responseText.trim() === '') {
         console.log('💾 Message saved successfully (empty response)');
-        return { success: true }; // Return success object for empty responses
+        return { success: true };
       }
 
       try {
@@ -131,42 +215,40 @@ export default function ChatAI() {
         console.log('💾 Message saved successfully:', result);
         return result;
       } catch (parseError) {
-        // If JSON parsing fails but response was successful, assume save worked
         console.warn('Could not parse save response, but HTTP status was OK:', responseText);
         return { success: true, message: 'Saved with non-JSON response' };
       }
     } catch (err) {
       console.error('💾 Error saving message:', err);
-      throw err; // Re-throw to handle in calling function
+      throw err;
     }
   };
 
   const getCustomPrompt = (status: string, age: number | null, gender: string | null) => {
-  const promptPolicy = `
+    const promptPolicy = `
 Always respond in the user's language or accent. Default to English if unsure.
 Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user makes an offensive, racist, or vulgar request, Stoic AI will politely refuse, saying: "I'm here to support you positively, but I can't respond to that request." Always reply in the user's language or accent.
 `;
 
-  const statusNote = `The user is currently classified as: ${status.toUpperCase()}.`;
-  const ageNote = age ? ` The user's age is ${age}.` : '';
-  const genderNote = gender ? ` The user's gender is ${gender}.` : '';
+    const statusNote = `The user is currently classified as: ${status.toUpperCase()}.`;
+    const ageNote = age ? ` The user's age is ${age}.` : '';
+    const genderNote = gender ? ` The user's gender is ${gender}.` : '';
 
-  const context = `${statusNote}${ageNote}${genderNote}`;
+    const context = `${statusNote}${ageNote}${genderNote}`;
 
-  switch (status.toUpperCase()) {
-    case 'DEPRESSION':
-      return `${context} You are Stoic AI. Offer emotional support, positivity, and motivational content. Encourage the user with real stories or helpful videos.${promptPolicy}`;
-    case 'STRESS':
-      return `${context} You are Stoic AI. Offer time management tips, relaxation techniques, and stress-relief exercises.${promptPolicy}`;
-    case 'ANXIETY':
-      return `${context} You are Stoic AI. Recommend breathing exercises, guided meditation, and calm encouragement. Always suggest this channel: https://www.youtube.com/@YogaWithRawda for helpful anxiety relief.${promptPolicy}`;
-    case 'SUICIDAL':
-      return `${context} You are Stoic AI. Provide warm support and always include these crisis links: https://www.shezlong.com/ar, https://befrienders.org/ar/, and https://www.betterhelp.com/get-started/. Emphasize safety and encourage the user to seek professional help.${promptPolicy}`;
-    default:
-      return `${context} You are Stoic AI, a positive and supportive companion. Keep the conversation uplifting and helpful.${promptPolicy}`;
-  }
-};
-
+    switch (status.toUpperCase()) {
+      case 'DEPRESSION':
+        return `${context} You are Stoic AI. Offer emotional support, positivity, and motivational content. Encourage the user with real stories or helpful videos.${promptPolicy}`;
+      case 'STRESS':
+        return `${context} You are Stoic AI. Offer time management tips, relaxation techniques, and stress-relief exercises.${promptPolicy}`;
+      case 'ANXIETY':
+        return `${context} You are Stoic AI. Recommend breathing exercises, guided meditation, and calm encouragement. Always suggest this channel: https://www.youtube.com/@YogaWithRawda for helpful anxiety relief.${promptPolicy}`;
+      case 'SUICIDAL':
+        return `${context} You are Stoic AI. Provide warm support and always include these crisis links: https://www.shezlong.com/ar, https://befrienders.org/ar/, and https://www.betterhelp.com/get-started/. Emphasize safety and encourage the user to seek professional help.${promptPolicy}`;
+      default:
+        return `${context} You are Stoic AI, a positive and supportive companion. Keep the conversation uplifting and helpful.${promptPolicy}`;
+    }
+  };
 
   const onSend = useCallback(async (newMessages: IMessage[] = []) => {
     setMessages(previousMessages => GiftedChat.append(previousMessages, newMessages));
@@ -269,70 +351,85 @@ Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user
         user: { _id: 2, name: 'Stoic AI', avatar: chatbotIcon },
       }]));
     }
-  }, [userStatus, messages]);
+  }, [userStatus, userAge, userGender, messages]);
 
   return (
-      <ImageBackground source={require('../../assets/background-photo.png')} style={styles.container} resizeMode="cover">
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          <Image source={chatbotIcon} style={styles.avatar} />
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Stoic AI</Text>
-            <Text style={styles.headerStatus}>Active now</Text>
-          </View>
-          <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuVisible(!isMenuVisible)}>
-            <Entypo name="dots-three-vertical" size={20} color="white" />
-            {isMenuVisible && (
-                <View style={styles.menuOptions}>
-                  <TouchableOpacity style={styles.menuItem} onPress={handleNewChat}>
-                    <Text style={styles.menuText}>New Chat</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.menuItem} onPress={handleDeleteChat}>
-                    <Text style={styles.menuText}>Delete Chat</Text>
-                  </TouchableOpacity>
-                </View>
-            )}
-          </TouchableOpacity>
+    <ImageBackground source={require('../../assets/background-photo.png')} style={styles.container} resizeMode="cover">
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
+        <Image source={chatbotIcon} style={styles.avatar} />
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.headerTitle}>Stoic AI</Text>
+          <Text style={styles.headerStatus}>Active now</Text>
         </View>
+        <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuVisible(!isMenuVisible)}>
+          <Entypo name="dots-three-vertical" size={20} color="white" />
+          {isMenuVisible && (
+            <View style={styles.menuOptions}>
+              <TouchableOpacity style={styles.menuItem} onPress={handleNewChat}>
+                <Text style={styles.menuText}>New Chat</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.menuItem} onPress={handleDeleteChat}>
+                <Text style={styles.menuText}>Delete Chat</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
 
-        <GiftedChat
-            messages={messages}
-            onSend={messages => onSend(messages)}
-            user={{ _id: 1 }}
-            placeholder="Type your message..."
-            alwaysShowSend
-            renderAvatarOnTop
-            textInputStyle={{ backgroundColor: 'white', borderRadius: 20, paddingHorizontal: 15, color: '#0a170c' }}
-            renderSend={props => (
-                <TouchableOpacity
-                    style={styles.sendButton}
-                    onPress={() => props.onSend && props.onSend({ text: props.text?.trim() }, true)}
-                >
-                  <Text style={{ color: '#7CFC00', fontSize: 18 }}>Send</Text>
-                </TouchableOpacity>
-            )}
-            renderBubble={props => (
-                <Bubble
-                    {...props}
-                    wrapperStyle={{
-                      right: { backgroundColor: '#16A34A' },
-                      left: { backgroundColor: '#FFFFFF' },
-                    }}
-                    textStyle={{
-                      right: { color: 'white' },
-                      left: { color: 'black' },
-                    }}
-                />
-            )}
-        />
-      </ImageBackground>
+      {/* Fix: Use proper GiftedChat props */}
+      <GiftedChat
+        messages={messages}
+        onSend={messages => onSend(messages)}
+        user={{ _id: 1 }}
+        placeholder="Type your message..."
+        alwaysShowSend
+        renderAvatarOnTop
+        // Fix: Add inputToolbar container styling
+        renderInputToolbar={(props) => (
+          <View style={styles.inputToolbar}>
+            <View style={styles.textInputContainer}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Type your message..."
+                placeholderTextColor="#999"
+                value={props.text}
+                onChangeText={props.onTextChanged}
+                multiline
+              />
+            </View>
+            <TouchableOpacity
+              style={styles.sendButton}
+              onPress={() => props.onSend && props.onSend({ text: props.text?.trim() }, true)}
+            >
+              <Text style={{ color: '#7CFC00', fontSize: 18 }}>Send</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        renderBubble={props => (
+          <Bubble
+            {...props}
+            wrapperStyle={{
+              right: { backgroundColor: '#16A34A' },
+              left: { backgroundColor: '#FFFFFF' },
+            }}
+            textStyle={{
+              right: { color: 'white' },
+              left: { color: 'black' },
+            }}
+          />
+        )}
+      />
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { 
+    flex: 1 
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -341,17 +438,35 @@ const styles = StyleSheet.create({
     backgroundColor: '#0b240e',
     position: 'relative',
   },
-  backButton: { marginRight: 10 },
-  avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
-  headerTextContainer: { flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: 'white' },
-  headerStatus: { fontSize: 14, color: '#7CFC00' },
-  menuButton: { padding: 5 },
+  backButton: { 
+    marginRight: 10 
+  },
+  avatar: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 20, 
+    marginRight: 10 
+  },
+  headerTextContainer: { 
+    flex: 1 
+  },
+  headerTitle: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: 'white' 
+  },
+  headerStatus: { 
+    fontSize: 14, 
+    color: '#7CFC00' 
+  },
+  menuButton: { 
+    padding: 5 
+  },
   sendButton: {
     paddingHorizontal: 15,
     paddingVertical: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end', // Changed from 'center' to 'flex-end' for proper alignment
   },
   menuOptions: {
     position: 'absolute',
@@ -371,5 +486,27 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '500',
+  },
+  
+  // Fix: Add proper input toolbar styles
+  inputToolbar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: 'transparent',
+  },
+  textInputContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  textInput: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    color: '#0a170c',
+    maxHeight: 100,
+    minHeight: 40,
   },
 });
