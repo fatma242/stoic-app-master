@@ -1,17 +1,18 @@
-import React, { useEffect, useState, useRef } from "react";
-import {
-  View,
-  Text,
-  Dimensions,
-  ScrollView,
-  ActivityIndicator,
-  StyleSheet,
-} from "react-native";
-import { LineChart } from "react-native-chart-kit";
-import axios from "axios";
+import BackgroundVideo from "@/components/BackgroundVideo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 import { Video } from "expo-av";
 import moment from "moment"; // Add moment for date formatting
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { LineChart } from "react-native-chart-kit";
 
 const ProgressScreen = () => {
   const [moodData, setMoodData] = useState<MoodLog[]>([]);
@@ -28,7 +29,7 @@ const ProgressScreen = () => {
         }
 
         const response = await axios.get(
-          `process.env.EXPO_PUBLIC_API_BASE_URL/api/mood-logs/${userId}`
+            `${process.env.EXPO_PUBLIC_API_BASE_URL}/api/mood-logs/${userId}`
         );
         setMoodData(response.data);
         setLoading(false);
@@ -62,14 +63,14 @@ const ProgressScreen = () => {
     logs.forEach((log, index) => {
       const currentDate = new Date(log.timestamp);
       const previousDate =
-        index > 0 ? new Date(logs[index - 1].timestamp) : null;
+          index > 0 ? new Date(logs[index - 1].timestamp) : null;
 
       // If previous entry exists and is on the same day, show time
       if (
-        previousDate &&
-        currentDate.getDate() === previousDate.getDate() &&
-        currentDate.getMonth() === previousDate.getMonth() &&
-        currentDate.getFullYear() === previousDate.getFullYear()
+          previousDate &&
+          currentDate.getDate() === previousDate.getDate() &&
+          currentDate.getMonth() === previousDate.getMonth() &&
+          currentDate.getFullYear() === previousDate.getFullYear()
       ) {
         formattedLabels.push(moment(log.timestamp).format("HH:mm"));
       }
@@ -84,34 +85,34 @@ const ProgressScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <VideoBackground videoRef={videoRef} />
-        <View style={styles.overlay}>
-          <ActivityIndicator size="large" color="#16A34A" />
+        <View style={styles.container}>
+          <VideoBackground videoRef={videoRef} />
+          <View style={styles.overlay}>
+            <ActivityIndicator size="large" color="#16A34A" />
+          </View>
         </View>
-      </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
-        <VideoBackground videoRef={videoRef} />
-        <View style={styles.overlay}>
-          <Text style={{ color: "red" }}>{error}</Text>
+        <View style={styles.container}>
+          <VideoBackground videoRef={videoRef} />
+          <View style={styles.overlay}>
+            <Text style={{ color: "red" }}>{error}</Text>
+          </View>
         </View>
-      </View>
     );
   }
 
   if (moodData.length === 0) {
     return (
-      <View style={styles.container}>
-        <VideoBackground videoRef={videoRef} />
-        <View style={styles.overlay}>
-          <Text style={styles.noDataText}>No mood data available</Text>
+        <View style={styles.container}>
+          <VideoBackground videoRef={videoRef} />
+          <View style={styles.overlay}>
+            <Text style={styles.noDataText}>No mood data available</Text>
+          </View>
         </View>
-      </View>
     );
   }
 
@@ -126,60 +127,49 @@ const ProgressScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <VideoBackground videoRef={videoRef} />
-      <View style={styles.overlay}>
-        <ScrollView style={styles.scrollContainer}>
-          <Text style={styles.title}>Mood Progress</Text>
-          <LineChart
-            data={chartData}
-            width={Dimensions.get("window").width - 32}
-            height={220}
-            chartConfig={{
-              backgroundColor: "rgba(255,255,255,0.3)",
-              backgroundGradientFrom: "rgba(201, 245, 216, 0.8)",
-              backgroundGradientTo: "rgba(131, 231, 173, 0.8)",
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(34, 139, 34, ${opacity})`,
-              propsForLabels: {
-                fontWeight: "bold",
-                fontSize: 10, // Smaller font for better fit
-              },
-              propsForDots: {
-                r: "4", // Smaller dots for dense data
-                strokeWidth: "1",
-                stroke: "#166534",
-              },
-            }}
-            style={{ marginVertical: 20, borderRadius: 16 }}
-            bezier
-            fromZero
-            yAxisInterval={1}
-            segments={4}
-          />
-        </ScrollView>
+      <View style={styles.container}>
+        <VideoBackground videoRef={videoRef} />
+        <View style={styles.overlay}>
+          <ScrollView style={styles.scrollContainer}>
+            <Text style={styles.title}>Mood Progress</Text>
+            <LineChart
+                data={chartData}
+                width={Dimensions.get("window").width - 32}
+                height={220}
+                chartConfig={{
+                  backgroundColor: "rgba(255,255,255,0.3)",
+                  backgroundGradientFrom: "rgba(201, 245, 216, 0.8)",
+                  backgroundGradientTo: "rgba(131, 231, 173, 0.8)",
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(34, 139, 34, ${opacity})`,
+                  propsForLabels: {
+                    fontWeight: "bold",
+                    fontSize: 10, // Smaller font for better fit
+                  },
+                  propsForDots: {
+                    r: "4", // Smaller dots for dense data
+                    strokeWidth: "1",
+                    stroke: "#166534",
+                  },
+                }}
+                style={{ marginVertical: 20, borderRadius: 16 }}
+                bezier
+                fromZero
+                yAxisInterval={1}
+                segments={4}
+            />
+          </ScrollView>
+        </View>
       </View>
-    </View>
   );
 };
 
 // Video Background Component
 const VideoBackground = ({
-  videoRef,
-}: {
+                           videoRef,
+                         }: {
   videoRef: React.RefObject<Video>;
-}) => (
-  <Video
-    ref={videoRef}
-    source={require("../../assets/background.mp4")} // Update with your video path
-    style={StyleSheet.absoluteFill}
-    resizeMode="cover"
-    shouldPlay
-    isLooping
-    isMuted
-    rate={1.0}
-  />
-);
+}) => <BackgroundVideo />;
 
 // Styles
 const styles = StyleSheet.create({

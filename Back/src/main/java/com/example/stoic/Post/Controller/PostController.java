@@ -21,7 +21,7 @@ import com.example.stoic.User.Model.UserRole;
 import com.example.stoic.User.Service.UserServiceImpl;
 
 @CrossOrigin(origins = {
-       " ${UserIphttp}",
+        " ${UserIphttp}",
         "${UserIPexp}"
 }, allowCredentials = "true")
 @RestController

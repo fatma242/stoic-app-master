@@ -15,9 +15,9 @@ import com.example.stoic.Progress.Model.MoodLog;
 import com.example.stoic.Progress.Repo.MoodLogRepository;
 
 @CrossOrigin(origins = {
-       " ${UserIphttp}",
+        " ${UserIphttp}",
         "${UserIPexp}",
-       " ${UserIphttp}",
+        " ${UserIphttp}",
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/mood-logs")

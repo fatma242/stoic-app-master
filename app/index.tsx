@@ -1,11 +1,11 @@
-import React, { useEffect, useRef } from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import BackgroundVideo from "@/components/BackgroundVideo";
 import { AntDesign, MaterialIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { Video, ResizeMode, /* Audio */ } from "expo-av"; // Audio commented out
-import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { BackHandler } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React from "react";
+import { useEffect, useRef } from "react";
+import { Animated, BackHandler, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function Landing() {
   const router = useRouter();
@@ -61,19 +61,7 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
-      {/* Background Video (kept active) */}
-      <Video
-        source={require("../assets/background.mp4")}
-        style={styles.backgroundVideo}
-        rate={1.0}
-        volume={1.0}
-        isMuted={true}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-      />
-
-      {/* Rest of the component remains unchanged */}
+      <BackgroundVideo />
       <View style={styles.overlay} />
       <Image source={require("../assets/logo.png")} style={styles.logo} />
       <Text style={styles.subtitle}>Your daily mental wellness companion</Text>

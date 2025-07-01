@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @CrossOrigin(origins = {
-       " ${UserIphttp}",
+        " ${UserIphttp}",
         "${UserIPexp}"
 }, allowCredentials = "true")
 @RestController

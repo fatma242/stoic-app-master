@@ -9,13 +9,13 @@ import java.time.LocalDateTime;
 public class ChatMessageDto {
   private int roomId;
   private int senderId;
+  private String senderName; // ✅ Add this
   private String content;
   private LocalDateTime sentAt;
 
-  public ChatMessageDto() {
-  }
+  public ChatMessageDto() {}
 
-  // Getters and setters
+  // ✅ Getters and Setters
   public int getRoomId() {
     return roomId;
   }
@@ -30,6 +30,14 @@ public class ChatMessageDto {
 
   public void setSenderId(int senderId) {
     this.senderId = senderId;
+  }
+
+  public String getSenderName() {
+    return senderName;
+  }
+
+  public void setSenderName(String senderName) {
+    this.senderName = senderName;
   }
 
   public String getContent() {
@@ -49,7 +57,7 @@ public class ChatMessageDto {
   }
 
   /**
-   * Build a Message entity once you have Room and User objects.
+   * Convert DTO to entity using room and sender.
    */
   public Message toEntity(Room room, User sender) {
     Message msg = new Message();
@@ -61,12 +69,13 @@ public class ChatMessageDto {
   }
 
   /**
-   * Convert a Message entity back into DTO form (extract IDs).
+   * Convert entity to DTO including sender name.
    */
   public static ChatMessageDto fromEntity(Message m) {
     ChatMessageDto dto = new ChatMessageDto();
     dto.setRoomId(m.getRoom().getRoomId());
     dto.setSenderId(m.getSender().getUserId());
+    dto.setSenderName(m.getSender().getUsername()); // ✅ Get name from sender
     dto.setContent(m.getContent());
     dto.setSentAt(m.getSentAt());
     return dto;

@@ -15,8 +15,8 @@ public class WebSocketStompConfig implements WebSocketMessageBrokerConfigurer {
         registry
                 .addEndpoint("/ws-chat")
                 .setAllowedOrigins(
-                       " ${UserIphttp}",
-                        "${UserIPexp}")
+                        "http://192.168.1.10:8081",
+                        "exp://192.168.1.10:8081")
                 .withSockJS();
     }
 

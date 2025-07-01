@@ -11,6 +11,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Video, ResizeMode } from 'expo-av';
+
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect } from "@react-navigation/native";
@@ -786,81 +788,83 @@ export default function RoomScreen() {
 
   // Update your posts mapping section (around line 1000) to include owner delete button
 
-  {posts.map((post) => (
-    <View key={`post-${post.id}`} style={styles.postItem}>
-      <TouchableOpacity
-        onPress={() => handlePostPress(post.id)}
-        style={styles.postContent}
-      >
-        <Text style={styles.postTitle}>{post.title}</Text>
-        <Text style={styles.postContentText}>{post.content}</Text>
-        <Text style={styles.postAuthor}>
-          By: {post.author?.username || "Unknown Author"}
-        </Text>
-        <Text style={styles.postDate}>
-          {new Date(post.date).toLocaleDateString()}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Like Button, Comment Button, and Delete Buttons */}
-      <View style={styles.postActions}>
+  {
+    posts.map((post) => (
+      <View key={`post-${post.id}`} style={styles.postItem}>
         <TouchableOpacity
-          style={styles.likeButton}
-          onPress={() => handleLike(post.id)}
-          disabled={likingPostIds.has(post.id)}
-        >
-          {likingPostIds.has(post.id) ? (
-            <ActivityIndicator size="small" color="#ef4444" />
-          ) : (
-            <Ionicons
-              name={post.isLikedByUser ? "heart" : "heart-outline"}
-              size={20}
-              color={post.isLikedByUser ? "#ef4444" : "#94a3b8"}
-            />
-          )}
-          <Text style={styles.likeCount}>{post.likes}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.commentButton}
           onPress={() => handlePostPress(post.id)}
+          style={styles.postContent}
         >
-          <Ionicons name="chatbubble-outline" size={20} color="#94a3b8" />
-          <Text style={styles.commentText}>Comment</Text>
+          <Text style={styles.postTitle}>{post.title}</Text>
+          <Text style={styles.postContentText}>{post.content}</Text>
+          <Text style={styles.postAuthor}>
+            By: {post.author?.username || "Unknown Author"}
+          </Text>
+          <Text style={styles.postDate}>
+            {new Date(post.date).toLocaleDateString()}
+          </Text>
         </TouchableOpacity>
 
-        {/* Owner Delete Button - Show if current user is the post author */}
-        {post.author?.userId === userId && (
+        {/* Like Button, Comment Button, and Delete Buttons */}
+        <View style={styles.postActions}>
           <TouchableOpacity
-            style={styles.ownerDeleteButton}
-            onPress={() => handleOwnerDeletePost(post.id, post.title)}
-            disabled={deletingPostIds.has(post.id)}
+            style={styles.likeButton}
+            onPress={() => handleLike(post.id)}
+            disabled={likingPostIds.has(post.id)}
           >
-            {deletingPostIds.has(post.id) ? (
-              <ActivityIndicator size="small" color="#f59e0b" />
-            ) : (
-              <Ionicons name="trash-outline" size={20} color="#f59e0b" />
-            )}
-          </TouchableOpacity>
-        )}
-
-        {/* Admin Delete Button - Show if current user is admin */}
-        {userRole === "ADMIN" && (
-          <TouchableOpacity
-            style={styles.adminDeleteButton}
-            onPress={() => handleAdminDeletePost(post.id, post.title)}
-            disabled={deletingPostIds.has(post.id)}
-          >
-            {deletingPostIds.has(post.id) ? (
+            {likingPostIds.has(post.id) ? (
               <ActivityIndicator size="small" color="#ef4444" />
             ) : (
-              <Ionicons name="trash" size={20} color="#ef4444" />
+              <Ionicons
+                name={post.isLikedByUser ? "heart" : "heart-outline"}
+                size={20}
+                color={post.isLikedByUser ? "#ef4444" : "#94a3b8"}
+              />
             )}
+            <Text style={styles.likeCount}>{post.likes}</Text>
           </TouchableOpacity>
-        )}
+
+          <TouchableOpacity
+            style={styles.commentButton}
+            onPress={() => handlePostPress(post.id)}
+          >
+            <Ionicons name="chatbubble-outline" size={20} color="#94a3b8" />
+            <Text style={styles.commentText}>Comment</Text>
+          </TouchableOpacity>
+
+          {/* Owner Delete Button - Show if current user is the post author */}
+          {post.author?.userId === userId && (
+            <TouchableOpacity
+              style={styles.ownerDeleteButton}
+              onPress={() => handleOwnerDeletePost(post.id, post.title)}
+              disabled={deletingPostIds.has(post.id)}
+            >
+              {deletingPostIds.has(post.id) ? (
+                <ActivityIndicator size="small" color="#f59e0b" />
+              ) : (
+                <Ionicons name="trash-outline" size={20} color="#f59e0b" />
+              )}
+            </TouchableOpacity>
+          )}
+
+          {/* Admin Delete Button - Show if current user is admin */}
+          {userRole === "ADMIN" && (
+            <TouchableOpacity
+              style={styles.adminDeleteButton}
+              onPress={() => handleAdminDeletePost(post.id, post.title)}
+              disabled={deletingPostIds.has(post.id)}
+            >
+              {deletingPostIds.has(post.id) ? (
+                <ActivityIndicator size="small" color="#ef4444" />
+              ) : (
+                <Ionicons name="trash" size={20} color="#ef4444" />
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-    </View>
-  ))}
+    ));
+  }
 
   if (loading) {
     return (
@@ -888,7 +892,19 @@ export default function RoomScreen() {
   console.log("Posts count:", posts.length);
   // console.log("Number of posts with likes:", posts.filter(post => post.likes && post.likes.size > 0).length);
   return (
-    <View style={styles.container}>
+      <View style={styles.container}>
+        {/* Video Background */}
+        <Video
+            source={require("../assets/background.mp4")}
+            style={styles.backgroundVideo}
+            rate={1.0}
+            volume={1.0}
+            isMuted
+            resizeMode={ResizeMode.COVER}
+            shouldPlay
+            isLooping
+        />
+        <View style={styles.overlay} />
       <ScrollView
         style={styles.content}
         ref={scrollViewRef}
@@ -896,7 +912,16 @@ export default function RoomScreen() {
       >
         {/* Back button and notifications at top of content */}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity
+              onPress={() => router.push({
+                pathname: '/chat',
+                params: { roomId: roomId?.toString() }
+              })}
+              style={styles.iconButton}
+          >
+            <Ionicons name="chatbubbles" size={24} color="white" />
+          </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
 
@@ -1037,36 +1062,7 @@ export default function RoomScreen() {
           )}
         </View>
 
-        {/* Chat Section */}
-        <Text style={styles.sectionTitle}>Chat</Text>
-        <View style={styles.chatContainer}>
-          {messages.length === 0 ? (
-            <Text style={styles.emptyText}>No messages yet</Text>
-          ) : (
-            messages.map((message, index) => (
-              <View
-                key={`${message.id}-${index}`}
-                style={[
-                  styles.messageBubble,
-                  message.senderId === userId
-                    ? styles.myMessage
-                    : styles.otherMessage,
-                ]}
-              >
-                <Text style={styles.senderName}>
-                  {message.senderId === userId ? "You" : message.senderName}
-                </Text>
-                <Text style={styles.messageText}>{message.content}</Text>
-                <Text style={styles.messageTime}>
-                  {new Date(message.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </Text>
-              </View>
-            ))
-          )}
-        </View>
+
 
         {/* Posts Section */}
         <Text style={styles.sectionTitle}>Posts</Text>
@@ -1130,7 +1126,11 @@ export default function RoomScreen() {
                     {deletingPostIds.has(post.id) ? (
                       <ActivityIndicator size="small" color="#f59e0b" />
                     ) : (
-                      <Ionicons name="trash-outline" size={20} color="#f59e0b" />
+                      <Ionicons
+                        name="trash-outline"
+                        size={20}
+                        color="#f59e0b"
+                      />
                     )}
                   </TouchableOpacity>
                 )}
@@ -1188,39 +1188,13 @@ export default function RoomScreen() {
       </ScrollView>
 
       {/* Message Input */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.messageInputContainer}
-      >
-        <TextInput
-          style={styles.messageInput}
-          placeholder="Type a message..."
-          placeholderTextColor="#94a3b8"
-          value={newMessage}
-          onChangeText={setNewMessage}
-          onSubmitEditing={sendMessage}
-        />
-        <TouchableOpacity
-          style={styles.sendButton}
-          onPress={sendMessage}
-          disabled={isSending}
-        >
-          <Ionicons
-            name="send"
-            size={24}
-            color={isSending ? "#94a3b8" : "#16A34A"}
-          />
-        </TouchableOpacity>
-      </KeyboardAvoidingView>
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0f172a",
-  },
+
   center: {
     flex: 1,
     justifyContent: "center",
@@ -1509,5 +1483,27 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     borderColor: "#f59e0b", // Orange color for owner delete
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  backgroundVideo: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  iconButton: {
+    padding: 6,
   },
 });

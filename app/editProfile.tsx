@@ -1,12 +1,16 @@
+import BackgroundVideo from "@/components/BackgroundVideo";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { useNavigation } from "@react-navigation/native";
+// import { useRouter } from "expo-router";
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import {
-  View,
+  Alert,
+  Image,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
-  StyleSheet,
-  Image,
+  View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -14,7 +18,6 @@ import { Video, ResizeMode } from "expo-av";
 import { useNavigation } from "@react-navigation/native";
 import Constants from "expo-constants";
 
-// Define the User type
 type User = {
   id: string;
   userId?: string;
@@ -22,6 +25,7 @@ type User = {
   email: string;
   password: string;
   userRole: string;
+  status?: string;
 };
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -34,6 +38,8 @@ export default function EditProfile() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
+
+  const [status, setStatus] = useState("");
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -51,39 +57,35 @@ export default function EditProfile() {
           });
           return;
         }
-        // Convert to integer and guard against NaN
+
         const userIdint = parseInt(userID, 10);
         if (isNaN(userIdint)) {
           Alert.alert("Error", "Stored user ID is not a valid number");
           return;
         }
-        // Fetch *only* the current user
+
         const res = await fetch(`${API_BASE_URL}/api/users/${userIdint}`, {
           credentials: "include",
         });
-        if (!res.ok) {
-          throw new Error(`Server returned status ${res.status}`);
-        }
+
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
 
         const currentUser: User = await res.json();
-        console.log("Fetched user:", currentUser);
+        console.log("✅ Fetched user:", currentUser);
 
         setUser(currentUser);
         setName(currentUser.username);
         setEmail(currentUser.email);
+        setStatus(currentUser.status || "");
 
-        // ensure we keep the ID in AsyncStorage too
+        await AsyncStorage.setItem("userStatus", currentUser.status || "");
+
         if (currentUser.userId) {
           await AsyncStorage.setItem("userId", String(currentUser.userId));
-        } else {
-          console.warn("⚠️ userId missing on payload:", currentUser);
         }
       } catch (error) {
         console.error("❌ fetchUser failed:", error);
-        Alert.alert(
-          "Error",
-          "Failed to fetch user data. See console for details."
-        );
+        Alert.alert("Error", "Failed to fetch user data.");
       }
     };
 
@@ -122,6 +124,7 @@ export default function EditProfile() {
         email,
         password: newPassword || user?.password || "",
         userRole: user?.userRole || "REG",
+        status: status,
       };
 
       const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
@@ -143,14 +146,7 @@ export default function EditProfile() {
 
   return (
     <View style={styles.container}>
-      <Video
-        source={require("../assets/background.mp4")}
-        style={StyleSheet.absoluteFill}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-        isMuted
-      />
+      <BackgroundVideo />
       <View style={styles.overlay} />
       <View style={styles.innerContainer}>
         <Image source={require("../assets/logo.png")} style={styles.logo} />

@@ -1,16 +1,20 @@
-import React, { useEffect, useState } from "react";
-import { useFocusEffect } from "@react-navigation/native";
+import BackgroundVideo from "@/components/BackgroundVideo";
+// import { Ionicons } from "@expo/vector-icons";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { useRouter } from "expo-router";
+import React from "react";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
   ScrollView,
   StyleSheet,
-  Image,
-  Alert,
-  ActivityIndicator,
+  Text,
   TextInput,
-  Modal,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -18,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import { useFocusEffect } from "@react-navigation/native";
 
 // Type definitions
 type RoomType = "PUBLIC" | "PRIVATE";
@@ -62,7 +67,7 @@ export default function Community() {
             return;
           }
           setUserId(parseInt(storedUserId));
-
+          console.log("Stored user ID:", storedUserId);
           // Fetch user role from API
           const response = await fetch(
             `${API_BASE_URL}/api/users/${storedUserId}`,
@@ -70,6 +75,10 @@ export default function Community() {
               credentials: "include",
             }
           );
+          if (!response.ok) {
+            console.error("Failed to fetch user data:", response.status);
+            throw new Error("Failed to fetch user data");
+          }
           const userData = await response.json();
           setUserRole(userData.userRole);
 
@@ -80,6 +89,7 @@ export default function Community() {
             await fetchPublicRooms();
           }
         } catch (error) {
+          console.error("Error loading user data:", error);
           Alert.alert("Error", "Failed to load user data");
         } finally {
           setLoading(false);
@@ -248,16 +258,7 @@ export default function Community() {
 
   return (
     <View style={styles.container}>
-      <Video
-        source={require("../../assets/background.mp4")}
-        style={styles.backgroundVideo}
-        rate={1.0}
-        volume={1.0}
-        isMuted
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-      />
+      <BackgroundVideo />
       <View style={styles.overlay} />
 
       <ScrollView style={styles.content}>
