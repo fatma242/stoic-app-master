@@ -2,6 +2,7 @@ package com.example.stoic.User.Service;
 
 import com.example.stoic.User.Model.OnboardingStatus;
 import com.example.stoic.User.Model.User;
+import com.example.stoic.User.Model.UserRole;
 
 import java.util.List;
 
@@ -26,5 +27,9 @@ public interface UserService {
 
     OnboardingStatus getStatus(int userId);
 
+    int getAge(int userId);
+    String getGender(int userId);
+
+    public UserRole getUserRole(int userId);
 
 }

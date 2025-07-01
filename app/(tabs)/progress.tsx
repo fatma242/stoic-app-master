@@ -1,32 +1,45 @@
-import BackgroundVideo from "@/components/BackgroundVideo";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import { Video } from "expo-av";
-import moment from "moment"; // Add moment for date formatting
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  ActivityIndicator,
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  Text,
   View,
-} from "react-native";
-import { LineChart } from "react-native-chart-kit";
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  Dimensions
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { LineChart } from 'react-native-chart-kit';
+import { Video } from 'expo-av';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import moment from 'moment';
+import i18n from "../../constants/i18n";
+import BackgroundVideo from '@/components/BackgroundVideo';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const ProgressScreen = () => {
   const [moodData, setMoodData] = useState<MoodLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const videoRef = useRef<Video>(null);
+  const [key, setKey] = useState(0);
+  
+  useEffect(() => {
+    global.reloadApp = () => setKey(prev => prev + 1);
+    return () => {
+      global.reloadApp = undefined;
+    };
+  }, []);
+
+  const isRTL = i18n.locale === 'ar';
+  const textAlign = isRTL ? 'right' : 'left';
 
   useEffect(() => {
     const fetchMoodData = async () => {
       try {
         const userId = await AsyncStorage.getItem("userId");
-        if (!userId) {
-          throw new Error("User not found. Please log in again.");
-        }
+        if (!userId) throw new Error(i18n.t('progress.errors.userNotFound'));
 
         const response = await axios.get(
             `${process.env.EXPO_PUBLIC_API_BASE_URL}/api/mood-logs/${userId}`
@@ -34,38 +47,25 @@ const ProgressScreen = () => {
         setMoodData(response.data);
         setLoading(false);
       } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("Failed to fetch mood data");
-        }
+        setError(err instanceof Error ? err.message : i18n.t('progress.errors.fetchFailed'));
         setLoading(false);
       }
     };
 
     fetchMoodData();
 
-    if (videoRef.current) {
-      videoRef.current.playAsync();
-    }
-
+    if (videoRef.current) videoRef.current.playAsync();
     return () => {
-      if (videoRef.current) {
-        videoRef.current.pauseAsync();
-      }
+      if (videoRef.current) videoRef.current.pauseAsync();
     };
   }, []);
 
-  // Format dates intelligently to avoid duplicates and show time when needed
   const formatChartLabels = (logs: MoodLog[]) => {
     const formattedLabels: string[] = [];
-
     logs.forEach((log, index) => {
       const currentDate = new Date(log.timestamp);
-      const previousDate =
-          index > 0 ? new Date(logs[index - 1].timestamp) : null;
-
-      // If previous entry exists and is on the same day, show time
+      const previousDate = index > 0 ? new Date(logs[index - 1].timestamp) : null;
+      
       if (
           previousDate &&
           currentDate.getDate() === previousDate.getDate() &&
@@ -73,14 +73,43 @@ const ProgressScreen = () => {
           currentDate.getFullYear() === previousDate.getFullYear()
       ) {
         formattedLabels.push(moment(log.timestamp).format("HH:mm"));
-      }
-      // Otherwise show date only
-      else {
+      } else {
         formattedLabels.push(moment(log.timestamp).format("DD/MM"));
       }
     });
-
     return formattedLabels;
+  };
+
+  const calculateStreak = (logs: MoodLog[]): number => {
+    if (!logs.length) return 0;
+
+    const sortedLogs = [...logs].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    let streak = 0;
+    let currentWeek = moment().startOf("isoWeek");
+
+    const weeksSet = new Set(
+      sortedLogs.map((log) => moment(log.timestamp).startOf("isoWeek").format("YYYY-MM-DD"))
+    );
+
+    while (weeksSet.has(currentWeek.format("YYYY-MM-DD"))) {
+      streak++;
+      currentWeek = currentWeek.subtract(1, "week");
+    }
+
+    return streak;
+  };
+
+  const streak = calculateStreak(moodData);
+  const chartData = {
+    labels: moodData.length ? formatChartLabels(moodData) : [i18n.t('progress.noData')],
+    datasets: [
+      {
+        data: moodData.length ? moodData.map((item) => item.moodScore) : [0],
+      },
+    ],
   };
 
   if (loading) {
@@ -96,80 +125,94 @@ const ProgressScreen = () => {
 
   if (error) {
     return (
-        <View style={styles.container}>
-          <VideoBackground videoRef={videoRef} />
-          <View style={styles.overlay}>
-            <Text style={{ color: "red" }}>{error}</Text>
-          </View>
-        </View>
-    );
-  }
-
-  if (moodData.length === 0) {
-    return (
-        <View style={styles.container}>
-          <VideoBackground videoRef={videoRef} />
-          <View style={styles.overlay}>
-            <Text style={styles.noDataText}>No mood data available</Text>
-          </View>
-        </View>
-    );
-  }
-
-  // Use our intelligent formatting function
-  const chartData = {
-    labels: formatChartLabels(moodData),
-    datasets: [
-      {
-        data: moodData.map((item) => item.moodScore),
-      },
-    ],
-  };
-
-  return (
       <View style={styles.container}>
         <VideoBackground videoRef={videoRef} />
         <View style={styles.overlay}>
-          <ScrollView style={styles.scrollContainer}>
-            <Text style={styles.title}>Mood Progress</Text>
-            <LineChart
-                data={chartData}
-                width={Dimensions.get("window").width - 32}
-                height={220}
-                chartConfig={{
-                  backgroundColor: "rgba(255,255,255,0.3)",
-                  backgroundGradientFrom: "rgba(201, 245, 216, 0.8)",
-                  backgroundGradientTo: "rgba(131, 231, 173, 0.8)",
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(34, 139, 34, ${opacity})`,
-                  propsForLabels: {
-                    fontWeight: "bold",
-                    fontSize: 10, // Smaller font for better fit
-                  },
-                  propsForDots: {
-                    r: "4", // Smaller dots for dense data
-                    strokeWidth: "1",
-                    stroke: "#166534",
-                  },
-                }}
-                style={{ marginVertical: 20, borderRadius: 16 }}
-                bezier
-                fromZero
-                yAxisInterval={1}
-                segments={4}
-            />
-          </ScrollView>
+          <Text style={{ color: "red", textAlign }}>{error}</Text>
         </View>
       </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={[styles.languageContainer, { marginTop: 40, marginRight: 10 }]}>
+        <LanguageSwitcher />
+      </View>
+      <VideoBackground videoRef={videoRef} />
+      <View style={styles.overlay}>
+        <ScrollView style={styles.scrollContainer}>
+          <Text style={[styles.title, { textAlign }]}>
+            {i18n.t('progress.title')}
+          </Text>
+
+          {/* Streak Card */}
+          <LinearGradient colors={['#16A34A', '#0d4215']} style={styles.card}>
+            <Text style={[styles.cardTitle, { textAlign }]}>
+              {i18n.t('progress.streakTitle')}
+            </Text>
+            <Text style={[styles.cardText, { textAlign }]}>
+              {i18n.t('progress.streakText')}
+            </Text>
+            <View style={styles.progressContainer}>
+              <Ionicons name="flame" size={40} color="#FFD700" />
+              <Text style={styles.streakNumber}>{streak}</Text>
+            </View>
+          </LinearGradient>
+
+          {/* Mood Trends */}
+          <LinearGradient colors={['#16A34A20', '#0d421520']} style={styles.card}>
+            <Text style={[styles.cardTitle, { textAlign }]}>
+              {i18n.t('progress.moodTrends')}
+            </Text>
+            <View style={styles.chartPlaceholder}>
+              <Ionicons name="stats-chart" size={50} color="#16A34A" />
+              <Text style={[styles.chartText, { textAlign }]}>
+                {i18n.t('progress.moodProgress')}
+              </Text>
+            </View>
+            {moodData.length === 0 ? (
+              <Text style={[styles.noDataText, { textAlign }]}>
+                {i18n.t('progress.noData')}
+              </Text>
+            ) : null}
+            <LineChart
+              data={chartData}
+              width={Dimensions.get("window").width - 48}
+              height={200}
+              chartConfig={{
+                backgroundGradientFrom: "#e6f4ea",
+                backgroundGradientTo: "#d1f7de",
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(22, 101, 52, ${opacity})`,
+                propsForDots: {
+                  r: "5",
+                  strokeWidth: "2",
+                  stroke: "#16A34A",
+                },
+              }}
+              style={{ marginVertical: 10, borderRadius: 16 }}
+              bezier
+              fromZero
+            />
+          </LinearGradient>
+        </ScrollView>
+      </View>
+    </View>
   );
 };
 
-// Video Background Component
-const VideoBackground = ({
-                           videoRef,
-                         }: {
-  videoRef: React.RefObject<Video>;
-}) => <BackgroundVideo />;
+const VideoBackground = ({ videoRef }: { videoRef: React.RefObject<Video> }) => (
+  <BackgroundVideo />
+);
+
+// Interface
+interface MoodLog {
+  id: number;
+  userId: string;
+  moodScore: number;
+  timestamp: string;
+}
 
 // Styles
 const styles = StyleSheet.create({
@@ -179,17 +222,22 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-dark overlay
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
   scrollContainer: {
     flex: 1,
-    padding: 16,
+    padding: 15,
+  },
+  languageContainer: {
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
   title: {
     fontSize: 22,
     fontWeight: "bold",
     textAlign: "center",
-    marginTop: 20,
+    marginTop: 60,
+    marginBottom: 20,
     color: "white",
     textShadowColor: "rgba(0,0,0,0.5)",
     textShadowOffset: { width: 1, height: 1 },
@@ -197,17 +245,52 @@ const styles = StyleSheet.create({
   },
   noDataText: {
     color: "white",
-    fontSize: 18,
+    fontSize: 16,
     textAlign: "center",
-    marginTop: 20,
+    marginBottom: 10,
+  },
+  card: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 30,
+    marginRight: 4,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 5,
+  },
+  cardText: {
+    fontSize: 14,
+    color: "#e4fbe6",
+  },
+  progressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  streakNumber: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#FFD700",
+    marginLeft: 8,
+  },
+  chartPlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  chartText: {
+    fontSize: 14,
+    color: "#fff",
+    marginTop: 8,
   },
 });
-
-interface MoodLog {
-  id: number;
-  userId: string;
-  moodScore: number;
-  timestamp: string;
-}
 
 export default ProgressScreen;

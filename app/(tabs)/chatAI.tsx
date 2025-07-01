@@ -17,6 +17,7 @@ import chatbotIcon from '../../assets/chatbot.png';
 
 const apiKey = Constants.expoConfig?.extra?.chatbotApiKey;
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export default function ChatAI() {
   const navigation = useNavigation();
@@ -24,6 +25,9 @@ export default function ChatAI() {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
   const [userStatus, setUserStatus] = useState<string | null>(null);
+  const [userAge, setUserAge] = useState<number | null>(null);
+  const [userGender, setUserGender] = useState<string | null>(null);
+
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -33,81 +37,40 @@ export default function ChatAI() {
           const numericId = parseInt(id, 10);
           setUserId(numericId);
 
-          // fetch user status with better error handling
-          try {
-            const res = await fetch(`${API_BASE_URL}/api/users/status/${id}`);
-            console.log('Fetching user status for ID:', id);
-            console.log('Response status:', res.status);
-            
-            if (!res.ok) {
-              throw new Error(`HTTP error! status: ${res.status}`);
-            }
-            
-            const responseText = await res.text();
-            console.log('Raw response:', responseText);
-            
-            if (!responseText || responseText.trim() === '') {
-              console.warn('Empty response from status API, using default status');
-              setUserStatus('NORMAL'); // Set default status
-            } else {
-              try {
-                const data = JSON.parse(responseText);
-                console.log('User status data:', data);
-                setUserStatus(data);
-              } catch (parseError) {
-                console.error('JSON parse error:', parseError);
-                console.log('Response text that failed to parse:', responseText);
-                setUserStatus('NORMAL'); // Fallback to default
-              }
-            }
-          } catch (statusError) {
-            console.error('❌ Error fetching user status:', statusError);
-            setUserStatus('NORMAL'); // Fallback to default status
-          }
+          // fetch user status
+          const res = await fetch(`${API_BASE_URL}/api/users/status/${id}`);
+          console.log('Fetching user status for ID:', id);
+          const data = await res.json();
+          console.log('User status data:', data);
+          setUserStatus(data);
 
-          // fetch chat history with better error handling
-          try {
-            const historyRes = await fetch(`${API_BASE_URL}/api/chat/${numericId}`);
-            console.log('Chat history response status:', historyRes.status);
-            
-            if (historyRes.ok) {
-              const historyText = await historyRes.text();
-              if (historyText && historyText.trim() !== '') {
-                try {
-                  const history = JSON.parse(historyText);
-                  const formatted = history.map((msg: any) => ({
-                    _id: msg.id,
-                    text: msg.content,
-                    createdAt: new Date(msg.timestamp),
-                    user: {
-                      _id: msg.sender === 'USER' ? 1 : 2,
-                      name: msg.sender === 'USER' ? 'You' : 'Stoic AI',
-                      avatar: msg.sender === 'AI' ? chatbotIcon : undefined
-                    },
-                  }))
-                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort by newest first
-                  
-                  console.log('Formatted messages count:', formatted.length);
-                  console.log('First message date:', formatted[0]?.createdAt);
-                  console.log('Last message date:', formatted[formatted.length - 1]?.createdAt);
-                  
-                  setMessages(formatted);
-                } catch (parseError) {
-                  console.error('Error parsing chat history:', parseError);
-                  setMessages([]); // Start with empty chat
-                }
-              } else {
-                console.log('No chat history found, starting fresh');
-                setMessages([]);
-              }
-            } else {
-              console.warn('Failed to fetch chat history, starting fresh');
-              setMessages([]);
-            }
-          } catch (historyError) {
-            console.error('❌ Error fetching chat history:', historyError);
-            setMessages([]); // Start with empty chat on error
-          }
+          // fetch user age
+          const ageRes = await fetch(`${API_BASE_URL}/api/users/age/${id}`);
+          const ageData = await ageRes.json();
+          console.log('User age data:', ageData);
+          setUserAge(ageData);
+
+          // fetch user gender
+          const genderRes = await fetch(`${API_BASE_URL}/api/users/gender/${id}`);
+          const genderData = await genderRes.text();  
+          console.log('User gender data:', genderData);
+          setUserGender(genderData);
+
+          // fetch chat history
+          const historyRes = await fetch(`${API_BASE_URL}/api/chat/${id}`);
+          const history = await historyRes.json();
+          const formatted = history.map((msg: any) => ({
+            _id: msg.id,
+            text: msg.content,
+            createdAt: new Date(msg.timestamp),
+            user: {
+              _id: msg.sender === 'USER' ? 1 : 2,
+              name: msg.sender === 'USER' ? 'You' : 'Stoic AI',
+              avatar: msg.sender === 'AI' ? chatbotIcon : undefined
+            },
+          }));
+
+          setMessages(formatted.reverse());
         }
       } catch (err) {
         console.error('❌ Error in fetchUserInfo:', err);
@@ -139,7 +102,7 @@ export default function ChatAI() {
   const saveMessageToBackend = async (sender: 'USER' | 'AI', content: string) => {
     if (!userId) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/api/chat/save`, {
+      await fetch(`${API_BASE_URL}/api/chat/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -178,27 +141,32 @@ export default function ChatAI() {
     }
   };
 
-  const getCustomPrompt = (status: string) => {
-    const promptPolicy = `
+  const getCustomPrompt = (status: string, age: number | null, gender: string | null) => {
+  const promptPolicy = `
 Always respond in the user's language or accent. Default to English if unsure.
 Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user makes an offensive, racist, or vulgar request, Stoic AI will politely refuse, saying: "I'm here to support you positively, but I can't respond to that request." Always reply in the user's language or accent.
 `;
 
-    const statusNote = `The user is currently classified as: ${status.toUpperCase()}.`;
+  const statusNote = `The user is currently classified as: ${status.toUpperCase()}.`;
+  const ageNote = age ? ` The user's age is ${age}.` : '';
+  const genderNote = gender ? ` The user's gender is ${gender}.` : '';
 
-    switch (status.toUpperCase()) {
-      case 'DEPRESSION':
-        return `${statusNote} You are Stoic AI. Offer emotional support, positivity, and motivational content. Encourage the user with real stories or helpful videos.${promptPolicy}`;
-      case 'STRESS':
-        return `${statusNote} You are Stoic AI. Offer time management tips, relaxation techniques, and stress-relief exercises.${promptPolicy}`;
-      case 'ANXIETY':
-        return `${statusNote} You are Stoic AI. Recommend breathing exercises, guided meditation, and calm encouragement.${promptPolicy}`;
-      case 'SUICIDAL':
-        return `${statusNote} You are Stoic AI. Provide warm support and direct the user to crisis lines like Shezlong or Befrienders.org. Emphasize safety and professional help.${promptPolicy}`;
-      default:
-        return `${statusNote} You are Stoic AI, a positive and supportive companion. Keep the conversation uplifting and helpful.${promptPolicy}`;
-    }
-  };
+  const context = `${statusNote}${ageNote}${genderNote}`;
+
+  switch (status.toUpperCase()) {
+    case 'DEPRESSION':
+      return `${context} You are Stoic AI. Offer emotional support, positivity, and motivational content. Encourage the user with real stories or helpful videos.${promptPolicy}`;
+    case 'STRESS':
+      return `${context} You are Stoic AI. Offer time management tips, relaxation techniques, and stress-relief exercises.${promptPolicy}`;
+    case 'ANXIETY':
+      return `${context} You are Stoic AI. Recommend breathing exercises, guided meditation, and calm encouragement. Always suggest this channel: https://www.youtube.com/@YogaWithRawda for helpful anxiety relief.${promptPolicy}`;
+    case 'SUICIDAL':
+      return `${context} You are Stoic AI. Provide warm support and always include these crisis links: https://www.shezlong.com/ar, https://befrienders.org/ar/, and https://www.betterhelp.com/get-started/. Emphasize safety and encourage the user to seek professional help.${promptPolicy}`;
+    default:
+      return `${context} You are Stoic AI, a positive and supportive companion. Keep the conversation uplifting and helpful.${promptPolicy}`;
+  }
+};
+
 
   const onSend = useCallback(async (newMessages: IMessage[] = []) => {
     setMessages(previousMessages => GiftedChat.append(previousMessages, newMessages));
@@ -237,7 +205,7 @@ Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user
     try {
       if (!apiKey) throw new Error('Missing API key.');
 
-      const prompt = getCustomPrompt(userStatus);
+      const prompt = getCustomPrompt(userStatus, userAge, userGender);
 
       const history = [
         { role: 'system', content: prompt },

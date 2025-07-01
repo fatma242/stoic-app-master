@@ -14,49 +14,55 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import i18n from "../constants/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
-const moods = [
-  { emoji: "😢", score: 1 },
-  { emoji: "😔", score: 2 },
-  { emoji: "😐", score: 3 },
-  { emoji: "😊", score: 4 },
-  { emoji: "😄", score: 5 },
-];
-
-// Helper function to get ISO week number
-function getWeekNumber(d: Date): { year: number; week: number } {
-  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+const getWeekNumber = (date: Date) => {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil(
-      ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
-  );
-  return { year: d.getUTCFullYear(), week: weekNo };
-}
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return { week: weekNo, year: d.getUTCFullYear() };
+};
 
 export default function WeeklyCheckIn() {
-  const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const videoRef = React.useRef(null);
+  const [questions, setQuestions] = useState<string[]>([]);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [status, setStatus] = useState<string | null>(null);
+
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+  const [key, setKey] = useState(0);
+
+  const isRTL = i18n.locale === 'ar';
+  const textAlign = isRTL ? 'right' : 'left';
+  const flexDirection = isRTL ? 'row-reverse' : 'row';
 
   useEffect(() => {
-    const checkUser = async () => {
+    global.reloadApp = () => setKey(prev => prev + 1);
+    return () => {
+      global.reloadApp = undefined;
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
       try {
         const userId = await AsyncStorage.getItem("userId");
         if (!userId) {
-          Alert.alert("Error", "User not found. Please log in again.");
+          Alert.alert(
+            i18n.t('weeklyCheckIn.errors.userNotFound'),
+            i18n.t('weeklyCheckIn.errors.userNotFound')
+          );
           router.replace("/login");
           return;
         }
 
-        // WEEKLY CHECK TEMPORARILY DISABLED FOR TESTING
-        // Commented out to allow multiple submissions during testing
-        /*
+        // Check if user already submitted this week's check-in
         const response = await axios.get(`${API_BASE_URL}/api/mood-logs/${userId}`);
         const logs = response.data;
-
         const now = new Date();
         const currentWeek = getWeekNumber(now);
 
@@ -68,54 +74,87 @@ export default function WeeklyCheckIn() {
 
         if (hasSubmitted) {
           Alert.alert(
-            "Already Submitted",
-            "You've already completed your weekly check-in.",
+            i18n.t('weeklyCheckIn.alerts.alreadySubmitted'),
+            i18n.t('weeklyCheckIn.alerts.alreadySubmitted')
           );
-          router.replace('/progress');
-        } else {
-          setLoading(false);
+          router.replace("/progress");
+          return;
         }
-        */
 
-        // Bypass the weekly check and always show the form
-        setLoading(false);
+        // Fetch user status
+        const res = await fetch(`${API_BASE_URL}/api/users/status/${userId}`);
+        const data = await res.json();
+        setStatus(data);
+
+        let statusQuestions: any = [];
+        if (data === "ANXIETY") {
+          statusQuestions = i18n.t("weeklyCheckIn.questions.anxiety", { returnObjects: true });
+        } else if (data === "STRESS") {
+          statusQuestions = i18n.t("weeklyCheckIn.questions.stress", { returnObjects: true });
+        } else if (data === "DEPRESSION") {
+          statusQuestions = i18n.t("weeklyCheckIn.questions.depression", { returnObjects: true });
+        } else {
+          statusQuestions = i18n.t("weeklyCheckIn.questions.normal", { returnObjects: true });
+        }
+
+        const questionTexts = Object.values(statusQuestions);
+        setQuestions(questionTexts as string[]);
       } catch (error) {
         console.error(error);
-        Alert.alert("Error", "Failed to initialize check-in");
+        Alert.alert(
+          i18n.t('weeklyCheckIn.errors.fetchFailed'),
+          i18n.t('weeklyCheckIn.errors.fetchFailed')
+        );
+      } finally {
         setLoading(false);
       }
     };
 
-    checkUser();
+    fetchData();
   }, []);
 
   const handleSubmit = async () => {
-    if (selectedMood == null) {
-      Alert.alert("Please select your mood.");
+    if (Object.keys(answers).length !== questions.length) {
+      Alert.alert(i18n.t('weeklyCheckIn.errors.incompleteAnswers'));
       return;
     }
 
     setSubmitting(true);
-
     try {
       const userId = await AsyncStorage.getItem("userId");
       if (!userId) {
-        Alert.alert("Error", "User not found. Please log in again.");
+        Alert.alert(
+          i18n.t('weeklyCheckIn.errors.userNotFound'),
+          i18n.t('weeklyCheckIn.errors.userNotFound')
+        );
         return;
       }
 
+      let score = 0;
+      Object.values(answers).forEach((ans) => {
+        if (ans === i18n.t('weeklyCheckIn.answers.yes')) score += 2;
+        else if (ans === i18n.t('weeklyCheckIn.answers.sometimes')) score += 1;
+      });
+
       await axios.post(`${API_BASE_URL}/api/mood-logs`, {
         userId: userId,
-        moodScore: selectedMood,
+        moodScore: score,
         timestamp: new Date().toISOString(),
       });
 
-      Alert.alert("Success", "Your mood has been recorded!", [
-        { text: "OK", onPress: () => router.replace("/progress") },
-      ]);
+      Alert.alert(
+        i18n.t('weeklyCheckIn.alerts.success'),
+        i18n.t('weeklyCheckIn.alerts.success'),
+        [
+          { text: "OK", onPress: () => router.replace("/progress") },
+        ]
+      );
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "Failed to submit mood. Please try again.");
+      Alert.alert(
+        i18n.t('weeklyCheckIn.errors.submitFailed'),
+        i18n.t('weeklyCheckIn.errors.submitFailed')
+      );
     } finally {
       setSubmitting(false);
     }
@@ -129,61 +168,88 @@ export default function WeeklyCheckIn() {
     );
   }
 
+  const currentQuestion = questions[currentQuestionIndex];
+
   return (
-      <View style={styles.container}>
-        <Stack.Screen options={{ headerShown: false }} />
+    <View style={styles.container} key={key}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.languageContainer, { marginTop: 40, marginRight: 10 }]}>
+        <LanguageSwitcher />
+      </View>
+      <BackgroundVideo />
+      <View style={styles.overlay} />
 
-        <BackgroundVideo />
+      <KeyboardAvoidingView behavior="padding" style={styles.contentContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+          <View style={styles.card}>
 
-        <View style={styles.overlay} />
+            <View style={{ marginBottom: 20 }}>
+              <Text style={[styles.questionText, { textAlign }]}>{currentQuestion}</Text>
 
-        <KeyboardAvoidingView behavior="padding" style={styles.contentContainer}>
-          <ScrollView
-              contentContainerStyle={styles.scrollContainer}
-              keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.card}>
-              <Text style={styles.title}>How are you feeling today?</Text>
-
-              <View style={styles.moods}>
-                {moods.map((m) => (
-                    <TouchableOpacity
-                        key={m.score}
-                        onPress={() => setSelectedMood(m.score)}
-                        disabled={submitting}
-                    >
-                      <Text
-                          style={[
-                            styles.emoji,
-                            selectedMood === m.score && styles.selected,
-                          ]}
-                      >
-                        {m.emoji}
-                      </Text>
-                    </TouchableOpacity>
+              <View style={[styles.optionsContainer, { flexDirection }]}>
+                {[
+                  i18n.t('weeklyCheckIn.answers.yes'),
+                  i18n.t('weeklyCheckIn.answers.no'),
+                  i18n.t('weeklyCheckIn.answers.sometimes')
+                ].map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    onPress={() => {
+                      setAnswers((prev) => ({ ...prev, [currentQuestionIndex]: option }));
+                      if (currentQuestionIndex < questions.length - 1) {
+                        setCurrentQuestionIndex((prev) => prev + 1);
+                      }
+                    }}
+                    style={[
+                      styles.optionButton,
+                      answers[currentQuestionIndex] === option && styles.selectedOption
+                    ]}
+                  >
+                    <Text style={styles.optionText}>{option}</Text>
+                  </TouchableOpacity>
                 ))}
               </View>
-
-              <TouchableOpacity
-                  onPress={handleSubmit}
-                  style={styles.submitButton}
-                  disabled={submitting}
-              >
-                <LinearGradient
-                    colors={["#16A34A", "#0d4215"]}
-                    style={styles.buttonGradient}
-                >
-                  {submitting ? (
-                      <ActivityIndicator color="white" />
-                  ) : (
-                      <Text style={styles.buttonText}>Submit</Text>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </View>
+
+            <View style={[styles.navigationContainer, { flexDirection }]}>
+              {currentQuestionIndex > 0 && (
+                <TouchableOpacity 
+                  onPress={() => setCurrentQuestionIndex(prev => prev - 1)}
+                  style={styles.previousButton}
+                >
+                  <Text style={styles.previousText}>
+                    {i18n.t('weeklyCheckIn.navigation.previous')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {currentQuestionIndex === questions.length - 1 && (
+                <View style={styles.submitContainer}>
+                  <TouchableOpacity
+                    onPress={handleSubmit}
+                    disabled={submitting}
+                    style={styles.submitButton}
+                  >
+                    <LinearGradient 
+                      colors={["#16A34A", "#0d4215"]} 
+                      style={styles.buttonGradient}
+                    >
+                      {submitting ? (
+                        <ActivityIndicator color="white" />
+                      ) : (
+                        <Text style={styles.buttonText}>
+                          {i18n.t('weeklyCheckIn.navigation.submit')}
+                        </Text>
+                      )}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -192,21 +258,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "transparent",
   },
-  backgroundVideo: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    right: 0,
-    zIndex: -2,
-  },
   overlay: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(0, 0, 0, 0.52)",
     zIndex: -1,
   },
   contentContainer: {
@@ -215,70 +273,89 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
   },
+  languageContainer: {
+    alignSelf: "flex-end",
+    zIndex: 2,
+  },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
   },
   card: {
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    backgroundColor: "rgba(255, 255, 255, 0.13)",
     borderRadius: 20,
     padding: 30,
     width: "90%",
-    maxWidth: 350,
+    maxWidth: 380,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    shadowRadius: 20,
+    elevation: 5,
     alignItems: "center",
   },
   title: {
     fontSize: 24,
-    marginBottom: 10,
+    marginBottom: 20,
     fontWeight: "bold",
     color: "#fff",
-    textAlign: "center",
   },
-  testNote: {
-    fontSize: 14,
-    marginBottom: 25,
-    color: "#E53935",
-    fontWeight: "600",
-    textAlign: "center",
+  questionText: {
+    color: "#fff",
+    fontSize: 18,
+    marginBottom: 15,
+    textAlign: 'center',
   },
-  moods: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 15,
-    marginBottom: 30,
+  optionsContainer: {
+    justifyContent: "space-around",
+    width: '100%',
   },
-  emoji: {
-    fontSize: 40,
-    margin: 10,
+  optionButton: {
+    padding: 12,
+    backgroundColor: "#ffffff30",
+    borderRadius: 8,
+    marginVertical: 5,
+    alignItems: 'center',
+    minWidth: 100,
   },
-  selected: {
-    borderBottomWidth: 3,
-    borderColor: "#16A34A",
-    borderRadius: 4,
-    transform: [{ scale: 1.2 }],
+  selectedOption: {
+    backgroundColor: "#16A34A",
+  },
+  optionText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  navigationContainer: {
+    width: '100%',
+    marginTop: 20,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  previousButton: {
+    padding: 10,
+  },
+  previousText: {
+    color: '#ccc',
+    fontSize: 16,
+  },
+  submitContainer: {
+    alignItems: 'center',
   },
   submitButton: {
-    width: "100%",
-    marginTop: 10,
     borderRadius: 10,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   buttonGradient: {
-    padding: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "white",
+    fontWeight: 'bold',
+    color: 'white',
   },
 });

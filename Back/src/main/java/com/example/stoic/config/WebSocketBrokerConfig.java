@@ -1,4 +1,4 @@
-package com.example.stoic.config;
+package com.example.stoic.Room.Service.WebSockets;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;

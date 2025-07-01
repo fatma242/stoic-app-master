@@ -15,6 +15,8 @@ import java.util.List;
         "${UserIphttp}",
         "${UserIPexp}",
         "${UserIphttp}"
+       " ${UserIphttp}",
+        "${UserIPexp}"
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/chat")
