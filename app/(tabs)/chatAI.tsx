@@ -33,31 +33,85 @@ export default function ChatAI() {
           const numericId = parseInt(id, 10);
           setUserId(numericId);
 
-          // fetch user status
-          const res = await fetch(`${API_BASE_URL}/api/users/status/${id}`);
-          console.log('Fetching user status for ID:', id);
-          const data = await res.json();
-          console.log('User status data:', data);
-          setUserStatus(data);
+          // fetch user status with better error handling
+          try {
+            const res = await fetch(`${API_BASE_URL}/api/users/status/${id}`);
+            console.log('Fetching user status for ID:', id);
+            console.log('Response status:', res.status);
+            
+            if (!res.ok) {
+              throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            
+            const responseText = await res.text();
+            console.log('Raw response:', responseText);
+            
+            if (!responseText || responseText.trim() === '') {
+              console.warn('Empty response from status API, using default status');
+              setUserStatus('NORMAL'); // Set default status
+            } else {
+              try {
+                const data = JSON.parse(responseText);
+                console.log('User status data:', data);
+                setUserStatus(data);
+              } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                console.log('Response text that failed to parse:', responseText);
+                setUserStatus('NORMAL'); // Fallback to default
+              }
+            }
+          } catch (statusError) {
+            console.error('❌ Error fetching user status:', statusError);
+            setUserStatus('NORMAL'); // Fallback to default status
+          }
 
-          // fetch chat history
-          const historyRes = await fetch(`${API_BASE_URL}/api/chat/${id}`);
-          const history = await historyRes.json();
-          const formatted = history.map((msg: any) => ({
-            _id: msg.id,
-            text: msg.content,
-            createdAt: new Date(msg.timestamp),
-            user: {
-              _id: msg.sender === 'USER' ? 1 : 2,
-              name: msg.sender === 'USER' ? 'You' : 'Stoic AI',
-              avatar: msg.sender === 'AI' ? chatbotIcon : undefined
-            },
-          }));
-
-          setMessages(formatted);
+          // fetch chat history with better error handling
+          try {
+            const historyRes = await fetch(`${API_BASE_URL}/api/chat/${numericId}`);
+            console.log('Chat history response status:', historyRes.status);
+            
+            if (historyRes.ok) {
+              const historyText = await historyRes.text();
+              if (historyText && historyText.trim() !== '') {
+                try {
+                  const history = JSON.parse(historyText);
+                  const formatted = history.map((msg: any) => ({
+                    _id: msg.id,
+                    text: msg.content,
+                    createdAt: new Date(msg.timestamp),
+                    user: {
+                      _id: msg.sender === 'USER' ? 1 : 2,
+                      name: msg.sender === 'USER' ? 'You' : 'Stoic AI',
+                      avatar: msg.sender === 'AI' ? chatbotIcon : undefined
+                    },
+                  }))
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort by newest first
+                  
+                  console.log('Formatted messages count:', formatted.length);
+                  console.log('First message date:', formatted[0]?.createdAt);
+                  console.log('Last message date:', formatted[formatted.length - 1]?.createdAt);
+                  
+                  setMessages(formatted);
+                } catch (parseError) {
+                  console.error('Error parsing chat history:', parseError);
+                  setMessages([]); // Start with empty chat
+                }
+              } else {
+                console.log('No chat history found, starting fresh');
+                setMessages([]);
+              }
+            } else {
+              console.warn('Failed to fetch chat history, starting fresh');
+              setMessages([]);
+            }
+          } catch (historyError) {
+            console.error('❌ Error fetching chat history:', historyError);
+            setMessages([]); // Start with empty chat on error
+          }
         }
       } catch (err) {
-        console.error('❌ Error:', err);
+        console.error('❌ Error in fetchUserInfo:', err);
+        setUserStatus('NORMAL'); // Ensure we have a fallback status
       }
     };
 
@@ -85,13 +139,42 @@ export default function ChatAI() {
   const saveMessageToBackend = async (sender: 'USER' | 'AI', content: string) => {
     if (!userId) return;
     try {
-      await fetch('${API_BASE_URL}/api/chat/save', {
+      const response = await fetch(`${API_BASE_URL}/api/chat/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, sender, content })
+        body: JSON.stringify({ 
+          userId, 
+          sender, 
+          content,
+          timestamp: new Date().toISOString()
+        })
       });
+      console.log('Saving message to backend:', { userId, sender, content });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Handle empty response from backend
+      const responseText = await response.text();
+      console.log('Save response:', responseText);
+      
+      if (!responseText || responseText.trim() === '') {
+        console.log('💾 Message saved successfully (empty response)');
+        return { success: true }; // Return success object for empty responses
+      }
+
+      try {
+        const result = JSON.parse(responseText);
+        console.log('💾 Message saved successfully:', result);
+        return result;
+      } catch (parseError) {
+        // If JSON parsing fails but response was successful, assume save worked
+        console.warn('Could not parse save response, but HTTP status was OK:', responseText);
+        return { success: true, message: 'Saved with non-JSON response' };
+      }
     } catch (err) {
       console.error('💾 Error saving message:', err);
+      throw err; // Re-throw to handle in calling function
     }
   };
 
@@ -123,11 +206,25 @@ Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user
     const userMessage = newMessages[0]?.text?.trim();
     if (!userMessage || !userStatus) return;
 
-    await saveMessageToBackend('USER', userMessage);
+    // Save user message first
+    try {
+      await saveMessageToBackend('USER', userMessage);
+      console.log('✅ User message saved');
+    } catch (error) {
+      console.error('❌ Failed to save user message:', error);
+      // Continue with AI response even if saving fails
+    }
 
     if (therapyKeywords.some(keyword => userMessage.toLowerCase().includes(keyword))) {
       const botResponse = "I'm here as an AI life coach, not a substitute for professional psychological support. I recommend reaching out to a mental health professional or using resources like Shezlong or Befrienders. 🌼";
-      await saveMessageToBackend('AI', botResponse);
+      
+      try {
+        await saveMessageToBackend('AI', botResponse);
+        console.log('✅ Therapy response saved');
+      } catch (error) {
+        console.error('❌ Failed to save therapy response:', error);
+      }
+
       setMessages(prev => GiftedChat.append(prev, [{
         _id: Math.random().toString(),
         text: botResponse,
@@ -170,7 +267,15 @@ Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user
       if (data.error || !data.choices?.[0]?.message?.content) throw new Error(data.error?.message || 'Invalid response');
 
       const botResponse = data.choices[0].message.content;
-      await saveMessageToBackend('AI', botResponse);
+      
+      // Save AI response
+      try {
+        await saveMessageToBackend('AI', botResponse);
+        console.log('✅ AI response saved');
+      } catch (saveError) {
+        console.error('❌ Failed to save AI response:', saveError);
+        // Continue to show message even if saving fails
+      }
 
       setMessages(prev => GiftedChat.append(prev, [{
         _id: Math.random().toString(),
@@ -181,7 +286,14 @@ Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user
     } catch (error) {
       console.error('💥 Chatbot API error:', error);
       const errText = "I'm having trouble connecting right now. Please try again later.";
-      await saveMessageToBackend('AI', errText);
+      
+      try {
+        await saveMessageToBackend('AI', errText);
+        console.log('✅ Error message saved');
+      } catch (saveError) {
+        console.error('❌ Failed to save error message:', saveError);
+      }
+
       setMessages(prev => GiftedChat.append(prev, [{
         _id: Math.random().toString(),
         text: errText,
