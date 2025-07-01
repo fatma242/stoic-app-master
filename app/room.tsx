@@ -20,7 +20,9 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
+import i18n from "../constants/i18n";
 
+// Type definitions
 interface User {
   userId: number;
   username: string;
@@ -68,6 +70,11 @@ export default function RoomScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const roomId = id ? parseInt(id as string) : null;
+
+  // تحديد اتجاه النص
+  const isRTL = i18n.locale === "ar";
+  const textStyle = isRTL ? styles.rtlText : styles.ltrText;
+  const flexDirection = isRTL ? "row-reverse" : "row";
 
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
@@ -125,8 +132,8 @@ export default function RoomScreen() {
         );
       },
       onStompError: (frame) => {
-        console.error("Broker reported error: " + frame.headers["message"]);
-        console.error("Additional details: " + frame.body);
+        console.error(i18n.t("room.websocketError") + frame.headers["message"]);
+        console.error(i18n.t("room.details") + frame.body);
       },
     });
 
@@ -139,7 +146,7 @@ export default function RoomScreen() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to fetch room");
+      if (!response.ok) throw new Error(i18n.t("room.fetchRoomError"));
 
       const data: Room = await response.json();
       setRoom(data);
@@ -157,14 +164,14 @@ export default function RoomScreen() {
           setUserRole(userData.userRole);
         }
       } catch (error) {
-        console.log("Could not fetch user role:", error);
+        console.log(i18n.t("room.fetchRoleError"), error);
       }
     } catch (error) {
       Alert.alert(
-        "Error",
+        i18n.t("room.error"),
         error instanceof Error && error.message
           ? error.message
-          : "Could not load room"
+          : i18n.t("room.loadRoomError")
       );
     }
   };
@@ -178,16 +185,16 @@ export default function RoomScreen() {
         }
       );
 
-      if (!response.ok) throw new Error("Failed to fetch messages");
+      if (!response.ok) throw new Error(i18n.t("room.fetchMessagesError"));
 
       const data: Message[] = await response.json();
       setMessages(data);
     } catch (error) {
       Alert.alert(
-        "Error",
+        i18n.t("room.error"),
         error instanceof Error && error.message
           ? error.message
-          : "Could not load messages"
+          : i18n.t("room.loadMessagesError")
       );
     }
   };
@@ -205,7 +212,7 @@ export default function RoomScreen() {
         setPosts([]);
         return;
       }
-      if (!response.ok) throw new Error("Failed to fetch posts");
+      if (!response.ok) throw new Error(i18n.t("room.fetchPostsError"));
 
       const data: Post[] = await response.json();
       const processed: Post[] = data.map((post) => {
@@ -225,8 +232,8 @@ export default function RoomScreen() {
       setPosts(processed);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not load posts"
+        i18n.t("room.error"),
+        error instanceof Error ? error.message : i18n.t("room.loadPostsError")
       );
     }
   };
@@ -240,7 +247,7 @@ export default function RoomScreen() {
         }
       );
 
-      if (!response.ok) throw new Error("Failed to fetch notifications");
+      if (!response.ok) throw new Error(i18n.t("room.fetchNotificationsError"));
 
       const data: Notification[] = await response.json();
       setNotifications(data);
@@ -248,10 +255,10 @@ export default function RoomScreen() {
       setUnreadCount(unread);
     } catch (error) {
       Alert.alert(
-        "Error",
+        i18n.t("room.error"),
         error instanceof Error && error.message
           ? error.message
-          : "Could not load notifications"
+          : i18n.t("room.loadNotificationsError")
       );
     }
   };
@@ -263,7 +270,7 @@ export default function RoomScreen() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to fetch room users");
+      if (!response.ok) throw new Error(i18n.t("room.fetchUsersError"));
 
       const data = await response.json();
       let users = [];
@@ -276,10 +283,10 @@ export default function RoomScreen() {
       }
       setRoomUsers(Array.isArray(users) ? users : []);
     } catch (error) {
-      console.error("Error fetching room users:", error);
+      console.error(i18n.t("room.fetchUsersError"), error);
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not load room users"
+        i18n.t("room.error"),
+        error instanceof Error ? error.message : i18n.t("room.loadUsersError")
       );
     }
   };
@@ -304,10 +311,10 @@ export default function RoomScreen() {
       setNewMessage("");
     } catch (error) {
       Alert.alert(
-        "Error",
+        i18n.t("room.error"),
         error instanceof Error && error.message
           ? error.message
-          : "Failed to send message"
+          : i18n.t("room.sendMessageError")
       );
     } finally {
       setIsSending(false);
@@ -316,7 +323,7 @@ export default function RoomScreen() {
 
   const createPost = async () => {
     if (!newPostTitle.trim() || !newPostContent.trim()) {
-      Alert.alert("Error", "Title and content are required");
+      Alert.alert(i18n.t("room.error"), i18n.t("room.postFieldsRequired"));
       return;
     }
 
@@ -339,7 +346,7 @@ export default function RoomScreen() {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Failed to create post: ${response.status} - ${errorText}`
+          `${i18n.t("room.createPostError")}: ${response.status} - ${errorText}`
         );
       }
 
@@ -347,13 +354,13 @@ export default function RoomScreen() {
       setPosts((prev) => [...prev, newPost]);
       setNewPostTitle("");
       setNewPostContent("");
-      Alert.alert("Success", "Post created successfully");
+      Alert.alert(i18n.t("room.success"), i18n.t("room.postCreatedSuccess"));
     } catch (error) {
       Alert.alert(
-        "Error",
+        i18n.t("room.error"),
         error instanceof Error && error.message
           ? error.message
-          : "Could not create post"
+          : i18n.t("room.createPostError")
       );
     } finally {
       setIsCreatingPost(false);
@@ -362,7 +369,7 @@ export default function RoomScreen() {
 
   const handleUpdateRoom = async () => {
     if (!room || !editedName.trim()) {
-      Alert.alert("Error", "Room name is required");
+      Alert.alert(i18n.t("room.error"), i18n.t("room.roomNameRequired"));
       return;
     }
 
@@ -378,18 +385,18 @@ export default function RoomScreen() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Update failed");
+      if (!response.ok) throw new Error(i18n.t("room.updateRoomError"));
 
       const updatedRoom = await response.json();
       setRoom(updatedRoom);
       setIsEditing(false);
-      Alert.alert("Success", "Room updated successfully");
+      Alert.alert(i18n.t("room.success"), i18n.t("room.roomUpdatedSuccess"));
     } catch (error) {
       Alert.alert(
-        "Error",
+        i18n.t("room.error"),
         error instanceof Error && error.message
           ? error.message
-          : "Could not update room"
+          : i18n.t("room.updateRoomError")
       );
     } finally {
       setIsUpdating(false);
@@ -400,12 +407,12 @@ export default function RoomScreen() {
     if (!room) return;
 
     Alert.alert(
-      "Confirm Delete",
-      `Are you sure you want to delete "${room.roomName}"?`,
+      i18n.t("room.confirmDeleteTitle"),
+      i18n.t("room.confirmDeleteMessage", { roomName: room.roomName }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: i18n.t("room.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: i18n.t("room.delete"),
           style: "destructive",
           onPress: async () => {
             setIsDeleting(true);
@@ -415,16 +422,16 @@ export default function RoomScreen() {
                 credentials: "include",
               });
 
-              if (!response.ok) throw new Error("Delete failed");
+              if (!response.ok) throw new Error(i18n.t("room.deleteRoomError"));
 
-              Alert.alert("Success", "Room deleted successfully");
+              Alert.alert(i18n.t("room.success"), i18n.t("room.roomDeletedSuccess"));
               router.back();
             } catch (error) {
               Alert.alert(
-                "Error",
+                i18n.t("room.error"),
                 error instanceof Error && error.message
                   ? error.message
-                  : "Could not delete room"
+                  : i18n.t("room.deleteRoomError")
               );
             } finally {
               setIsDeleting(false);
@@ -447,7 +454,7 @@ export default function RoomScreen() {
       );
       setUnreadCount(0);
     } catch (error) {
-      console.error("Failed to mark notifications as read", error);
+      console.error(i18n.t("room.markNotificationsError"), error);
     }
   };
 
@@ -458,7 +465,7 @@ export default function RoomScreen() {
   const copyRoomCode = async () => {
     if (room?.join_code) {
       await Clipboard.setStringAsync(room.join_code);
-      Alert.alert("Copied", "Room code copied to clipboard");
+      Alert.alert(i18n.t("room.copied"), i18n.t("room.roomCodeCopied"));
     }
   };
 
@@ -474,7 +481,7 @@ export default function RoomScreen() {
           const storedUsername = await AsyncStorage.getItem("username");
 
           if (!storedUserId) {
-            Alert.alert("Error", "User not found. Please log in again.");
+            Alert.alert(i18n.t("room.error"), i18n.t("room.userNotFound"));
             return;
           }
 
@@ -496,8 +503,8 @@ export default function RoomScreen() {
             }
           }
         } catch (error) {
-          console.error("Error loading data:", error);
-          Alert.alert("Error", "Failed to load room data");
+          console.error(i18n.t("room.loadDataError"), error);
+          Alert.alert(i18n.t("room.error"), i18n.t("room.loadRoomDataError"));
         } finally {
           if (isActive) {
             setLoading(false);
@@ -538,12 +545,12 @@ export default function RoomScreen() {
         method: "PUT",
         credentials: "include",
       });
-      if (!response.ok) throw new Error("Failed to toggle like");
+      if (!response.ok) throw new Error(i18n.t("room.toggleLikeError"));
       setRefreshCount((prev) => prev + 1);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not toggle like"
+        i18n.t("room.error"),
+        error instanceof Error ? error.message : i18n.t("room.toggleLikeError")
       );
     } finally {
       setLikingPostIds((prev) => {
@@ -558,12 +565,12 @@ export default function RoomScreen() {
     if (!roomId || !userId) return;
 
     Alert.alert(
-      "Remove User",
-      `Are you sure you want to remove ${username} from this room? `,
+      i18n.t("room.removeUserTitle"),
+      i18n.t("room.removeUserMessage", { username }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: i18n.t("room.cancel"), style: "cancel" },
         {
-          text: "Remove",
+          text: i18n.t("room.remove"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -574,16 +581,16 @@ export default function RoomScreen() {
                   credentials: "include",
                 }
               );
-              if (!response.ok) throw new Error("Failed to remove user");
+              if (!response.ok) throw new Error(i18n.t("room.removeUserError"));
               await fetchRoomUsers();
               Alert.alert(
-                "Success",
-                `${username} has been removed from the room`
+                i18n.t("room.success"),
+                i18n.t("room.userRemovedSuccess", { username })
               );
             } catch (error) {
               Alert.alert(
-                "Error",
-                error instanceof Error ? error.message : "Could not remove user"
+                i18n.t("room.error"),
+                error instanceof Error ? error.message : i18n.t("room.removeUserError")
               );
             }
           },
@@ -594,17 +601,17 @@ export default function RoomScreen() {
 
   const handleAdminDeletePost = async (postId: number, postTitle: string) => {
     if (userRole !== "ADMIN") {
-      Alert.alert("Error", "Only admins can delete posts");
+      Alert.alert(i18n.t("room.error"), i18n.t("room.adminOnlyDelete"));
       return;
     }
 
     Alert.alert(
-      "Admin Force Delete",
-      `Are you sure you want to permanently delete the post "${postTitle}"? This action cannot be undone.`,
+      i18n.t("room.adminDeleteTitle"),
+      i18n.t("room.adminDeleteMessage", { postTitle }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: i18n.t("room.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: i18n.t("room.delete"),
           style: "destructive",
           onPress: async () => {
             if (deletingPostIds.has(postId)) return;
@@ -621,15 +628,15 @@ export default function RoomScreen() {
 
               if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(errorText || "Failed to delete post");
+                throw new Error(errorText || i18n.t("room.deletePostError"));
               }
 
               setPosts((prev) => prev.filter((post) => post.id !== postId));
-              Alert.alert("Success", "Post deleted successfully");
+              Alert.alert(i18n.t("room.success"), i18n.t("room.postDeletedSuccess"));
             } catch (error) {
               Alert.alert(
-                "Error",
-                error instanceof Error ? error.message : "Could not delete post"
+                i18n.t("room.error"),
+                error instanceof Error ? error.message : i18n.t("room.deletePostError")
               );
             } finally {
               setDeletingPostIds((prev) => {
@@ -646,23 +653,23 @@ export default function RoomScreen() {
 
   const handleOwnerDeletePost = async (postId: number, postTitle: string) => {
     if (!userId) {
-      Alert.alert("Error", "User not authenticated");
+      Alert.alert(i18n.t("room.error"), i18n.t("room.userNotAuthenticated"));
       return;
     }
 
     const post = posts.find((p) => p.id === postId);
     if (!post || post.author?.userId !== userId) {
-      Alert.alert("Error", "You can only delete your own posts");
+      Alert.alert(i18n.t("room.error"), i18n.t("room.deleteOwnPostsOnly"));
       return;
     }
 
     Alert.alert(
-      "Delete Post",
-      `Are you sure you want to delete "${postTitle}"?`,
+      i18n.t("room.deletePostTitle"),
+      i18n.t("room.deletePostMessage", { postTitle }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: i18n.t("room.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: i18n.t("room.delete"),
           style: "destructive",
           onPress: async () => {
             if (deletingPostIds.has(postId)) return;
@@ -679,15 +686,15 @@ export default function RoomScreen() {
 
               if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(errorText || "Failed to delete post");
+                throw new Error(errorText || i18n.t("room.deletePostError"));
               }
 
               setPosts((prev) => prev.filter((post) => post.id !== postId));
-              Alert.alert("Success", "Post deleted successfully");
+              Alert.alert(i18n.t("room.success"), i18n.t("room.postDeletedSuccess"));
             } catch (error) {
               Alert.alert(
-                "Error",
-                error instanceof Error ? error.message : "Could not delete post"
+                i18n.t("room.error"),
+                error instanceof Error ? error.message : i18n.t("room.deletePostError")
               );
             } finally {
               setDeletingPostIds((prev) => {
@@ -713,7 +720,7 @@ export default function RoomScreen() {
   if (!room) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>Room not found</Text>
+        <Text style={styles.errorText}>{i18n.t("room.roomNotFound")}</Text>
       </View>
     );
   }
@@ -731,9 +738,13 @@ export default function RoomScreen() {
         ref={scrollViewRef}
         onContentSizeChange={() => scrollToBottom()}
       >
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, { flexDirection }]}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <Ionicons 
+              name={isRTL ? "arrow-forward" : "arrow-back"} 
+              size={24} 
+              color="white" 
+            />
           </TouchableOpacity>
 
           <TouchableOpacity onPress={markNotificationsAsRead}>
@@ -750,55 +761,57 @@ export default function RoomScreen() {
           <View style={styles.roomNameContainer}>
             {isEditing ? (
               <TextInput
-                style={styles.roomNameInput}
+                style={[styles.roomNameInput, textStyle]}
                 value={editedName}
                 onChangeText={setEditedName}
                 autoFocus
               />
             ) : (
-              <Text style={styles.roomNameText}>{room.roomName}</Text>
+              <Text style={[styles.roomNameText, textStyle]}>{room.roomName}</Text>
             )}
           </View>
 
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Type:</Text>
-            <Text style={styles.detailValue}>
-              {room.type === "PUBLIC" ? "Public" : "Private"}
+          <View style={[styles.detailRow, { flexDirection }]}>
+            <Text style={styles.detailLabel}>{i18n.t("room.type")}:</Text>
+            <Text style={[styles.detailValue, textStyle]}>
+              {room.type === "PUBLIC" ? i18n.t("room.public") : i18n.t("room.private")}
             </Text>
           </View>
 
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Owner:</Text>
-            <Text style={styles.detailValue}>
-              {isOwner ? "You" : `User #${room.ownerId}`}
+          <View style={[styles.detailRow, { flexDirection }]}>
+            <Text style={styles.detailLabel}>{i18n.t("room.owner")}:</Text>
+            <Text style={[styles.detailValue, textStyle]}>
+              {isOwner ? i18n.t("room.you") : `${i18n.t("room.user")} #${room.ownerId}`}
             </Text>
           </View>
 
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Room Code:</Text>
-            <Text style={styles.detailValue}>{room.join_code}</Text>
+          <View style={[styles.detailRow, { flexDirection }]}>
+            <Text style={styles.detailLabel}>{i18n.t("room.roomCode")}:</Text>
+            <Text style={[styles.detailValue, textStyle]}>{room.join_code}</Text>
             <TouchableOpacity onPress={copyRoomCode} style={styles.copyButton}>
               <Ionicons name="copy" size={18} color="white" />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Users:</Text>
+          <View style={[styles.detailRow, { flexDirection }]}>
+            <Text style={styles.detailLabel}>{i18n.t("room.users")}:</Text>
             <View style={{ flex: 1 }}>
               {roomUsers.length === 0 ? (
-                <Text style={styles.detailValue}>No users joined yet</Text>
+                <Text style={[styles.detailValue, textStyle]}>
+                  {i18n.t("room.noUsers")}
+                </Text>
               ) : (
                 roomUsers.map((user, index) => (
                   <View
                     key={`user-${user.userId}-${index}`}
-                    style={styles.userRow}
+                    style={[styles.userRow, { flexDirection }]}
                   >
-                    <Text style={styles.detailValue}>
+                    <Text style={[styles.detailValue, textStyle]}>
                       {typeof user === "object" && user !== null
-                        ? user.username || "Unknown User"
+                        ? user.username || i18n.t("room.unknownUser")
                         : String(user)}
-                      {user.userId === userId && " (You)"}
-                      {user.userId === room?.ownerId && " (Owner)"}
+                      {user.userId === userId && ` (${i18n.t("room.you")})`}
+                      {user.userId === room?.ownerId && ` (${i18n.t("room.owner")})`}
                     </Text>
                     {isOwner &&
                       user.userId !== userId &&
@@ -806,7 +819,7 @@ export default function RoomScreen() {
                         <TouchableOpacity
                           style={styles.removeUserButton}
                           onPress={() =>
-                            handleRemoveUser(user.username || "Unknown User")
+                            handleRemoveUser(user.username || i18n.t("room.unknownUser"))
                           }
                         >
                           <Ionicons
@@ -823,7 +836,7 @@ export default function RoomScreen() {
           </View>
 
           {isOwner && (
-            <View style={styles.actionsContainer}>
+            <View style={[styles.actionsContainer, { flexDirection }]}>
               {isEditing ? (
                 <>
                   <TouchableOpacity
@@ -831,7 +844,7 @@ export default function RoomScreen() {
                     onPress={() => setIsEditing(false)}
                     disabled={isUpdating}
                   >
-                    <Text style={styles.buttonText}>Cancel</Text>
+                    <Text style={styles.buttonText}>{i18n.t("room.cancel")}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.button, styles.saveButton]}
@@ -841,7 +854,7 @@ export default function RoomScreen() {
                     {isUpdating ? (
                       <ActivityIndicator color="white" />
                     ) : (
-                      <Text style={styles.buttonText}>Save</Text>
+                      <Text style={styles.buttonText}>{i18n.t("room.save")}</Text>
                     )}
                   </TouchableOpacity>
                 </>
@@ -851,7 +864,7 @@ export default function RoomScreen() {
                     style={[styles.button, styles.editButton]}
                     onPress={() => setIsEditing(true)}
                   >
-                    <Text style={styles.buttonText}>Edit</Text>
+                    <Text style={styles.buttonText}>{i18n.t("room.edit")}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.button, styles.deleteButton]}
@@ -861,7 +874,7 @@ export default function RoomScreen() {
                     {isDeleting ? (
                       <ActivityIndicator color="white" />
                     ) : (
-                      <Text style={styles.buttonText}>Delete</Text>
+                      <Text style={styles.buttonText}>{i18n.t("room.delete")}</Text>
                     )}
                   </TouchableOpacity>
                 </>
@@ -870,10 +883,10 @@ export default function RoomScreen() {
           )}
         </View>
 
-        <Text style={styles.sectionTitle}>Chat</Text>
+        <Text style={[styles.sectionTitle, textStyle]}>{i18n.t("room.chat")}</Text>
         <View style={styles.chatContainer}>
           {messages.length === 0 ? (
-            <Text style={styles.emptyText}>No messages yet</Text>
+            <Text style={[styles.emptyText, textStyle]}>{i18n.t("room.noMessages")}</Text>
           ) : (
             messages.map((message, index) => (
               <View
@@ -886,7 +899,7 @@ export default function RoomScreen() {
                 ]}
               >
                 <Text style={styles.senderName}>
-                  {message.senderId === userId ? "You" : message.senderName}
+                  {message.senderId === userId ? i18n.t("room.you") : message.senderName}
                 </Text>
                 <Text style={styles.messageText}>{message.content}</Text>
                 <Text style={styles.messageTime}>
@@ -900,9 +913,9 @@ export default function RoomScreen() {
           )}
         </View>
 
-        <Text style={styles.sectionTitle}>Posts</Text>
+        <Text style={[styles.sectionTitle, textStyle]}>{i18n.t("room.posts")}</Text>
         {posts.length === 0 ? (
-          <Text style={styles.emptyText}>No posts yet</Text>
+          <Text style={[styles.emptyText, textStyle]}>{i18n.t("room.noPosts")}</Text>
         ) : (
           posts.map((post) => (
             <View key={`post-${post.id}`} style={styles.postItem}>
@@ -910,17 +923,17 @@ export default function RoomScreen() {
                 onPress={() => handlePostPress(post.id)}
                 style={styles.postContent}
               >
-                <Text style={styles.postTitle}>{post.title}</Text>
-                <Text style={styles.postContentText}>{post.content}</Text>
-                <Text style={styles.postAuthor}>
-                  By: {post.author?.username || "Unknown Author"}
+                <Text style={[styles.postTitle, textStyle]}>{post.title}</Text>
+                <Text style={[styles.postContentText, textStyle]}>{post.content}</Text>
+                <Text style={[styles.postAuthor, textStyle]}>
+                  {i18n.t("room.by")}: {post.author?.username || i18n.t("room.unknownAuthor")}
                 </Text>
-                <Text style={styles.postDate}>
+                <Text style={[styles.postDate, textStyle]}>
                   {new Date(post.date).toLocaleDateString()}
                 </Text>
               </TouchableOpacity>
 
-              <View style={styles.postActions}>
+              <View style={[styles.postActions, { flexDirection }]}>
                 <TouchableOpacity
                   style={styles.likeButton}
                   onPress={() => handleLike(post.id)}
@@ -947,7 +960,7 @@ export default function RoomScreen() {
                     size={20}
                     color="#94a3b8"
                   />
-                  <Text style={styles.commentText}>Comment</Text>
+                  <Text style={styles.commentText}>{i18n.t("room.comment")}</Text>
                 </TouchableOpacity>
 
                 {post.author?.userId === userId && (
@@ -987,17 +1000,17 @@ export default function RoomScreen() {
         )}
 
         <View style={styles.postForm}>
-          <Text style={styles.sectionTitle}>Create New Post</Text>
+          <Text style={[styles.sectionTitle, textStyle]}>{i18n.t("room.createPost")}</Text>
           <TextInput
-            style={styles.input}
-            placeholder="Post title"
+            style={[styles.input, textStyle]}
+            placeholder={i18n.t("room.postTitlePlaceholder")}
             placeholderTextColor="#94a3b8"
             value={newPostTitle}
             onChangeText={setNewPostTitle}
           />
           <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Post content"
+            style={[styles.input, styles.textArea, textStyle]}
+            placeholder={i18n.t("room.postContentPlaceholder")}
             placeholderTextColor="#94a3b8"
             value={newPostContent}
             onChangeText={setNewPostContent}
@@ -1012,7 +1025,7 @@ export default function RoomScreen() {
             {isCreatingPost ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text style={styles.buttonText}>Create Post</Text>
+              <Text style={styles.buttonText}>{i18n.t("room.createPostButton")}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -1023,8 +1036,8 @@ export default function RoomScreen() {
         style={styles.messageInputContainer}
       >
         <TextInput
-          style={styles.messageInput}
-          placeholder="Type a message..."
+          style={[styles.messageInput, textStyle]}
+          placeholder={i18n.t("room.messagePlaceholder")}
           placeholderTextColor="#94a3b8"
           value={newMessage}
           onChangeText={setNewMessage}
@@ -1064,7 +1077,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   topBar: {
-    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 15,
@@ -1096,20 +1108,19 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   detailRow: {
-    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
   },
   detailLabel: {
     color: "#94a3b8",
     fontWeight: "bold",
-    width: 80,
+    minWidth: 80,
   },
   detailValue: {
     color: "white",
     flex: 1,
   },
   actionsContainer: {
-    flexDirection: "row",
     justifyContent: "space-around",
     marginTop: 15,
   },
@@ -1145,7 +1156,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: "#94a3b8",
-    textAlign: "center",
     marginVertical: 20,
   },
   chatContainer: {
@@ -1277,7 +1287,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   postActions: {
-    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 10,
@@ -1307,7 +1316,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   userRow: {
-    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 4,
@@ -1333,5 +1341,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     borderColor: "#f59e0b",
+  },
+  rtlText: {
+    textAlign: "right",
+  },
+  ltrText: {
+    textAlign: "left",
   },
 });

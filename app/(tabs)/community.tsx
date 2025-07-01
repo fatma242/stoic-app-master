@@ -1,7 +1,4 @@
 import BackgroundVideo from "@/components/BackgroundVideo";
-// import { Ionicons } from "@expo/vector-icons";
-// import AsyncStorage from "@react-native-async-storage/async-storage";
-// import { useRouter } from "expo-router";
 import React from "react";
 import { useEffect, useState } from "react";
 import {
@@ -23,6 +20,7 @@ import { Video, ResizeMode } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { useFocusEffect } from "@react-navigation/native";
+import i18n from "../../constants/i18n";
 
 // Type definitions
 type RoomType = "PUBLIC" | "PRIVATE";
@@ -34,7 +32,6 @@ interface RoomDTO {
   roomName: string;
   type: RoomType;
   createdAt: string;
-  // Assuming backend returns join_code as joinCode
   joinCode?: string;
 }
 
@@ -49,18 +46,19 @@ export default function Community() {
   const [showModal, setShowModal] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-
-  // New state for join code
   const [joinCode, setJoinCode] = useState("");
+  const [showJoinModal, setShowJoinModal] = useState(false); 
 
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
-  console.log("API_BASE_URL:", API_BASE_URL);
-  // Replace the existing useEffect with useFocusEffect to refresh data when screen is focused
+
+  const isRTL = i18n.locale.startsWith("ar");
+  const textStyle = { textAlign: isRTL ? "right" as "right" : "left" as "left" };
+  const flexDirection = isRTL ? "row-reverse" : "row";
+
   useFocusEffect(
     React.useCallback(() => {
       const loadUserData = async () => {
         try {
-          console.log("useFocusEffect running");
           const storedUserId = await AsyncStorage.getItem("userId");
           if (!storedUserId) {
             router.replace("/login");
@@ -68,7 +66,6 @@ export default function Community() {
           }
           setUserId(parseInt(storedUserId));
 
-          // Fetch user role from API
           const response = await fetch(
             `${API_BASE_URL}/api/users/${storedUserId}`,
             {
@@ -78,20 +75,19 @@ export default function Community() {
           const userData = await response.json();
           setUserRole(userData.userRole);
 
-          // Fetch both owner and non-owner rooms
           await fetchOwnerRooms();
           await fetchNonOwnerRooms();
           if (userData.userRole !== "ADMIN") {
             await fetchPublicRooms();
           }
         } catch (error) {
-          Alert.alert("Error", "Failed to load user data");
+          Alert.alert(i18n.t("common.error"), i18n.t("community.errorFetching"));
         } finally {
           setLoading(false);
         }
       };
 
-      loadUserData();
+      loadUserData();[]
     }, [])
   );
 
@@ -100,16 +96,17 @@ export default function Community() {
       const response = await fetch(`${API_BASE_URL}/rooms/getPub`, {
         credentials: "include",
       });
-      if (!response.ok) throw new Error("Failed to fetch public rooms");
+      if (!response.ok) throw new Error(i18n.t("community.errorFetching"));
       const data = await response.json();
       setPublicRooms(data);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not load public rooms"
+        i18n.t("common.error"),
+        error instanceof Error ? error.message : i18n.t("community.errorFetching")
       );
     }
   };
+
   const filteredPublicRooms = publicRooms.filter(
     (room) =>
       room.ownerId !== userId &&
@@ -123,15 +120,14 @@ export default function Community() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to fetch owner rooms");
+      if (!response.ok) throw new Error(i18n.t("community.errorFetching"));
 
       const data = await response.json();
-      console.log("Owner rooms:", data);
       setOwnerRooms(data);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not load owner rooms"
+        i18n.t("common.error"),
+        error instanceof Error ? error.message : i18n.t("community.errorFetching")
       );
     }
   };
@@ -142,22 +138,21 @@ export default function Community() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to fetch rooms");
+      if (!response.ok) throw new Error(i18n.t("community.errorFetching"));
 
       const data = await response.json();
-      console.log("Non-owner rooms:", data);
       setNonOwnerRooms(data);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not load rooms"
+        i18n.t("common.error"),
+        error instanceof Error ? error.message : i18n.t("community.errorFetching")
       );
     }
   };
 
   const createRoom = async () => {
     if (!roomName.trim()) {
-      Alert.alert("Error", "Room name is required");
+      Alert.alert(i18n.t("common.error"), i18n.t("community.roomNameRequired"));
       return;
     }
 
@@ -168,7 +163,6 @@ export default function Community() {
           ? `${API_BASE_URL}/rooms`
           : `${API_BASE_URL}/rooms/createPR/${userId}`;
 
-      // Create a complete room object
       const roomData = {
         roomName,
         ownerId: userId,
@@ -179,36 +173,35 @@ export default function Community() {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(roomData), // Send full object
+        body: JSON.stringify(roomData),
         credentials: "include",
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Room creation failed: ${response.status} ${errorText}`
+          `${i18n.t("community.errorCreating")}: ${response.status} ${errorText}`
         );
       }
 
       const newRoom = await response.json();
-      // Add to owner rooms since the user created it
       setOwnerRooms((prev) => [...prev, newRoom]);
       setShowModal(false);
       setRoomName("");
+      Alert.alert(i18n.t("community.successCreate"));
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not create room"
+        i18n.t("community.errorCreating"),
+        error instanceof Error ? error.message : i18n.t("community.errorCreating")
       );
     } finally {
       setIsCreating(false);
     }
   };
 
-  // New join room function that uses the /rooms/joinPR endpoint
   const joinRoom = async () => {
     if (!joinCode.trim()) {
-      Alert.alert("Error", "Join code is required");
+      Alert.alert(i18n.t("community.errorJoining"), i18n.t("community.joinCodeRequired"));
       return;
     }
     try {
@@ -221,17 +214,39 @@ export default function Community() {
       );
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to join room: ${response.status} ${errorText}`);
+        throw new Error(
+          `${i18n.t("community.errorJoining")}: ${response.status} ${errorText}`
+        );
       }
-      Alert.alert("Success", "Joined room successfully!");
-      // Refresh both room lists
+      Alert.alert(i18n.t("community.successJoin"));
       await fetchOwnerRooms();
       await fetchNonOwnerRooms();
       setJoinCode("");
+      setShowJoinModal(false);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Error joining room"
+        i18n.t("common.error"),
+        error instanceof Error ? error.message : i18n.t("community.errorJoining")
+      );
+    }
+  };
+
+  const deleteRoom = async (roomId: number) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(i18n.t("community.errorDeleting"));
+      }
+
+      setOwnerRooms(ownerRooms.filter((room) => room.roomId !== roomId));
+      Alert.alert(i18n.t("community.successDelete"));
+    } catch (error) {
+      Alert.alert(
+        error instanceof Error ? error.message : i18n.t("community.errorDeleting")
       );
     }
   };
@@ -241,6 +256,24 @@ export default function Community() {
       pathname: "../room",
       params: { id: roomId.toString() },
     });
+  };
+
+  const confirmDelete = (roomId: number) => {
+    Alert.alert(
+      i18n.t("community.deleteRoomTitle"),
+      i18n.t("community.deleteRoomMessage"),
+      [
+        {
+          text: i18n.t("community.cancel"),
+          style: "cancel",
+        },
+        {
+          text: i18n.t("community.delete"),
+          onPress: () => deleteRoom(roomId),
+          style: "destructive",
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -254,173 +287,141 @@ export default function Community() {
   return (
     <View style={styles.container}>
       <BackgroundVideo />
-      <View style={styles.overlay} />
+      <LinearGradient
+        colors={["rgba(0,0,0,0.8)", "transparent"]}
+        style={styles.gradient}
+      />
 
-      <ScrollView style={styles.content}>
-        <View style={styles.header}>
-          <Image
-            source={require("../../assets/logo.png")}
-            style={styles.logo}
+      {/* Header */}
+      <View style={[styles.header, { flexDirection }]}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons
+            name={isRTL ? "arrow-forward" : "arrow-back"}
+            size={24}
+            color="white"
           />
-          <Text style={styles.greeting}>
-            {userRole === "ADMIN" ? "Admin Community" : "Your Community"}
-          </Text>
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, textStyle]}>
+          {userRole === "ADMIN"
+            ? i18n.t("community.titleAdmin")
+            : i18n.t("community.titleUser")}
+        </Text>
+        <View style={{ width: 24 }} />
+      </View>
 
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* Create Room Button */}
+        <View style={[styles.buttonRow, { flexDirection }]}>
           <TouchableOpacity
             style={styles.createButton}
             onPress={() => setShowModal(true)}
           >
-            <Ionicons name="add" size={24} color="white" />
-            <Text style={styles.createButtonText}>
+            <Text style={styles.buttonText}>
               {userRole === "ADMIN"
-                ? "Create Public Room"
-                : "Create Private Room"}
+                ? i18n.t("community.createPublicRoom")
+                : i18n.t("community.createPrivateRoom")}
             </Text>
           </TouchableOpacity>
 
-          {/* New Join Room Section */}
-          {userRole === "REG" && (
-            <View style={styles.joinRoomContainer}>
-              <TextInput
-                style={styles.joinRoomInput}
-                placeholder="Enter room join code"
-                placeholderTextColor="#888"
-                value={joinCode}
-                onChangeText={setJoinCode}
-              />
-              <TouchableOpacity
-                style={styles.joinRoomButton}
-                onPress={joinRoom}
-              >
-                <Text style={styles.joinRoomButtonText}>Join Room</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <TouchableOpacity
+            style={styles.joinButton}
+            onPress={() => setShowJoinModal(true)}
+          >
+            <Text style={styles.buttonText}>
+              {i18n.t("community.joinRoomButton")}
+            </Text>
+          </TouchableOpacity>
         </View>
 
+        {/* Rooms You Own */}
+        <Text style={[styles.sectionTitle, textStyle]}>
+          {i18n.t("community.roomsOwned")}
+        </Text>
+        {ownerRooms.length === 0 ? (
+          <Text style={[styles.emptyText, textStyle]}>
+            {i18n.t("community.noRoomsOwned")}
+          </Text>
+        ) : (
+          ownerRooms.map((room) => (
+            <TouchableOpacity
+              key={room.roomId}
+              style={[styles.roomContainer, { flexDirection }]}
+              onPress={() => handleRoomPress(room.roomId)}
+              onLongPress={() => confirmDelete(room.roomId)}
+            >
+              <View style={styles.roomInfo}>
+                <Text style={[styles.roomName, textStyle]}>
+                  {room.roomName}
+                </Text>
+              </View>
+              <Ionicons
+                name={isRTL ? "arrow-back" : "arrow-forward"}
+                size={20}
+                color="white"
+              />
+            </TouchableOpacity>
+          ))
+        )}
+
+        {/* Joined Rooms */}
+        <Text style={[styles.sectionTitle, textStyle]}>
+          {i18n.t("community.joinedRooms")}
+        </Text>
+        {nonOwnerRooms.length === 0 ? (
+          <Text style={[styles.emptyText, textStyle]}>
+            {i18n.t("community.noJoinedRooms")}
+          </Text>
+        ) : (
+          nonOwnerRooms.map((room) => (
+            <TouchableOpacity
+              key={room.roomId}
+              style={[styles.roomContainer, { flexDirection }]}
+              onPress={() => handleRoomPress(room.roomId)}
+            >
+              <View style={styles.roomInfo}>
+                <Text style={[styles.roomName, textStyle]}>
+                  {room.roomName}
+                </Text>
+              </View>
+              <Ionicons
+                name={isRTL ? "arrow-back" : "arrow-forward"}
+                size={20}
+                color="white"
+              />
+            </TouchableOpacity>
+          ))
+        )}
+
+        {/* Public Rooms (for non-admin users) */}
         {userRole !== "ADMIN" && (
           <>
-            {/* Rooms You Own */}
-            <View style={styles.roomsSection}>
-              <Text style={styles.sectionTitle}>Rooms You Own</Text>
-              {ownerRooms.length === 0 ? (
-                <Text style={styles.emptyText}>No rooms owned yet</Text>
-              ) : (
-                ownerRooms.map((room) => (
-                  <View
-                    key={room.roomId}
-                    style={[
-                      styles.roomItem,
-                      styles.ownerRoomItem,
-                      {
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      },
-                    ]}
-                  >
-                    <TouchableOpacity
-                      style={{ flex: 1 }}
-                      onPress={() => handleRoomPress(room.roomId)}
-                    >
-                      <View style={styles.roomHeader}>
-                        <Text style={styles.roomName}>{room.roomName}</Text>
-                        <Ionicons name="star" size={16} color="#FFD700" />
-                      </View>
-                      <Text style={styles.roomDetails}>
-                        {room.type === "PUBLIC" ? "Public" : "Private"} • Owner
-                        {room.joinCode && ` • Code: ${room.joinCode}`}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        Alert.alert(
-                          "Delete Room",
-                          "Are you sure you want to delete this room? This will delete all posts in the room.",
-                          [
-                            { text: "Cancel", style: "cancel" },
-                            {
-                              text: "Delete",
-                              style: "destructive",
-                              onPress: async () => {
-                                try {
-                                  const response = await fetch(
-                                    `${API_BASE_URL}/rooms/${room.roomId}`,
-                                    {
-                                      method: "DELETE",
-                                      credentials: "include",
-                                    }
-                                  );
-                                  if (!response.ok)
-                                    throw new Error("Failed to delete room");
-                                  setOwnerRooms((prev) =>
-                                    prev.filter((r) => r.roomId !== room.roomId)
-                                  );
-                                  Alert.alert("Success", "Room deleted!");
-                                } catch (error) {
-                                  Alert.alert(
-                                    "Error",
-                                    error instanceof Error
-                                      ? error.message
-                                      : "Could not delete room"
-                                  );
-                                }
-                              },
-                            },
-                          ]
-                        );
-                      }}
-                      style={{ marginLeft: 10, padding: 8 }}
-                    >
-                      <Ionicons name="trash" size={22} color="#ef4444" />
-                    </TouchableOpacity>
+            <Text style={[styles.sectionTitle, textStyle]}>
+              {i18n.t("community.publicRooms")}
+            </Text>
+            {filteredPublicRooms.length === 0 ? (
+              <Text style={[styles.emptyText, textStyle]}>
+                {i18n.t("community.noPublicRooms")}
+              </Text>
+            ) : (
+              filteredPublicRooms.map((room) => (
+                <TouchableOpacity
+                  key={room.roomId}
+                  style={[styles.roomContainer, { flexDirection }]}
+                  onPress={() => handleRoomPress(room.roomId)}
+                >
+                  <View style={styles.roomInfo}>
+                    <Text style={[styles.roomName, textStyle]}>
+                      {room.roomName}
+                    </Text>
                   </View>
-                ))
-              )}
-            </View>
-
-            {/* Joined Rooms */}
-            <View style={styles.roomsSection}>
-              <Text style={styles.sectionTitle}>Joined Rooms</Text>
-              {nonOwnerRooms.length === 0 ? (
-                <Text style={styles.emptyText}>No joined rooms yet</Text>
-              ) : (
-                nonOwnerRooms.map((room) => (
-                  <TouchableOpacity
-                    key={room.roomId}
-                    style={styles.roomItem}
-                    onPress={() => handleRoomPress(room.roomId)}
-                  >
-                    <Text style={styles.roomName}>{room.roomName}</Text>
-                    <Text style={styles.roomDetails}>
-                      {room.type === "PUBLIC" ? "Public" : "Private"} • Owner:{" "}
-                      {room.ownerId}
-                    </Text>
-                  </TouchableOpacity>
-                ))
-              )}
-            </View>
-
-            {/* Public Rooms */}
-            <View style={styles.roomsSection}>
-              <Text style={styles.sectionTitle}>Public Rooms</Text>
-              {filteredPublicRooms.length === 0 ? (
-                <Text style={styles.emptyText}>No public rooms available</Text>
-              ) : (
-                filteredPublicRooms.map((room) => (
-                  <TouchableOpacity
-                    key={room.roomId}
-                    style={styles.roomItem}
-                    onPress={() => handleRoomPress(room.roomId)}
-                  >
-                    <Text style={styles.roomName}>{room.roomName}</Text>
-                    <Text style={styles.roomDetails}>
-                      Public • Owner: {room.ownerId}
-                    </Text>
-                  </TouchableOpacity>
-                ))
-              )}
-            </View>
+                  <Ionicons
+                    name={isRTL ? "arrow-back" : "arrow-forward"}
+                    size={20}
+                    color="white"
+                  />
+                </TouchableOpacity>
+              ))
+            )}
           </>
         )}
       </ScrollView>
@@ -429,43 +430,85 @@ export default function Community() {
       <Modal
         visible={showModal}
         animationType="slide"
-        transparent
+        transparent={true}
         onRequestClose={() => setShowModal(false)}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
+            <Text style={[styles.modalTitle, textStyle]}>
               {userRole === "ADMIN"
-                ? "Create Public Room"
-                : "Create Private Room"}
+                ? i18n.t("community.createPublicRoom")
+                : i18n.t("community.createPrivateRoom")}
             </Text>
-
             <TextInput
-              style={styles.input}
-              placeholder="Room name"
+              style={[styles.input, textStyle]}
+              placeholder={i18n.t("community.roomNamePlaceholder")}
+              placeholderTextColor="#999"
               value={roomName}
               onChangeText={setRoomName}
-              placeholderTextColor="#888"
             />
-
-            <View style={styles.modalButtons}>
+            <View style={[styles.modalButtons, { flexDirection }]}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={styles.cancelButton}
                 onPress={() => setShowModal(false)}
               >
-                <Text style={styles.buttonText}>Cancel</Text>
+                <Text style={styles.buttonText}>
+                  {i18n.t("community.cancel")}
+                </Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalCreateButton]}
+                style={styles.createModalButton}
                 onPress={createRoom}
                 disabled={isCreating}
               >
                 {isCreating ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text style={styles.buttonText}>Create</Text>
+                  <Text style={styles.buttonText}>
+                    {i18n.t("community.create")}
+                  </Text>
                 )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Join Room Modal */}
+      <Modal
+        visible={showJoinModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowJoinModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={[styles.modalTitle, textStyle]}>
+              {i18n.t("community.joinRoomButton")}
+            </Text>
+            <TextInput
+              style={[styles.input, textStyle]}
+              placeholder={i18n.t("community.joinRoomPlaceholder")}
+              placeholderTextColor="#999"
+              value={joinCode}
+              onChangeText={setJoinCode}
+            />
+            <View style={[styles.modalButtons, { flexDirection }]}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowJoinModal(false)}
+              >
+                <Text style={styles.buttonText}>
+                  {i18n.t("community.cancel")}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.createModalButton}
+                onPress={joinRoom}
+              >
+                <Text style={styles.buttonText}>
+                  {i18n.t("community.joinRoomButton")}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -476,171 +519,137 @@ export default function Community() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: "black",
+  },
+  gradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: "100%",
+  },
   center: {
     justifyContent: "center",
     alignItems: "center",
   },
-  backgroundVideo: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  content: {
-    padding: 20,
-    paddingTop: 50,
-  },
   header: {
-    alignItems: "center",
-    marginBottom: 30,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 15,
-  },
-  greeting: {
-    fontSize: 24,
-    color: "#fff",
-    fontWeight: "600",
-  },
-  createButton: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#16A34A",
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 15,
+    padding: 20,
+    paddingTop: Constants.statusBarHeight + 10,
   },
-  createButtonText: {
-    color: "#fff",
-    marginLeft: 8,
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  joinRoomContainer: {
-    marginTop: 15,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  joinRoomInput: {
+  headerTitle: {
+    color: "white",
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
     flex: 1,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    color: "white",
-    padding: 12,
-    borderRadius: 8,
-    marginRight: 10,
   },
-  joinRoomButton: {
-    backgroundColor: "#334155",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+  scrollContainer: {
+    padding: 20,
+    paddingBottom: 100,
   },
-  joinRoomButtonText: {
-    color: "white",
-    fontWeight: "600",
-  },
-  roomsSection: {
-    borderRadius: 15,
-    padding: 15,
-    backgroundColor: "rgba(255,255,255,0.1)",
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 20,
-    color: "#fff",
-    fontWeight: "600",
-    marginBottom: 15,
-  },
-  roomItem: {
-    backgroundColor: "rgba(255,255,255,0.15)",
+  createButton: {
+    backgroundColor: "#16A34A",
     padding: 15,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  ownerRoomItem: {
-    backgroundColor: "rgba(255,215,0,0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.3)",
-  },
-  roomHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 5,
-  },
-  roomName: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "500",
+    borderRadius: 10,
     flex: 1,
+    marginRight: 10,
   },
-  roomDetails: {
-    color: "#ffffffaa",
-    fontSize: 14,
+  joinButton: {
+    backgroundColor: "#3B82F6",
+    padding: 15,
+    borderRadius: 10,
+    flex: 1,
+    marginLeft: 10,
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  sectionTitle: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 20,
+    marginBottom: 10,
   },
   emptyText: {
-    color: "#ffffff88",
+    color: "#999",
     textAlign: "center",
-    fontSize: 16,
     marginVertical: 20,
+  },
+  roomContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  roomInfo: {
+    flex: 1,
+  },
+  roomName: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  roomType: {
+    color: "#888",
+    fontSize: 14,
   },
   modalContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
+    backgroundColor: "#1e1e1e",
     width: "80%",
-    backgroundColor: "#1e293b",
     borderRadius: 15,
     padding: 20,
   },
   modalTitle: {
-    fontSize: 20,
     color: "white",
+    fontSize: 18,
     fontWeight: "bold",
     marginBottom: 20,
-    textAlign: "center",
   },
   input: {
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "#333",
     color: "white",
-    padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
+    padding: 15,
     marginBottom: 20,
   },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  modalButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginHorizontal: 5,
-  },
   cancelButton: {
-    backgroundColor: "#64748b",
+    backgroundColor: "#6b7280",
+    padding: 15,
+    borderRadius: 10,
+    flex: 1,
+    marginRight: 10,
   },
-  modalCreateButton: {
+  createModalButton: {
     backgroundColor: "#16A34A",
-  },
-  buttonText: {
-    color: "white",
-    fontWeight: "bold",
+    padding: 15,
+    borderRadius: 10,
+    flex: 1,
+    marginLeft: 10,
   },
 });

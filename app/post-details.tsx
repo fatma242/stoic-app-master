@@ -18,6 +18,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
+import i18n from "../constants/i18n";
 
 const { width, height } = Dimensions.get("window");
 
@@ -55,13 +56,19 @@ interface Comment {
     postId: number;
   };
   report?: number;
-  likes?: User[]; // or number, depending on your backend response
+  likes?: User[];
   isLikedByUser?: boolean;
 }
 
 export default function PostDetailsScreen() {
   const router = useRouter();
   const { postId, roomId } = useLocalSearchParams();
+  
+  // تحديد اتجاه النص
+  const isRTL = i18n.locale === "ar";
+  const textStyle = isRTL ? styles.rtlText : styles.ltrText;
+  const flexDirection = isRTL ? "row-reverse" : "row";
+
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,7 +104,6 @@ export default function PostDetailsScreen() {
   }, []);
 
   // 2) Fetch post details, comments, and run entrance animations
-  //    only after we know postId AND userId, or when refreshCount changes.
   useEffect(() => {
     if (!postId || userId === null) return;
 
@@ -133,9 +139,10 @@ export default function PostDetailsScreen() {
         setUserId(parseInt(storedUserId));
       }
     } catch (error) {
-      console.error("Error loading user data:", error);
+      console.error(i18n.t("postDetails.loadUserError"), error);
     }
   };
+  
   const handleLikeComment = async (commentId: number) => {
     if (userId === null) return;
 
@@ -147,14 +154,17 @@ export default function PostDetailsScreen() {
           credentials: "include",
         }
       );
-      if (!response.ok) throw new Error("Failed to toggle like");
+      if (!response.ok) throw new Error(i18n.t("postDetails.likeCommentError"));
 
-      // Trigger a refresh to get updated like state (just like posts)
       setRefreshCount((prev) => prev + 1);
     } catch (error) {
-      Alert.alert("Error", "Could not toggle like on comment.");
+      Alert.alert(
+        i18n.t("postDetails.error"),
+        i18n.t("postDetails.likeCommentError")
+      );
     }
   };
+  
   const fetchPostDetails = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`, {
@@ -163,11 +173,10 @@ export default function PostDetailsScreen() {
           "Content-Type": "application/json",
         },
       });
-      if (!response.ok) throw new Error("Failed to fetch post");
+      if (!response.ok) throw new Error(i18n.t("postDetails.fetchPostError"));
 
       const data: any = await response.json();
 
-      // Process the likes data similar to room.tsx
       const likesArray = Array.isArray(data.likes)
         ? (data.likes as User[])
         : [];
@@ -177,13 +186,16 @@ export default function PostDetailsScreen() {
       const processedPost: Post = {
         ...data,
         likes: new Set(likesArray),
-        isLikedByUser: likedByMe, // This is the key fix
+        isLikedByUser: likedByMe,
       };
 
       setPost(processedPost);
     } catch (error) {
-      console.error("Error fetching post details:", error);
-      Alert.alert("Error", "Could not load post details");
+      console.error(i18n.t("postDetails.fetchPostError"), error);
+      Alert.alert(
+        i18n.t("postDetails.error"),
+        i18n.t("postDetails.loadPostError")
+      );
     }
   };
 
@@ -208,11 +220,10 @@ export default function PostDetailsScreen() {
       }
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch comments: ${response.status}`);
+        throw new Error(i18n.t("postDetails.fetchCommentsError"));
       }
 
       const data: Comment[] = await response.json();
-      // Set isLikedByUser for each comment
       const processedComments = data.map((comment) => ({
         ...comment,
         isLikedByUser:
@@ -222,7 +233,6 @@ export default function PostDetailsScreen() {
       }));
       setComments(processedComments);
 
-      // Animate comments in
       Animated.stagger(100, [
         Animated.timing(commentScaleAnim, {
           toValue: 1,
@@ -237,7 +247,7 @@ export default function PostDetailsScreen() {
         }),
       ]).start();
     } catch (error) {
-      console.error("Error fetching comments:", error);
+      console.error(i18n.t("postDetails.fetchCommentsError"), error);
       setComments([]);
     } finally {
       setCommentsLoading(false);
@@ -248,7 +258,6 @@ export default function PostDetailsScreen() {
   const handleLike = async (postId: number) => {
     if (likingPostIds.has(postId) || userId === null) return;
 
-    // Like animation
     Animated.sequence([
       Animated.timing(likeScaleAnim, {
         toValue: 1.3,
@@ -271,14 +280,15 @@ export default function PostDetailsScreen() {
         method: "PUT",
         credentials: "include",
       });
-      if (!response.ok) throw new Error("Failed to toggle like");
+      if (!response.ok) throw new Error(i18n.t("postDetails.likeError"));
 
-      // Trigger a refresh to get updated like state
       setRefreshCount((prev) => prev + 1);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not toggle like"
+        i18n.t("postDetails.error"),
+        error instanceof Error 
+          ? error.message 
+          : i18n.t("postDetails.likeError")
       );
     } finally {
       setLikingPostIds((prev) => {
@@ -293,20 +303,18 @@ export default function PostDetailsScreen() {
     if (reportingCommentIds.has(commentId) || reportedComments.has(commentId))
       return;
 
-    // Show confirmation dialog
     Alert.alert(
-      "Report Comment",
-      "Are you sure you want to report this comment for inappropriate content?",
+      i18n.t("postDetails.reportComment"),
+      i18n.t("postDetails.reportConfirm"),
       [
         {
-          text: "Cancel",
+          text: i18n.t("postDetails.cancel"),
           style: "cancel",
         },
         {
-          text: "Report",
+          text: i18n.t("postDetails.report"),
           style: "destructive",
           onPress: async () => {
-            // Report animation
             Animated.sequence([
               Animated.timing(reportScaleAnim, {
                 toValue: 0.8,
@@ -340,32 +348,30 @@ export default function PostDetailsScreen() {
               );
 
               if (!response.ok) {
-                throw new Error("Failed to report comment");
+                throw new Error(i18n.t("postDetails.reportError"));
               }
 
               const responseText = await response.text();
 
-              // Mark comment as reported
               setReportedComments((prev) => new Set(prev).add(commentId));
 
               if (responseText.includes("deleted")) {
                 Alert.alert(
-                  "Success",
-                  "Comment has been removed due to multiple reports"
+                  i18n.t("postDetails.success"),
+                  i18n.t("postDetails.commentRemoved")
                 );
-                // Refresh comments to remove the deleted comment
                 fetchComments();
               } else {
                 Alert.alert(
-                  "Success",
-                  "Comment has been reported successfully"
+                  i18n.t("postDetails.success"),
+                  i18n.t("postDetails.commentReported")
                 );
               }
             } catch (error) {
-              console.error("Error reporting comment:", error);
+              console.error(i18n.t("postDetails.reportError"), error);
               Alert.alert(
-                "Error",
-                "Could not report comment. Please try again."
+                i18n.t("postDetails.error"),
+                i18n.t("postDetails.reportError")
               );
             } finally {
               setReportingCommentIds((prev) => {
@@ -385,7 +391,6 @@ export default function PostDetailsScreen() {
 
     setIsCommenting(true);
     try {
-      // Updated endpoint and payload to match your Spring Boot controller
       const response = await fetch(
         `${API_BASE_URL}/api/Comments/comments/create`,
         {
@@ -402,28 +407,33 @@ export default function PostDetailsScreen() {
       );
 
       if (response.status === 401) {
-        Alert.alert("Error", "You must be logged in to comment");
+        Alert.alert(
+          i18n.t("postDetails.error"),
+          i18n.t("postDetails.mustLogin")
+        );
         return;
       }
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to add comment: ${errorText}`);
+        throw new Error(`${i18n.t("postDetails.commentError")}: ${errorText}`);
       }
 
       const newCommentData = await response.json();
 
-      // Add the new comment to the local state
       setComments((prevComments) => [newCommentData, ...prevComments]);
       setNewComment("");
 
-      // Optional: Re-fetch comments to ensure consistency
-      // fetchComments();
-
-      Alert.alert("Success", "Comment added successfully");
+      Alert.alert(
+        i18n.t("postDetails.success"),
+        i18n.t("postDetails.commentAdded")
+      );
     } catch (error) {
-      console.error("Error adding comment:", error);
-      Alert.alert("Error", "Could not add comment. Please try again.");
+      console.error(i18n.t("postDetails.commentError"), error);
+      Alert.alert(
+        i18n.t("postDetails.error"),
+        i18n.t("postDetails.commentError")
+      );
     } finally {
       setIsCommenting(false);
     }
@@ -432,7 +442,7 @@ export default function PostDetailsScreen() {
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
+      return date.toLocaleDateString(i18n.locale, {
         month: "short",
         day: "numeric",
         year: "numeric",
@@ -440,7 +450,7 @@ export default function PostDetailsScreen() {
         minute: "2-digit",
       });
     } catch (error) {
-      return "Unknown date";
+      return i18n.t("postDetails.unknownDate");
     }
   };
 
@@ -478,7 +488,9 @@ export default function PostDetailsScreen() {
           >
             <ActivityIndicator size="large" color="#10b981" />
           </Animated.View>
-          <Text style={styles.loadingText}>Loading your post...</Text>
+          <Text style={[styles.loadingText, textStyle]}>
+            {i18n.t("postDetails.loadingPost")}
+          </Text>
         </View>
       </LinearGradient>
     );
@@ -489,12 +501,16 @@ export default function PostDetailsScreen() {
       <LinearGradient colors={["#0f172a", "#1e293b"]} style={styles.center}>
         <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
         <Ionicons name="document-text-outline" size={64} color="#64748b" />
-        <Text style={styles.errorText}>Post not found</Text>
+        <Text style={[styles.errorText, textStyle]}>
+          {i18n.t("postDetails.postNotFound")}
+        </Text>
         <TouchableOpacity
           style={styles.retryButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.retryButtonText}>Go Back</Text>
+          <Text style={styles.retryButtonText}>
+            {i18n.t("postDetails.goBack")}
+          </Text>
         </TouchableOpacity>
       </LinearGradient>
     );
@@ -523,9 +539,15 @@ export default function PostDetailsScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={24} color="#10b981" />
+            <Ionicons 
+              name={isRTL ? "arrow-forward" : "arrow-back"} 
+              size={24} 
+              color="#10b981" 
+            />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Therapy Session</Text>
+          <Text style={[styles.headerTitle, textStyle]}>
+            {i18n.t("postDetails.therapySession")}
+          </Text>
           <View style={styles.headerRight}>
             <Ionicons name="heart-outline" size={20} color="#10b981" />
           </View>
@@ -539,8 +561,7 @@ export default function PostDetailsScreen() {
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
-        )
-        }
+        )}
         scrollEventThrottle={16}
       >
         {/* Post Details Card */}
@@ -558,7 +579,7 @@ export default function PostDetailsScreen() {
             style={styles.cardGradient}
           >
             <View style={styles.postHeader}>
-              <View style={styles.authorInfo}>
+              <View style={[styles.authorInfo, { flexDirection }]}>
                 <View style={styles.avatarContainer}>
                   <LinearGradient
                     colors={["#10b981", "#059669"]}
@@ -570,22 +591,27 @@ export default function PostDetailsScreen() {
                   </LinearGradient>
                 </View>
                 <View>
-                  <Text style={styles.postAuthor}>
-                    {post.author?.username || "Anonymous"}
+                  <Text style={[styles.postAuthor, textStyle]}>
+                    {post.author?.username || i18n.t("postDetails.anonymous")}
                   </Text>
-                  <Text style={styles.postDate}>{formatDate(post.date)}</Text>
+                  <Text style={[styles.postDate, textStyle]}>
+                    {formatDate(post.date)}
+                  </Text>
                 </View>
               </View>
             </View>
 
-            <Text style={styles.postTitle}>{post.title}</Text>
-            <Text style={styles.postContent}>{post.content}</Text>
+            <Text style={[styles.postTitle, textStyle]}>{post.title}</Text>
+            <Text style={[styles.postContent, textStyle]}>{post.content}</Text>
 
             {/* Like Button */}
             <Animated.View
               style={[
                 styles.interactionBar,
-                { transform: [{ scale: likeScaleAnim }] },
+                { 
+                  transform: [{ scale: likeScaleAnim }],
+                  flexDirection
+                },
               ]}
             >
               <TouchableOpacity
@@ -639,9 +665,9 @@ export default function PostDetailsScreen() {
             },
           ]}
         >
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              Supportive Comments ({comments.length})
+          <View style={[styles.sectionHeader, { flexDirection }]}>
+            <Text style={[styles.sectionTitle, textStyle]}>
+              {i18n.t("postDetails.supportiveComments", { count: comments.length })}
             </Text>
             <Ionicons name="chatbubbles" size={24} color="#10b981" />
           </View>
@@ -650,11 +676,11 @@ export default function PostDetailsScreen() {
           <View style={styles.addCommentContainer}>
             <LinearGradient
               colors={["#1e293b", "#334155"]}
-              style={styles.commentInputContainer}
+              style={[styles.commentInputContainer, { flexDirection }]}
             >
               <TextInput
-                style={styles.commentInput}
-                placeholder="Share your thoughts..."
+                style={[styles.commentInput, textStyle]}
+                placeholder={i18n.t("postDetails.shareYourThoughts")}
                 placeholderTextColor="#64748b"
                 value={newComment}
                 onChangeText={setNewComment}
@@ -694,8 +720,8 @@ export default function PostDetailsScreen() {
           {commentsLoading ? (
             <View style={styles.commentsLoadingContainer}>
               <ActivityIndicator size="small" color="#10b981" />
-              <Text style={styles.commentsLoadingText}>
-                Loading comments...
+              <Text style={[styles.commentsLoadingText, textStyle]}>
+                {i18n.t("postDetails.loadingComments")}
               </Text>
             </View>
           ) : (
@@ -730,8 +756,8 @@ export default function PostDetailsScreen() {
                     colors={["#1e293b", "#334155"]}
                     style={styles.commentGradient}
                   >
-                    <View style={styles.commentHeader}>
-                      <View style={styles.commentLeftSection}>
+                    <View style={[styles.commentHeader, { flexDirection }]}>
+                      <View style={[styles.commentLeftSection, { flexDirection }]}>
                         <View style={styles.commentAvatar}>
                           <LinearGradient
                             colors={["#10b981", "#059669"]}
@@ -745,10 +771,10 @@ export default function PostDetailsScreen() {
                           </LinearGradient>
                         </View>
                         <View style={styles.commentMeta}>
-                          <Text style={styles.commentAuthor}>
-                            {comment.author?.username || "Anonymous"}
+                          <Text style={[styles.commentAuthor, textStyle]}>
+                            {comment.author?.username || i18n.t("postDetails.anonymous")}
                           </Text>
-                          <Text style={styles.commentDate}>
+                          <Text style={[styles.commentDate, textStyle]}>
                             {formatDate(comment.date)}
                           </Text>
                         </View>
@@ -803,11 +829,11 @@ export default function PostDetailsScreen() {
                         </TouchableOpacity>
                       </Animated.View>
                     </View>
-                    <Text style={styles.commentContent}>{comment.content}</Text>
+                    <Text style={[styles.commentContent, textStyle]}>{comment.content}</Text>
 
                     <View
                       style={{
-                        flexDirection: "row",
+                        flexDirection,
                         alignItems: "center",
                         marginTop: 8,
                       }}
@@ -839,19 +865,19 @@ export default function PostDetailsScreen() {
                           {comment.likes ? comment.likes.length : 0}
                         </Text>
                       </TouchableOpacity>
-
-                      {/* Report Button ... */}
                     </View>
 
                     {/* Report Status Indicator */}
                     {reportedComments.has(comment.id) && (
-                      <View style={styles.reportStatusContainer}>
+                      <View style={[styles.reportStatusContainer, { flexDirection }]}>
                         <Ionicons
                           name="checkmark-circle"
                           size={14}
                           color="#10b981"
                         />
-                        <Text style={styles.reportStatusText}>Reported</Text>
+                        <Text style={[styles.reportStatusText, textStyle]}>
+                          {i18n.t("postDetails.reported")}
+                        </Text>
                       </View>
                     )}
                   </LinearGradient>
@@ -863,9 +889,11 @@ export default function PostDetailsScreen() {
           {!commentsLoading && comments.length === 0 && (
             <View style={styles.emptyComments}>
               <Ionicons name="chatbubble-outline" size={48} color="#374151" />
-              <Text style={styles.emptyCommentsText}>No comments yet</Text>
-              <Text style={styles.emptyCommentsSubtext}>
-                Be the first to share your thoughts
+              <Text style={[styles.emptyCommentsText, textStyle]}>
+                {i18n.t("postDetails.noComments")}
+              </Text>
+              <Text style={[styles.emptyCommentsSubtext, textStyle]}>
+                {i18n.t("postDetails.beFirst")}
               </Text>
             </View>
           )}
@@ -965,7 +993,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   authorInfo: {
-    flexDirection: "row",
     alignItems: "center",
   },
   avatarContainer: {
@@ -1012,7 +1039,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   interactionBar: {
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingTop: 20,
@@ -1070,7 +1096,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sectionHeader: {
-    flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
     justifyContent: "space-between",
@@ -1084,7 +1109,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   commentInputContainer: {
-    flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#1e293b",
     borderRadius: 16,
@@ -1131,13 +1155,11 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   commentHeader: {
-    flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
     justifyContent: "space-between",
   },
   commentLeftSection: {
-    flexDirection: "row",
     alignItems: "center",
   },
   commentAvatar: {
@@ -1190,7 +1212,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   reportStatusContainer: {
-    flexDirection: "row",
     alignItems: "center",
     marginTop: 4,
   },
@@ -1234,5 +1255,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
     fontSize: 16,
+  },
+  rtlText: {
+    textAlign: "right",
+  },
+  ltrText: {
+    textAlign: "left",
   },
 });
