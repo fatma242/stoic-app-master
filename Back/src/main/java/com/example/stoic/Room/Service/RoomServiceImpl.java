@@ -1,5 +1,8 @@
 package com.example.stoic.Room.Service;
 
+import com.example.stoic.Notification.Model.Notification;
+import com.example.stoic.Notification.Model.NotificationType;
+import com.example.stoic.Notification.Service.NotificationService;
 import com.example.stoic.Room.Model.Room;
 import com.example.stoic.Room.Repo.RoomRepo;
 import com.example.stoic.Room.dto.RoomDTO;
@@ -9,6 +12,7 @@ import com.example.stoic.User.Repo.UserRepo;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 
+import org.checkerframework.checker.units.qual.s;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,10 +24,13 @@ public class RoomServiceImpl implements RoomService {
 
     private final RoomRepo roomRepo;
     private final UserRepo userRepo;
+    private Notification notification;
+    private final NotificationService notificationService;
 
-    public RoomServiceImpl(RoomRepo roomRepo, UserRepo userRepo) {
+    public RoomServiceImpl(RoomRepo roomRepo, UserRepo userRepo, NotificationService notificationService) {
         this.roomRepo = roomRepo;
         this.userRepo = userRepo;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -72,6 +79,11 @@ public class RoomServiceImpl implements RoomService {
             // userId));
             // room.removeUser(user);
             roomRepo.deleteUserFromRoom(userId, roomId);
+            notificationService.createNotification(
+                    userRepo.findById(userId).orElse(null),
+                    "You have been removed from a room",
+                    "You have been removed from room " + roomId,
+                    NotificationType.USER_REMOVED);
             System.out.println("User removed from room successfully: " + userId + " from room " + roomId);
             // roomRepo.save(room);
 
@@ -184,23 +196,51 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public Void joinRoom(User user, String join_code) {
+    public int joinRoom(User user, String join_code) {
         try {
 
             Room room = roomRepo.findRoomByjoin_code(join_code);
             if (room == null) {
-                throw new RuntimeException("Room not found with join code: " + join_code);
+                return 3;
+
             }
+
+            List<User> usersInRoom = room.getUsers();
+            for (User u : usersInRoom) {
+                if (u.getUserId() == user.getUserId()) {
+
+                    return 2;
+                }
+            }
+
             room.adduser(user); // Assuming adduser method is defined in Room class
-            roomRepo.save(room); // Save the updated room with the new user
+            roomRepo.save(room);
+            notificationService.createNotification(
+                    user,
+                    "Room Joined",
+                    "You have successfully joined the room: " + room.getRoomName(),
+                    NotificationType.USER_JOINED);
+
+            for (User u : usersInRoom) {
+                if (u.getUserId() != user.getUserId()) {
+                    notificationService.createNotification(
+                            u,
+                            "New User Joined",
+                            user.getUsername() + " has joined the room: " + room.getRoomName(),
+                            NotificationType.USER_JOINED);
+                }
+            }
+
+            return 1; // Successfully joined the room
+            // Save the updated room with the new user
             // Logic to add user to the room
             // For example, you might want to add the user to the room's Users list
             // room.getUsers().add(user);
             // roomRepo.save(room);
         } catch (Exception e) {
+
             throw new RuntimeException("Failed to join room with join code: " + join_code, e);
         }
-        return null;
     }
 
     // @Override

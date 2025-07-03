@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons, Entypo } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { HeaderWithNotifications } from '../../components/HeaderWithNotifications';
 
 // Fix: Use require for local images
 const chatbotIcon = require('../../assets/chatbot.png');
@@ -356,9 +357,9 @@ Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user
   return (
     <ImageBackground source={require('../../assets/background-photo.png')} style={styles.container} resizeMode="cover">
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
+        <HeaderWithNotifications 
+          style={{ backgroundColor: 'transparent', flex: 0 }}
+        />
         <Image source={chatbotIcon} style={styles.avatar} />
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>Stoic AI</Text>

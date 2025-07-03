@@ -10,6 +10,9 @@ import lombok.*;
 
 import java.util.*;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 
 
 @Data
@@ -50,6 +53,7 @@ public class User {
 
     @JsonIgnore
     @ManyToMany(mappedBy = "Users")
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private List<Room> rooms;
 
     // Getters and Setters

@@ -21,6 +21,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { useFocusEffect } from "@react-navigation/native";
 import i18n from "../../constants/i18n";
+import { HeaderWithNotifications } from "../../components/HeaderWithNotifications";
 
 // Type definitions
 type RoomType = "PUBLIC" | "PRIVATE";
@@ -300,21 +301,15 @@ export default function Community() {
       />
 
       {/* Header */}
-      <View style={[styles.header, { flexDirection }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons
-            name={isRTL ? "arrow-forward" : "arrow-back"}
-            size={24}
-            color="white"
-          />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, textStyle]}>
-          {userRole === "ADMIN"
-            ? i18n.t("community.titleAdmin")
-            : i18n.t("community.titleUser")}
-        </Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <HeaderWithNotifications 
+        isRTL={isRTL}
+        style={styles.header}
+      />
+      <Text style={[styles.headerTitle, textStyle]}>
+        {userRole === "ADMIN"
+          ? i18n.t("community.titleAdmin")
+          : i18n.t("community.titleUser")}
+      </Text>
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Create Room Button */}

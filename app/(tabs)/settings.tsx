@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackgroundVideo from '@/components/BackgroundVideo';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import i18n from "../../constants/i18n";
+import { HeaderWithNotifications } from '../../components/HeaderWithNotifications';
 
 export default function Settings() {
   const router = useRouter();
@@ -101,7 +102,20 @@ export default function Settings() {
 
   return (
     <View style={styles.container} key={key}>
-      <View style={[styles.languageContainer, { marginTop: 10 }]}>
+      <View style={{
+        position: 'absolute',
+        top: 40,
+        right: 10,
+        zIndex: 1000,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10
+      }}>
+        <HeaderWithNotifications 
+          showBackButton={false}
+          isRTL={isRTL}
+          style={{ backgroundColor: 'transparent' }}
+        />
         <LanguageSwitcher />
       </View>
       <BackgroundVideo />

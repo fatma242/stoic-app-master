@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Entity
 @Table(name = "post")
 @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
@@ -39,6 +42,7 @@ public class Post {
 
     @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinTable(name = "post_likes", joinColumns = @JoinColumn(name = "post_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private List<User> likes = new ArrayList<>();
 
     @JsonIgnore

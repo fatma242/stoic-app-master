@@ -4,7 +4,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
 
 public enum NotificationType {
+    USER_JOINED,
+    POST_CREATED,
+    COMMENT_ADDED,
+    SYSTEM_UPDATE,
     REMINDER,
-    MESSAGE,
-    POST
+    POST_LIKED,
+    COMMENT_LIKED,
+    USER_REMOVED,
 }

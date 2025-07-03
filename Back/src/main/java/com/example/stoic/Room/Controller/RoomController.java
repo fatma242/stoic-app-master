@@ -1,5 +1,7 @@
 package com.example.stoic.Room.Controller;
 
+import com.example.stoic.Notification.Model.NotificationType;
+import com.example.stoic.Notification.Service.NotificationService;
 import com.example.stoic.Post.Model.Post;
 import com.example.stoic.Post.Repo.PostRepo;
 import com.example.stoic.Post.Service.PostServiceImpl;
@@ -38,11 +40,13 @@ public class RoomController {
     private final RoomServiceImpl roomService;
     private final PostRepo postRepo;
     private final UserServiceImpl uServiceImpl;
+    private final NotificationService notificationService;
 
-    public RoomController(RoomServiceImpl roomService, PostRepo postRepo, UserServiceImpl uServiceImpl) {
+    public RoomController(RoomServiceImpl roomService, PostRepo postRepo, UserServiceImpl uServiceImpl,NotificationService notificationService) {
         this.roomService = roomService;
         this.postRepo = postRepo;
         this.uServiceImpl = uServiceImpl;
+        this.notificationService=notificationService;
     }
 
     @GetMapping("/")
@@ -138,9 +142,16 @@ public class RoomController {
             return new ResponseEntity<>("Forbidden", HttpStatus.FORBIDDEN);
 
         // Join the room
-        roomService.joinRoom(user, joinCode);
-
-        return new ResponseEntity<>(HttpStatus.OK);
+        int result = roomService.joinRoom(user, joinCode);
+        if (result == 1) {
+            return new ResponseEntity<>(HttpStatus.OK);
+        } else if (result == 2) {
+            return new ResponseEntity<>("Already a member of this room", HttpStatus.CONFLICT);
+        } else if (result == 3) {
+            return new ResponseEntity<>("Room not found with join code: " + joinCode, HttpStatus.NOT_FOUND);
+        } else {
+            return new ResponseEntity<>("Failed to join room", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @GetMapping("/users")
@@ -177,7 +188,19 @@ public class RoomController {
                 post.getLikes().add(user);
             }
             Post savedPost = postRepo.save(post);
-
+            User temp=savedPost.getAuthor();
+            // notificationService.createNotification(
+            //         user,
+            //         "Post Li",
+            //         "You have successfully joined the room: " + room.getRoomName(),
+            //         NotificationType.USER_JOINED);
+            if (!alreadyLiked){
+            notificationService.createNotification(
+                            temp,
+                            "Your post is getting recognized! ",
+                            user.getUsername()+ " Liked your post",
+                            NotificationType.POST_LIKED);
+            }
             // Return the updated post data
             return savedPost.getLikes().size(); // Return the number of likes
 
@@ -341,6 +364,7 @@ public class RoomController {
                 post.setRoom(room);
 
                 Post savedPost = postService.savePost(post);
+                
                 return new ResponseEntity<>(savedPost, HttpStatus.CREATED);
 
             } catch (Exception e) {

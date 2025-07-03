@@ -23,6 +23,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 import i18n from "../constants/i18n";
+import { HeaderWithNotifications } from "../components/HeaderWithNotifications";
+
 
 // Type definitions
 interface User {
@@ -63,8 +65,10 @@ interface Post {
 
 interface Notification {
   id: number;
-  content: string;
-  read: boolean;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
   createdAt: string;
 }
 
@@ -94,8 +98,6 @@ export default function RoomScreen() {
   const [editedName, setEditedName] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [roomUsers, setRoomUsers] = useState<User[]>([]);
   const [likingPostIds, setLikingPostIds] = useState<Set<number>>(new Set());
   const [refreshCount, setRefreshCount] = useState(0);
@@ -121,15 +123,6 @@ export default function RoomScreen() {
             const newMessage = JSON.parse(message.body);
             setMessages((prev) => [...prev, newMessage]);
             scrollToBottom();
-          }
-        );
-
-        stompClient.current.subscribe(
-          `/user/${userId}/queue/notifications`,
-          (message: any) => {
-            const notification = JSON.parse(message.body);
-            setNotifications((prev) => [notification, ...prev]);
-            setUnreadCount((prev) => prev + 1);
           }
         );
       },
@@ -236,31 +229,6 @@ export default function RoomScreen() {
       Alert.alert(
         i18n.t("room.error"),
         error instanceof Error ? error.message : i18n.t("room.loadPostsError")
-      );
-    }
-  };
-
-  const fetchNotifications = async (currentUserId: number) => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/notifications?userId=${currentUserId}`,
-        {
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) throw new Error(i18n.t("room.fetchNotificationsError"));
-
-      const data: Notification[] = await response.json();
-      setNotifications(data);
-      const unread = data.filter((n) => !n.read).length;
-      setUnreadCount(unread);
-    } catch (error) {
-      Alert.alert(
-        i18n.t("room.error"),
-        error instanceof Error && error.message
-          ? error.message
-          : i18n.t("room.loadNotificationsError")
       );
     }
   };
@@ -444,22 +412,6 @@ export default function RoomScreen() {
     );
   };
 
-  const markNotificationsAsRead = async () => {
-    if (!userId) return;
-    try {
-      await fetch(
-        `${API_BASE_URL}/api/notifications/mark-read?userId=${userId}`,
-        {
-          method: "POST",
-          credentials: "include",
-        }
-      );
-      setUnreadCount(0);
-    } catch (error) {
-      console.error(i18n.t("room.markNotificationsError"), error);
-    }
-  };
-
   const scrollToBottom = () => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   };
@@ -497,7 +449,6 @@ export default function RoomScreen() {
             await fetchRoom(parsedUserId);
             await fetchMessages();
             await fetchPosts(parsedUserId);
-            await fetchNotifications(parsedUserId);
             await fetchRoomUsers();
 
             if (isActive) {
@@ -740,24 +691,10 @@ export default function RoomScreen() {
         ref={scrollViewRef}
         onContentSizeChange={() => scrollToBottom()}
       >
-        <View style={[styles.topBar, { flexDirection }]}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons 
-              name={isRTL ? "arrow-forward" : "arrow-back"} 
-              size={24} 
-              color="white" 
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={markNotificationsAsRead}>
-            <Ionicons name="notifications" size={24} color="white" />
-            {unreadCount > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+        <HeaderWithNotifications 
+          isRTL={isRTL}
+          style={styles.topBar}
+        />
 
         <View style={styles.infoCard}>
           <View style={styles.roomNameContainer}>
@@ -1264,22 +1201,6 @@ const styles = StyleSheet.create({
   sendButton: {
     padding: 10,
   },
-  notificationBadge: {
-    position: "absolute",
-    right: -5,
-    top: -5,
-    backgroundColor: "red",
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  badgeText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
   copyButton: {
     marginLeft: 8,
     padding: 4,
@@ -1349,25 +1270,6 @@ const styles = StyleSheet.create({
   },
   ltrText: {
     textAlign: "left",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  backgroundVideo: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
   },
   iconButton: {
     padding: 6,

@@ -58,6 +58,12 @@ public interface RoomRepo extends JpaRepository<Room, Integer> {
         @Transactional
         @Query(value = "delete from post p where p.id = :PostId and p.user_id = :userId", nativeQuery = true)
         void PostDelete(@Param("PostId") int PostId, @Param("userId") int userId);
+
+        // @Query(value = "select case when count(u) > 0 then true else false end from user_rooms ur join ur.user u where u.id = :userId and ur.room.id = :roomId", nativeQuery = true)
+        // Boolean checkuserinroom (@Param("userId") int userId, @Param("roomId") int roomId);
+        // @Query("select u from User u where u.id= (select r.userId from User_rooms r where r.roomId = :roomId)")
+        // List<User> getAllUsersInRoom(@Param("roomId") int roomId);
+      
 }
 
 

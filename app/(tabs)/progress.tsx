@@ -17,6 +17,7 @@ import moment from 'moment';
 import i18n from "../../constants/i18n";
 import BackgroundVideo from '@/components/BackgroundVideo';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { HeaderWithNotifications } from '../../components/HeaderWithNotifications';
 
 const ProgressScreen = () => {
   const [moodData, setMoodData] = useState<MoodLog[]>([]);
@@ -136,7 +137,20 @@ const ProgressScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.languageContainer, { marginTop: 40, marginRight: 10 }]}>
+      <View style={{
+        position: 'absolute',
+        top: 40,
+        right: 10,
+        zIndex: 1000,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10
+      }}>
+        <HeaderWithNotifications 
+          showBackButton={false}
+          isRTL={isRTL}
+          style={{ backgroundColor: 'transparent' }}
+        />
         <LanguageSwitcher />
       </View>
       <VideoBackground videoRef={videoRef} />

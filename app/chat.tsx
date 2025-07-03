@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { Video, ResizeMode } from 'expo-av';
+import { HeaderWithNotifications } from '../components/HeaderWithNotifications';
 
 interface Message {
     id?: number;
@@ -175,16 +176,8 @@ export default function ChatScreen() {
             <View style={styles.overlay} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    style={styles.backButton}
-                >
-                    <Ionicons name="arrow-back" size={24} color="white" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Room Chat</Text>
-                <View style={styles.headerSpacer} />
-            </View>
+            <HeaderWithNotifications style={styles.header} />
+            <Text style={styles.headerTitle}>Room Chat</Text>
 
             {/* Messages */}
             <ScrollView

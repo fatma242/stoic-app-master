@@ -126,11 +126,23 @@ const translations = {
       },
       alerts: {
         alreadySubmitted: "You've already completed your weekly check-in.",
-        success: "Your check-in has been recorded!"
+        success: "Your check-in has been recorded!",
+        updateProgress: "Update Progress",
+        reminderMessage: "Great work completing your weekly check-in! Would you like to update your progress tracker now?",
+        progressReminder: "💡 Don't forget to track your daily progress after this check-in!"
       },
       navigation: {
         previous: "Previous",
-        submit: "Submit"
+        submit: "Submit",
+        later: "Later"
+      },
+      notifications: {
+        weeklyReminderTitle: "Weekly Check-in Reminder",
+        weeklyReminderMessage: "It's time for your weekly mental health check-in! Take a moment to reflect on your week.",
+        progressReminderTitle: "Progress Update Reminder",
+        progressReminderMessage: "Don't forget to update your daily progress tracker to maintain your wellness journey!",
+        completionTitle: "Weekly Check-in Completed!",
+        completionMessage: "Great job completing your weekly mental health check-in! Your wellness journey continues."
       }
     },
     landing: {
@@ -520,11 +532,23 @@ const translations = {
       },
       alerts: {
         alreadySubmitted: "لقد أكملت فحصك الأسبوعي بالفعل.",
-        success: "تم تسجيل فحصك بنجاح!"
+        success: "تم تسجيل فحصك بنجاح!",
+        updateProgress: "تحديث التقدم",
+        reminderMessage: "عمل رائع في إكمال فحصك الأسبوعي! هل تريد تحديث متتبع التقدم الآن؟",
+        progressReminder: "💡 لا تنس تتبع تقدمك اليومي بعد هذا الفحص!"
       },
       navigation: {
         previous: "السابق",
-        submit: "إرسال"
+        submit: "إرسال",
+        later: "لاحقاً"
+      },
+      notifications: {
+        weeklyReminderTitle: "تذكير الفحص الأسبوعي",
+        weeklyReminderMessage: "حان وقت فحصك الأسبوعي للصحة النفسية! خذ لحظة للتفكير في أسبوعك.",
+        progressReminderTitle: "تذكير تحديث التقدم",
+        progressReminderMessage: "لا تنس تحديث متتبع التقدم اليومي للحفاظ على رحلة العافية الخاصة بك!",
+        completionTitle: "تم إكمال الفحص الأسبوعي!",
+        completionMessage: "عمل رائع في إكمال فحصك الأسبوعي للصحة النفسية! رحلة العافية الخاصة بك مستمرة."
       }
     },
     landing: {
