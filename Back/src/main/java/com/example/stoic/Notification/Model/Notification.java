@@ -19,9 +19,9 @@ public class Notification {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    
+
     private User user;
-    
+
     @Column(nullable = false)
     private String title;
 
@@ -41,10 +41,10 @@ public class Notification {
     @Column(name = "is_read")
     private boolean isRead = false;
 
-        @Column(name = "read_at")
+    @Column(name = "read_at")
     private LocalDateTime readAt;
 
- public void setIsRead(Boolean isRead) { 
+    public void setIsRead(Boolean isRead) {
         this.isRead = isRead;
         if (isRead && this.readAt == null) {
             this.readAt = LocalDateTime.now();
@@ -59,4 +59,11 @@ public class Notification {
         this.sentAt = LocalDateTime.now();
     }
 
+    public boolean isRead() {
+        return isRead;
+    }
+
+    public void setRead(boolean read) {
+        isRead = read;
+    }
 }

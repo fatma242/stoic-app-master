@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  ScrollView, 
-  Text, 
-  TouchableOpacity, 
-  Image, 
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  Image,
   StyleSheet,
-  Alert
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import BackgroundVideo from '@/components/BackgroundVideo';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+  Alert,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import BackgroundVideo from "@/components/BackgroundVideo";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import i18n from "../../constants/i18n";
-import { HeaderWithNotifications } from '../../components/HeaderWithNotifications';
+import { HeaderWithNotifications } from "../../components/HeaderWithNotifications";
 
 export default function Settings() {
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function Settings() {
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   useEffect(() => {
-    global.reloadApp = () => setKey(prev => prev + 1);
+    global.reloadApp = () => setKey((prev) => prev + 1);
     return () => {
       global.reloadApp = undefined;
     };
@@ -55,66 +55,67 @@ export default function Settings() {
       router.replace("/login");
     } catch (error) {
       Alert.alert(
-        i18n.t('settings.logoutError'),
-        i18n.t('settings.logoutFailed')
+        i18n.t("settings.logoutError"),
+        i18n.t("settings.logoutFailed")
       );
     }
   };
 
   const handleDeleteAccount = async () => {
     if (!userId) {
-      Alert.alert(i18n.t('settings.deleteError'), i18n.t('settings.userIdNotFound'));
+      Alert.alert(
+        i18n.t("settings.deleteError"),
+        i18n.t("settings.userIdNotFound")
+      );
       return;
     }
 
-    Alert.alert(
-      i18n.t('settings.confirm'),
-      i18n.t('settings.confirmDelete'),
-      [
-        { 
-          text: i18n.t('settings.cancel'), 
-          style: "cancel" 
+    Alert.alert(i18n.t("settings.confirm"), i18n.t("settings.confirmDelete"), [
+      {
+        text: i18n.t("settings.cancel"),
+        style: "cancel",
+      },
+      {
+        text: i18n.t("settings.delete"),
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+              method: "DELETE",
+            });
+            await AsyncStorage.clear();
+            router.replace("/login");
+          } catch (error) {
+            Alert.alert(
+              i18n.t("settings.deleteError"),
+              i18n.t("settings.deleteFailed")
+            );
+          }
         },
-        {
-          text: i18n.t('settings.delete'),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await fetch(`${API_BASE_URL}/api/users/${userId}`, {
-                method: "DELETE",
-              });
-              await AsyncStorage.clear();
-              router.replace("/login");
-            } catch (error) {
-              Alert.alert(
-                i18n.t('settings.deleteError'), 
-                i18n.t('settings.deleteFailed')
-              );
-            }
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
-  const isRTL = i18n.locale === 'ar';
-  const textAlign = isRTL ? 'right' : 'left';
-  const flexDirection = isRTL ? 'row-reverse' : 'row';
+  const isRTL = i18n.locale === "ar";
+  const textAlign = isRTL ? "right" : "left";
+  const flexDirection = isRTL ? "row-reverse" : "row";
 
   return (
     <View style={styles.container} key={key}>
-      <View style={{
-        position: 'absolute',
-        top: 40,
-        right: 10,
-        zIndex: 1000,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10
-      }}>
-        <HeaderWithNotifications 
+      <View
+        style={{
+          position: "absolute",
+          top: 40,
+          right: 10,
+          zIndex: 1000,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <HeaderWithNotifications
           showBackButton={false}
           isRTL={isRTL}
-          style={{ backgroundColor: 'transparent' }}
+          style={{ backgroundColor: "transparent" }}
         />
         <LanguageSwitcher />
       </View>
@@ -127,13 +128,13 @@ export default function Settings() {
             style={styles.logo}
           />
           <Text style={[styles.greeting, { textAlign }]}>
-            {i18n.t('settings.title')}
+            {i18n.t("settings.title")}
           </Text>
         </View>
 
         <LinearGradient colors={["#16A34A", "#0d4215"]} style={styles.card}>
           <Text style={[styles.cardTitle, { textAlign }]}>
-            {i18n.t('settings.accountSettings')}
+            {i18n.t("settings.accountSettings")}
           </Text>
           <TouchableOpacity
             style={[styles.settingItem, { flexDirection }]}
@@ -141,7 +142,7 @@ export default function Settings() {
           >
             <Ionicons name="person" size={24} color="#7CFC00" />
             <Text style={[styles.settingText, { textAlign }]}>
-              {i18n.t('settings.editProfile')}
+              {i18n.t("settings.editProfile")}
             </Text>
             <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
           </TouchableOpacity>
@@ -149,12 +150,12 @@ export default function Settings() {
 
         <LinearGradient colors={["#16A34A", "#0d4215"]} style={styles.card}>
           <Text style={[styles.cardTitle, { textAlign }]}>
-            {i18n.t('settings.appInformation')}
+            {i18n.t("settings.appInformation")}
           </Text>
 
           <View style={[styles.infoItem, { flexDirection }]}>
             <Text style={[styles.infoLabel, { textAlign }]}>
-              {i18n.t('settings.version')}
+              {i18n.t("settings.version")}
             </Text>
             <Text style={styles.infoValue}>1.0.0</Text>
           </View>
@@ -164,7 +165,7 @@ export default function Settings() {
             onPress={() => router.push("/PrivacyPolicy")}
           >
             <Text style={[styles.infoLabel, { textAlign }]}>
-              {i18n.t('settings.privacyPolicy')}
+              {i18n.t("settings.privacyPolicy")}
             </Text>
             <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
           </TouchableOpacity>
@@ -174,7 +175,7 @@ export default function Settings() {
             onPress={() => router.push("/TermsOfService")}
           >
             <Text style={[styles.infoLabel, { textAlign }]}>
-              {i18n.t('settings.termsOfService')}
+              {i18n.t("settings.termsOfService")}
             </Text>
             <Ionicons name="chevron-forward" size={20} color="#7CFC00" />
           </TouchableOpacity>
@@ -184,16 +185,16 @@ export default function Settings() {
           colors={["#FF4444", "#8B0000"]}
           style={[styles.card, { marginTop: 20 }]}
         >
-          <TouchableOpacity 
-            style={[styles.dangerItem, { flexDirection }]} 
+          <TouchableOpacity
+            style={[styles.dangerItem, { flexDirection }]}
             onPress={handleLogout}
           >
             <Ionicons name="log-out" size={24} color="#FFF" />
             <Text style={[styles.dangerText, { textAlign }]}>
-              {i18n.t('settings.logOut')}
+              {i18n.t("settings.logOut")}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[styles.dangerItem, { flexDirection }]}
             onPress={handleDeleteAccount}
           >
@@ -201,7 +202,7 @@ export default function Settings() {
             <Text style={[styles.dangerText, { textAlign }]}>
               {i18n.t('settings.deleteAccount')}
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </LinearGradient>
       </ScrollView>
     </View>
@@ -211,24 +212,24 @@ export default function Settings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   languageContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 15,
     right: 15,
     zIndex: 20,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: "rgba(0,0,0,0.3)",
   },
   content: {
     padding: 20,
     paddingTop: 80,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 30,
   },
   logo: {
@@ -238,9 +239,9 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   greeting: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginTop: 10,
   },
   card: {
@@ -249,55 +250,55 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   cardTitle: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 10,
   },
   settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 15,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: "rgba(255,255,255,0.1)",
   },
   settingText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
     flex: 1,
     marginHorizontal: 15,
   },
   infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 15,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: "rgba(255,255,255,0.1)",
   },
   infoLabel: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
     flex: 1,
   },
   infoValue: {
-    color: '#7CFC00',
+    color: "#7CFC00",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   dangerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 15,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: "rgba(255,255,255,0.1)",
   },
   dangerText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     flex: 1,
     marginHorizontal: 15,
   },

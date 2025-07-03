@@ -48,12 +48,14 @@ export default function Community() {
   const [roomName, setRoomName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [joinCode, setJoinCode] = useState("");
-  const [showJoinModal, setShowJoinModal] = useState(false); 
+  const [showJoinModal, setShowJoinModal] = useState(false);
 
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   const isRTL = i18n.locale.startsWith("ar");
-  const textStyle = { textAlign: isRTL ? "right" as "right" : "left" as "left" };
+  const textStyle = {
+    textAlign: isRTL ? ("right" as "right") : ("left" as "left"),
+  };
   const flexDirection = isRTL ? "row-reverse" : "row";
 
   useFocusEffect(
@@ -89,13 +91,17 @@ export default function Community() {
         } catch (error) {
           console.error("Error loading user data:", error);
           Alert.alert("Error", "Failed to load user data");
-          Alert.alert(i18n.t("common.error"), i18n.t("community.errorFetching"));
+          Alert.alert(
+            i18n.t("common.error"),
+            i18n.t("community.errorFetching")
+          );
         } finally {
           setLoading(false);
         }
       };
 
-      loadUserData();[]
+      loadUserData();
+      [];
     }, [])
   );
 
@@ -110,7 +116,9 @@ export default function Community() {
     } catch (error) {
       Alert.alert(
         i18n.t("common.error"),
-        error instanceof Error ? error.message : i18n.t("community.errorFetching")
+        error instanceof Error
+          ? error.message
+          : i18n.t("community.errorFetching")
       );
     }
   };
@@ -135,7 +143,9 @@ export default function Community() {
     } catch (error) {
       Alert.alert(
         i18n.t("common.error"),
-        error instanceof Error ? error.message : i18n.t("community.errorFetching")
+        error instanceof Error
+          ? error.message
+          : i18n.t("community.errorFetching")
       );
     }
   };
@@ -153,7 +163,9 @@ export default function Community() {
     } catch (error) {
       Alert.alert(
         i18n.t("common.error"),
-        error instanceof Error ? error.message : i18n.t("community.errorFetching")
+        error instanceof Error
+          ? error.message
+          : i18n.t("community.errorFetching")
       );
     }
   };
@@ -188,7 +200,9 @@ export default function Community() {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `${i18n.t("community.errorCreating")}: ${response.status} ${errorText}`
+          `${i18n.t("community.errorCreating")}: ${
+            response.status
+          } ${errorText}`
         );
       }
 
@@ -200,7 +214,9 @@ export default function Community() {
     } catch (error) {
       Alert.alert(
         i18n.t("community.errorCreating"),
-        error instanceof Error ? error.message : i18n.t("community.errorCreating")
+        error instanceof Error
+          ? error.message
+          : i18n.t("community.errorCreating")
       );
     } finally {
       setIsCreating(false);
@@ -209,7 +225,10 @@ export default function Community() {
 
   const joinRoom = async () => {
     if (!joinCode.trim()) {
-      Alert.alert(i18n.t("community.errorJoining"), i18n.t("community.joinCodeRequired"));
+      Alert.alert(
+        i18n.t("community.errorJoining"),
+        i18n.t("community.joinCodeRequired")
+      );
       return;
     }
     try {
@@ -234,7 +253,9 @@ export default function Community() {
     } catch (error) {
       Alert.alert(
         i18n.t("common.error"),
-        error instanceof Error ? error.message : i18n.t("community.errorJoining")
+        error instanceof Error
+          ? error.message
+          : i18n.t("community.errorJoining")
       );
     }
   };
@@ -254,7 +275,37 @@ export default function Community() {
       Alert.alert(i18n.t("community.successDelete"));
     } catch (error) {
       Alert.alert(
-        error instanceof Error ? error.message : i18n.t("community.errorDeleting")
+        error instanceof Error
+          ? error.message
+          : i18n.t("community.errorDeleting")
+      );
+    }
+  };
+
+  const leaveRoom = async (roomId: number) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/rooms/leave-room/${roomId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+      console.log("Leaving room:", roomId, response);
+      if (!response.ok) {
+        throw new Error(i18n.t("community.errorLeaving"));
+      }
+
+      // Remove room from both owner and non-owner rooms
+      setOwnerRooms(ownerRooms.filter((room) => room.roomId !== roomId));
+      setNonOwnerRooms(nonOwnerRooms.filter((room) => room.roomId !== roomId));
+      Alert.alert(i18n.t("community.successLeave"));
+    } catch (error) {
+      Alert.alert(
+        i18n.t("common.error"),
+        error instanceof Error
+          ? error.message
+          : i18n.t("community.errorLeaving")
       );
     }
   };
@@ -284,6 +335,49 @@ export default function Community() {
     );
   };
 
+  const showRoomOptions = (roomId: number, isOwner: boolean) => {
+    if (isOwner) {
+      // Owner can either delete or leave
+      Alert.alert(
+        i18n.t("community.roomOptionsTitle"),
+        i18n.t("community.roomOptionsMessage"),
+        [
+          {
+            text: i18n.t("community.cancel"),
+            style: "cancel",
+          },
+
+          {
+            text: i18n.t("community.delete"),
+            onPress: () => confirmDelete(roomId),
+            style: "destructive",
+          },
+        ]
+      );
+    } else {
+      // Non-owner can only leave
+      confirmLeaveRoom(roomId);
+    }
+  };
+
+  const confirmLeaveRoom = (roomId: number) => {
+    Alert.alert(
+      i18n.t("community.leaveRoomTitle"),
+      i18n.t("community.leaveRoomMessage"),
+      [
+        {
+          text: i18n.t("community.cancel"),
+          style: "cancel",
+        },
+        {
+          text: i18n.t("community.leave"),
+          onPress: () => leaveRoom(roomId),
+          style: "destructive",
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
@@ -301,10 +395,7 @@ export default function Community() {
       />
 
       {/* Header */}
-      <HeaderWithNotifications 
-        isRTL={isRTL}
-        style={styles.header}
-      />
+      <HeaderWithNotifications isRTL={isRTL} style={styles.header} />
       <Text style={[styles.headerTitle, textStyle]}>
         {userRole === "ADMIN"
           ? i18n.t("community.titleAdmin")
@@ -349,7 +440,7 @@ export default function Community() {
               key={room.roomId}
               style={[styles.roomContainer, { flexDirection }]}
               onPress={() => handleRoomPress(room.roomId)}
-              onLongPress={() => confirmDelete(room.roomId)}
+              onLongPress={() => showRoomOptions(room.roomId, true)}
             >
               <View style={styles.roomInfo}>
                 <Text style={[styles.roomName, textStyle]}>
@@ -379,6 +470,7 @@ export default function Community() {
               key={room.roomId}
               style={[styles.roomContainer, { flexDirection }]}
               onPress={() => handleRoomPress(room.roomId)}
+              onLongPress={() => showRoomOptions(room.roomId, false)}
             >
               <View style={styles.roomInfo}>
                 <Text style={[styles.roomName, textStyle]}>

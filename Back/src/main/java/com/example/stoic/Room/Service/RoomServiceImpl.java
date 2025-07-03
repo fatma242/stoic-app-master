@@ -79,11 +79,11 @@ public class RoomServiceImpl implements RoomService {
             // userId));
             // room.removeUser(user);
             roomRepo.deleteUserFromRoom(userId, roomId);
-            notificationService.createNotification(
-                    userRepo.findById(userId).orElse(null),
-                    "You have been removed from a room",
-                    "You have been removed from room " + roomId,
-                    NotificationType.USER_REMOVED);
+            // notificationService.createNotification(
+            // userRepo.findById(userId).orElse(null),
+            // "You have been removed from a room",
+            // "You have been removed from room " + roomId,
+            // NotificationType.USER_REMOVED);
             System.out.println("User removed from room successfully: " + userId + " from room " + roomId);
             // roomRepo.save(room);
 

@@ -18,9 +18,9 @@ spec:
           imagePullPolicy: Always
 
           ports:
-            - containerPort: 3306  # or whatever your DB port is
+            - containerPort: 3306 # or whatever your DB port is
           env:
             - name: MYSQL_ROOT_PASSWORD
-              value: "Ahmed2002#"
+              value: "Adelra122@122"
             - name: MYSQL_DATABASE
               value: "stoic"

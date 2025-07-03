@@ -12,4 +12,6 @@ public enum NotificationType {
     POST_LIKED,
     COMMENT_LIKED,
     USER_REMOVED,
+    USER_LEFT,
+    MESSAGE
 }

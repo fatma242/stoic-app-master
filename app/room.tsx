@@ -10,12 +10,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ImageBackground
+  ImageBackground,
 } from "react-native";
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode } from "expo-av";
 
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Clipboard from "expo-clipboard";
+import { ToastAndroid } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,7 +25,6 @@ import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 import i18n from "../constants/i18n";
 import { HeaderWithNotifications } from "../components/HeaderWithNotifications";
-
 
 // Type definitions
 interface User {
@@ -90,6 +90,9 @@ export default function RoomScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  // Notifications
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
@@ -102,14 +105,21 @@ export default function RoomScreen() {
   const [likingPostIds, setLikingPostIds] = useState<Set<number>>(new Set());
   const [refreshCount, setRefreshCount] = useState(0);
   const [userRole, setUserRole] = useState<string>("");
-  const [deletingPostIds, setDeletingPostIds] = useState<Set<number>>(new Set());
+  const [deletingPostIds, setDeletingPostIds] = useState<Set<number>>(
+    new Set()
+  );
 
   const stompClient = useRef<any>(null);
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const connectWebSocket = () => {
+  const connectWebSocket = (usernameParam?: string) => {
+    const effectiveUsername = usernameParam || username;
+    if (!effectiveUsername) {
+      console.warn("⚠️ Username not set, delaying WebSocket connection");
+      return;
+    }
     const socket = new SockJS(`${API_BASE_URL}/ws-chat`);
     stompClient.current = new Client({
       webSocketFactory: () => socket,
@@ -117,19 +127,83 @@ export default function RoomScreen() {
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
+        console.log(
+          "✅ WebSocket connected, subscribing to notifications on /user/" +
+            effectiveUsername
+        );
         stompClient.current.subscribe(
-          `/topic/rooms/${roomId}`,
-          (message: any) => {
-            const newMessage = JSON.parse(message.body);
-            setMessages((prev) => [...prev, newMessage]);
-            scrollToBottom();
+          `/user/${effectiveUsername}/queue/notifications`,
+          (frame: any) => {
+            console.log("📨 Raw WS frame.body:", frame.body);
+            try {
+              const notif: Notification = JSON.parse(frame.body);
+              console.log("🔔 Parsed notification:", notif);
+              console.log(
+                "🔍 Current username for comparison:",
+                effectiveUsername
+              );
+              console.log("🔍 Notification message:", notif.message);
+
+              // ► ENHANCED SELF-NOTIFICATION FILTERING
+              const isSelfNotification =
+                notif.message &&
+                typeof notif.message === "string" &&
+                effectiveUsername &&
+                notif.message.startsWith(`${effectiveUsername}:`);
+
+              console.log("🔍 Is self notification check:", {
+                username: effectiveUsername,
+                notificationmessage: notif.message,
+                messageType: typeof notif.message,
+                startsWithUsername: isSelfNotification,
+              });
+
+              if (isSelfNotification) {
+                console.log("🚫 Dropping self notification:", notif.message);
+                return;
+              }
+
+              console.log(
+                "✅ Processing notification from another user:",
+                notif.message
+              );
+
+              // ► DEDUPE + UNisRead COUNT
+              setNotifications((prev) => {
+                if (prev.some((n) => n.id === notif.id)) {
+                  console.log("🔁 Duplicate detected, skipping id:", notif.id);
+                  return prev;
+                }
+                console.log("➕ Adding notification id:", notif.id);
+                if (!notif.isRead) {
+                  setUnreadCount((c) => {
+                    const nc = c + 1;
+                    console.log("🔢 New unreadCount:", nc);
+                    return nc;
+                  });
+                }
+                return [notif, ...prev];
+              });
+
+              // ► SHOW TOAST FOR UNisRead ONLY
+              if (!notif.isRead) {
+                console.log(
+                  "🔔 Showing toast for notification:",
+                  notif.message
+                );
+                if (Platform.OS === "android") {
+                  ToastAndroid.show(notif.message, ToastAndroid.SHORT);
+                } else {
+                  Alert.alert("New Notification", notif.message);
+                }
+              }
+            } catch (err) {
+              console.error("❌ Error processing WS notification:", err);
+            }
           }
         );
       },
-      onStompError: (frame) => {
-        console.error(i18n.t("room.websocketError") + frame.headers["message"]);
-        console.error(i18n.t("room.details") + frame.body);
-      },
+      onStompError: (err) => console.error("⚠️ STOMP error:", err),
     });
 
     stompClient.current.activate();
@@ -168,6 +242,120 @@ export default function RoomScreen() {
           ? error.message
           : i18n.t("room.loadRoomError")
       );
+    }
+  };
+
+  const fetchNotifications = async (
+    currentUserId: number,
+    usernameParam?: string
+  ) => {
+    const effectiveUsername = usernameParam || username;
+    console.log("🔍 fetchNotifications for userId:", currentUserId);
+    console.log("🔍 Current username for filtering:", effectiveUsername);
+    console.log("🔍 Username state:", username);
+    console.log("🔍 Username parameter:", usernameParam);
+
+    try {
+      const resp = await fetch(
+        `${API_BASE_URL}/api/notifications?userId=${currentUserId}`,
+        { credentials: "include" }
+      );
+      console.log("  → HTTP status:", resp.status);
+      if (!resp.ok) throw new Error(`Status ${resp.status}`);
+
+      const data: Notification[] = await resp.json();
+      console.log("  → Raw notifications:", data);
+
+      // ► ENHANCED SELF-NOTIFICATION FILTERING
+      const filtered = data.filter((n) => {
+        // Safety check for message and effectiveUsername
+        if (!n.message || typeof n.message !== "string" || !effectiveUsername) {
+          console.log(
+            "🔍 Skipping notification with invalid message or username:",
+            {
+              id: n.id,
+              message: n.message,
+              username: effectiveUsername,
+            }
+          );
+          return true; // Keep notifications with invalid data
+        }
+
+        const isSelf = n.message.startsWith(`${effectiveUsername}:`);
+        console.log("🔍 Filtering notification:", {
+          id: n.id,
+          message: n.message,
+          username: effectiveUsername,
+          isSelf: isSelf,
+        });
+
+        if (isSelf) {
+          console.log("🚫 Filtering out self notification:", n.message);
+          return false;
+        }
+        return true;
+      });
+      console.log("  → After filtering self notifications:", filtered);
+
+      setNotifications(filtered);
+
+      // ► UPDATE UNREAD COUNT
+      const unread = filtered.filter((n) => !n.isRead).length;
+      console.log("  → Calculated unreadCount:", unread);
+      setUnreadCount(unread);
+    } catch (err) {
+      console.error("❌ fetchNotifications error:", err);
+    }
+  };
+  const loadCurrentUser = async (uid: number) => {
+    console.log("👤 Loading current user with ID:", uid);
+
+    const res = await fetch(`${API_BASE_URL}/api/users/${uid}`, {
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const currentUser: User = await res.json();
+    console.log("✅ Fetched user:", currentUser);
+    console.log("✅ Setting username to:", currentUser.username);
+
+    setUsername(currentUser.username);
+    await AsyncStorage.setItem("username", currentUser.username);
+
+    return currentUser;
+  };
+
+  // Optimized markNotificationsAsRead
+  const markNotificationsAsRead = async () => {
+    if (!userId || unreadCount === 0) return;
+
+    console.log("Marking notifications as read");
+
+    try {
+      // Optimistic update
+      const updatedNotifications = notifications.map((n) => ({
+        ...n,
+        read: true,
+      }));
+      setNotifications(updatedNotifications);
+      setUnreadCount(0);
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/notifications/mark-read?userId=${userId}`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Mark read failed: " + response.status);
+      }
+
+      console.log("Notifications marked as read successfully");
+    } catch (error) {
+      console.error("Mark read error:", error);
+      // Revert on error
+      fetchNotifications(userId);
     }
   };
 
@@ -394,7 +582,10 @@ export default function RoomScreen() {
 
               if (!response.ok) throw new Error(i18n.t("room.deleteRoomError"));
 
-              Alert.alert(i18n.t("room.success"), i18n.t("room.roomDeletedSuccess"));
+              Alert.alert(
+                i18n.t("room.success"),
+                i18n.t("room.roomDeletedSuccess")
+              );
               router.back();
             } catch (error) {
               Alert.alert(
@@ -422,57 +613,107 @@ export default function RoomScreen() {
       Alert.alert(i18n.t("room.copied"), i18n.t("room.roomCodeCopied"));
     }
   };
+  const fetchRoomAndUser = async (uid: number, rid: number) => {
+    try {
+      console.log("🚀 Starting fetchRoomAndUser flow");
 
-  useFocusEffect(
-    useCallback(() => {
-      let isActive = true;
+      // a) load user first and wait for username to be set
+      const currentUser = await loadCurrentUser(uid);
+      console.log("✅ User loaded, username set to:", currentUser.username);
 
-      async function loadData() {
-        try {
-          setLoading(true);
+      // b) now load room
+      const roomData = await loadRoom(rid);
 
-          const storedUserId = await AsyncStorage.getItem("userId");
-          const storedUsername = await AsyncStorage.getItem("username");
+      // c) owner check
+      const isOwnerFlag = currentUser.userId === roomData.ownerId;
+      setIsOwner(isOwnerFlag);
+      console.log("👑 Owner status:", isOwnerFlag);
 
-          if (!storedUserId) {
-            Alert.alert(i18n.t("room.error"), i18n.t("room.userNotFound"));
-            return;
-          }
-
-          const parsedUserId = parseInt(storedUserId);
-          setUserId(parsedUserId);
-          if (storedUsername) {
-            setUsername(storedUsername);
-          }
-
-          if (roomId && isActive) {
-            await fetchRoom(parsedUserId);
-            await fetchMessages();
-            await fetchPosts(parsedUserId);
-            await fetchRoomUsers();
-
-            if (isActive) {
-              connectWebSocket();
-            }
-          }
-        } catch (error) {
-          console.error(i18n.t("room.loadDataError"), error);
-          Alert.alert(i18n.t("room.error"), i18n.t("room.loadRoomDataError"));
-        } finally {
-          if (isActive) {
-            setLoading(false);
-          }
-        }
+      // d) fetch role if needed
+      const roleRes = await fetch(`${API_BASE_URL}/api/users/${uid}`, {
+        credentials: "include",
+      });
+      if (roleRes.ok) {
+        const { userRole: role } = await roleRes.json();
+        setUserRole(role);
+        console.log("🎭 User role set to:", role);
       }
 
-      loadData();
+      return currentUser;
+    } catch (error) {
+      console.error("❌ Error in fetchRoomAndUser:", error);
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+      throw error;
+    }
+  };
 
-      return () => {
-        isActive = false;
-        if (stompClient.current) {
-          stompClient.current.deactivate();
+  const loadRoom = async (roomId: number) => {
+    const res = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error(`Failed to fetch room: ${res.status}`);
+    const data: Room = await res.json();
+    console.log("Fetched room:", data);
+    setRoom(data);
+    setEditedName(data.roomName);
+    return data;
+  };
+  // Then in your focus effect (or useEffect):
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        console.log("🔄 Focus effect triggered");
+
+        const storedUid = await AsyncStorage.getItem("userId");
+        const storedUsername = await AsyncStorage.getItem("username");
+
+        console.log("📱 Stored userId:", storedUid);
+        console.log("📱 Stored username:", storedUsername);
+
+        if (!storedUid || !roomId) {
+          console.warn("⚠️ Missing userId or roomId");
+          return;
         }
-      };
+
+        const uid = parseInt(storedUid, 10);
+        setUserId(uid);
+
+        // If we have stored username, set it immediately
+        if (storedUsername) {
+          console.log("📱 Setting username from storage:", storedUsername);
+          setUsername(storedUsername);
+        }
+
+        try {
+          // fetch both user and room (this will also set/update username)
+          const currentUser = await fetchRoomAndUser(uid, roomId);
+
+          // Now that username is properly set, we can safely do other operations
+          console.log("🔗 Username confirmed as:", currentUser.username);
+
+          // ... now messages, posts, notifications, users, websocket…
+          await fetchMessages();
+          await fetchPosts(uid);
+          await fetchNotifications(uid, currentUser.username);
+          await fetchRoomUsers();
+
+          // Connect WebSocket AFTER username is set and pass username explicitly
+          console.log(
+            "🔌 Connecting WebSocket with username:",
+            currentUser.username
+          );
+          connectWebSocket(currentUser.username);
+
+          setLoading(false);
+          console.log("✅ All data loaded successfully");
+        } catch (error) {
+          console.error("❌ Error in focus effect:", error);
+          setLoading(false);
+        }
+      })();
     }, [roomId])
   );
 
@@ -543,7 +784,9 @@ export default function RoomScreen() {
             } catch (error) {
               Alert.alert(
                 i18n.t("room.error"),
-                error instanceof Error ? error.message : i18n.t("room.removeUserError")
+                error instanceof Error
+                  ? error.message
+                  : i18n.t("room.removeUserError")
               );
             }
           },
@@ -585,11 +828,16 @@ export default function RoomScreen() {
               }
 
               setPosts((prev) => prev.filter((post) => post.id !== postId));
-              Alert.alert(i18n.t("room.success"), i18n.t("room.postDeletedSuccess"));
+              Alert.alert(
+                i18n.t("room.success"),
+                i18n.t("room.postDeletedSuccess")
+              );
             } catch (error) {
               Alert.alert(
                 i18n.t("room.error"),
-                error instanceof Error ? error.message : i18n.t("room.deletePostError")
+                error instanceof Error
+                  ? error.message
+                  : i18n.t("room.deletePostError")
               );
             } finally {
               setDeletingPostIds((prev) => {
@@ -643,11 +891,16 @@ export default function RoomScreen() {
               }
 
               setPosts((prev) => prev.filter((post) => post.id !== postId));
-              Alert.alert(i18n.t("room.success"), i18n.t("room.postDeletedSuccess"));
+              Alert.alert(
+                i18n.t("room.success"),
+                i18n.t("room.postDeletedSuccess")
+              );
             } catch (error) {
               Alert.alert(
                 i18n.t("room.error"),
-                error instanceof Error ? error.message : i18n.t("room.deletePostError")
+                error instanceof Error
+                  ? error.message
+                  : i18n.t("room.deletePostError")
               );
             } finally {
               setDeletingPostIds((prev) => {
@@ -679,23 +932,97 @@ export default function RoomScreen() {
   }
 
   return (
-    <ImageBackground 
-      source={require('../assets/background-photo.png')} 
-      style={styles.container} 
+    <ImageBackground
+      source={require("../assets/background-photo.png")}
+      style={styles.container}
       resizeMode="cover"
     >
       <View style={styles.overlay} />
-      
+
       <ScrollView
         style={styles.content}
         ref={scrollViewRef}
         onContentSizeChange={() => scrollToBottom()}
+        showsVerticalScrollIndicator={false}
       >
-        <HeaderWithNotifications 
-          isRTL={isRTL}
-          style={styles.topBar}
-        />
+        {/* Header with notifications
+        } */}
+        <HeaderWithNotifications isRTL={isRTL} style={styles.topBar} />
+        {/* <View style={styles.topBar}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} c olor="white" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/chat",
+                params: { roomId: roomId?.toString() },
+              })
+            }
+            style={styles.iconButton}
+          >
+            <Ionicons name="chatbubbles" size={24} color="white" />
+          </TouchableOpacity>
+          {unreadCount > 0 && (
+            <TouchableOpacity
+              style={styles.notificationBanner}
+              onPress={() => {
+                markNotificationsAsRead();
+                // Don't just set count to 0, let the async function handle it
+              }}
+            >
+              <Text style={styles.notificationBannerText}>
+                {unreadCount} new{" "}
+                {unreadCount === 1 ? "notification" : "notifications"}
+              </Text>
+            </TouchableOpacity>
+          )}
 
+          <TouchableOpacity
+            onPress={() => {
+              markNotificationsAsRead();
+              router.push("/Notification"); // Navigate to notifications screen
+            }}
+            style={styles.iconButton}
+          >
+            <Ionicons name="notifications" size={24} color="white" />
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+ */}
+        {/* Chat button positioned properly */}
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/chat",
+                params: { roomId: roomId?.toString() },
+              })
+            }
+            style={styles.chatButton}
+          >
+            <Ionicons name="chatbubbles" size={24} color="white" />
+            <Text style={styles.buttonLabel}>{i18n.t("room.chat")}</Text>
+          </TouchableOpacity>
+
+          {/* Back button
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Ionicons
+              name={isRTL ? "arrow-forward" : "arrow-back"}
+              size={24}
+              color="white"
+            />
+            <Text style={styles.buttonLabel}>{i18n.t("room.back")}</Text>
+          </TouchableOpacity> */}
+        </View>
+        {/* Back button and notifications at top of content */}
         <View style={styles.infoCard}>
           <View style={styles.roomNameContainer}>
             {isEditing ? (
@@ -706,27 +1033,35 @@ export default function RoomScreen() {
                 autoFocus
               />
             ) : (
-              <Text style={[styles.roomNameText, textStyle]}>{room.roomName}</Text>
+              <Text style={[styles.roomNameText, textStyle]}>
+                {room.roomName}
+              </Text>
             )}
           </View>
 
           <View style={[styles.detailRow, { flexDirection }]}>
             <Text style={styles.detailLabel}>{i18n.t("room.type")}:</Text>
             <Text style={[styles.detailValue, textStyle]}>
-              {room.type === "PUBLIC" ? i18n.t("room.public") : i18n.t("room.private")}
+              {room.type === "PUBLIC"
+                ? i18n.t("room.public")
+                : i18n.t("room.private")}
             </Text>
           </View>
 
           <View style={[styles.detailRow, { flexDirection }]}>
             <Text style={styles.detailLabel}>{i18n.t("room.owner")}:</Text>
             <Text style={[styles.detailValue, textStyle]}>
-              {isOwner ? i18n.t("room.you") : `${i18n.t("room.user")} #${room.ownerId}`}
+              {isOwner
+                ? i18n.t("room.you")
+                : `${i18n.t("room.user")} #${room.ownerId}`}
             </Text>
           </View>
 
           <View style={[styles.detailRow, { flexDirection }]}>
             <Text style={styles.detailLabel}>{i18n.t("room.roomCode")}:</Text>
-            <Text style={[styles.detailValue, textStyle]}>{room.join_code}</Text>
+            <Text style={[styles.detailValue, textStyle]}>
+              {room.join_code}
+            </Text>
             <TouchableOpacity onPress={copyRoomCode} style={styles.copyButton}>
               <Ionicons name="copy" size={18} color="white" />
             </TouchableOpacity>
@@ -750,7 +1085,8 @@ export default function RoomScreen() {
                         ? user.username || i18n.t("room.unknownUser")
                         : String(user)}
                       {user.userId === userId && ` (${i18n.t("room.you")})`}
-                      {user.userId === room?.ownerId && ` (${i18n.t("room.owner")})`}
+                      {user.userId === room?.ownerId &&
+                        ` (${i18n.t("room.owner")})`}
                     </Text>
                     {isOwner &&
                       user.userId !== userId &&
@@ -758,7 +1094,9 @@ export default function RoomScreen() {
                         <TouchableOpacity
                           style={styles.removeUserButton}
                           onPress={() =>
-                            handleRemoveUser(user.username || i18n.t("room.unknownUser"))
+                            handleRemoveUser(
+                              user.username || i18n.t("room.unknownUser")
+                            )
                           }
                         >
                           <Ionicons
@@ -783,7 +1121,9 @@ export default function RoomScreen() {
                     onPress={() => setIsEditing(false)}
                     disabled={isUpdating}
                   >
-                    <Text style={styles.buttonText}>{i18n.t("room.cancel")}</Text>
+                    <Text style={styles.buttonText}>
+                      {i18n.t("room.cancel")}
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.button, styles.saveButton]}
@@ -793,7 +1133,9 @@ export default function RoomScreen() {
                     {isUpdating ? (
                       <ActivityIndicator color="white" />
                     ) : (
-                      <Text style={styles.buttonText}>{i18n.t("room.save")}</Text>
+                      <Text style={styles.buttonText}>
+                        {i18n.t("room.save")}
+                      </Text>
                     )}
                   </TouchableOpacity>
                 </>
@@ -813,7 +1155,9 @@ export default function RoomScreen() {
                     {isDeleting ? (
                       <ActivityIndicator color="white" />
                     ) : (
-                      <Text style={styles.buttonText}>{i18n.t("room.delete")}</Text>
+                      <Text style={styles.buttonText}>
+                        {i18n.t("room.delete")}
+                      </Text>
                     )}
                   </TouchableOpacity>
                 </>
@@ -821,11 +1165,14 @@ export default function RoomScreen() {
             </View>
           )}
         </View>
-
-        <Text style={[styles.sectionTitle, textStyle]}>{i18n.t("room.chat")}</Text>
+        {/* <Text style={[styles.sectionTitle, textStyle]}>
+          {i18n.t("room.chat")}
+        </Text>
         <View style={styles.chatContainer}>
           {messages.length === 0 ? (
-            <Text style={[styles.emptyText, textStyle]}>{i18n.t("room.noMessages")}</Text>
+            <Text style={[styles.emptyText, textStyle]}>
+              {i18n.t("room.noMessages")}
+            </Text>
           ) : (
             messages.map((message, index) => (
               <View
@@ -838,7 +1185,9 @@ export default function RoomScreen() {
                 ]}
               >
                 <Text style={styles.senderName}>
-                  {message.senderId === userId ? i18n.t("room.you") : message.senderName}
+                  {message.senderId === userId
+                    ? i18n.t("room.you")
+                    : message.senderName}
                 </Text>
                 <Text style={styles.messageText}>{message.content}</Text>
                 <Text style={styles.messageTime}>
@@ -850,11 +1199,14 @@ export default function RoomScreen() {
               </View>
             ))
           )}
-        </View>
-
-        <Text style={[styles.sectionTitle, textStyle]}>{i18n.t("room.posts")}</Text>
+        </View> */}
+        <Text style={[styles.sectionTitle, textStyle]}>
+          {i18n.t("room.posts")}
+        </Text>
         {posts.length === 0 ? (
-          <Text style={[styles.emptyText, textStyle]}>{i18n.t("room.noPosts")}</Text>
+          <Text style={[styles.emptyText, textStyle]}>
+            {i18n.t("room.noPosts")}
+          </Text>
         ) : (
           posts.map((post) => (
             <View key={`post-${post.id}`} style={styles.postItem}>
@@ -863,9 +1215,12 @@ export default function RoomScreen() {
                 style={styles.postContent}
               >
                 <Text style={[styles.postTitle, textStyle]}>{post.title}</Text>
-                <Text style={[styles.postContentText, textStyle]}>{post.content}</Text>
+                <Text style={[styles.postContentText, textStyle]}>
+                  {post.content}
+                </Text>
                 <Text style={[styles.postAuthor, textStyle]}>
-                  {i18n.t("room.by")}: {post.author?.username || i18n.t("room.unknownAuthor")}
+                  {i18n.t("room.by")}:{" "}
+                  {post.author?.username || i18n.t("room.unknownAuthor")}
                 </Text>
                 <Text style={[styles.postDate, textStyle]}>
                   {new Date(post.date).toLocaleDateString()}
@@ -899,7 +1254,9 @@ export default function RoomScreen() {
                     size={20}
                     color="#94a3b8"
                   />
-                  <Text style={styles.commentText}>{i18n.t("room.comment")}</Text>
+                  <Text style={styles.commentText}>
+                    {i18n.t("room.comment")}
+                  </Text>
                 </TouchableOpacity>
 
                 {post.author?.userId === userId && (
@@ -920,7 +1277,7 @@ export default function RoomScreen() {
                   </TouchableOpacity>
                 )}
 
-                {userRole === "ADMIN" && (
+                {/* {userRole === "ADMIN" && (
                   <TouchableOpacity
                     style={styles.adminDeleteButton}
                     onPress={() => handleAdminDeletePost(post.id, post.title)}
@@ -932,68 +1289,49 @@ export default function RoomScreen() {
                       <Ionicons name="trash" size={20} color="#ef4444" />
                     )}
                   </TouchableOpacity>
-                )}
+                )} */}
               </View>
             </View>
           ))
         )}
-
-        <View style={styles.postForm}>
-          <Text style={[styles.sectionTitle, textStyle]}>{i18n.t("room.createPost")}</Text>
-          <TextInput
-            style={[styles.input, textStyle]}
-            placeholder={i18n.t("room.postTitlePlaceholder")}
-            placeholderTextColor="#94a3b8"
-            value={newPostTitle}
-            onChangeText={setNewPostTitle}
-          />
-          <TextInput
-            style={[styles.input, styles.textArea, textStyle]}
-            placeholder={i18n.t("room.postContentPlaceholder")}
-            placeholderTextColor="#94a3b8"
-            value={newPostContent}
-            onChangeText={setNewPostContent}
-            multiline
-            numberOfLines={4}
-          />
-          <TouchableOpacity
-            style={[styles.button, styles.postButton]}
-            onPress={createPost}
-            disabled={isCreatingPost}
-          >
-            {isCreatingPost ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.buttonText}>{i18n.t("room.createPostButton")}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        {((userRole == "ADMIN" && room.type == "PUBLIC") ||
+          room.type == "PRIVATE") && (
+          <View style={styles.postForm}>
+            <Text style={[styles.sectionTitle, textStyle]}>
+              {i18n.t("room.createPost")}
+            </Text>
+            <TextInput
+              style={[styles.input, textStyle]}
+              placeholder={i18n.t("room.postTitlePlaceholder")}
+              placeholderTextColor="#94a3b8"
+              value={newPostTitle}
+              onChangeText={setNewPostTitle}
+            />
+            <TextInput
+              style={[styles.input, styles.textArea, textStyle]}
+              placeholder={i18n.t("room.postContentPlaceholder")}
+              placeholderTextColor="#94a3b8"
+              value={newPostContent}
+              onChangeText={setNewPostContent}
+              multiline
+              numberOfLines={4}
+            />
+            <TouchableOpacity
+              style={[styles.button, styles.postButton]}
+              onPress={createPost}
+              disabled={isCreatingPost}
+            >
+              {isCreatingPost ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.buttonText}>
+                  {i18n.t("room.createPostButton")}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.messageInputContainer}
-      >
-        <TextInput
-          style={[styles.messageInput, textStyle]}
-          placeholder={i18n.t("room.messagePlaceholder")}
-          placeholderTextColor="#94a3b8"
-          value={newMessage}
-          onChangeText={setNewMessage}
-          onSubmitEditing={sendMessage}
-        />
-        <TouchableOpacity
-          style={styles.sendButton}
-          onPress={sendMessage}
-          disabled={isSending}
-        >
-          <Ionicons
-            name="send"
-            size={24}
-            color={isSending ? "#94a3b8" : "#16A34A"}
-          />
-        </TouchableOpacity>
-      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }
@@ -1004,7 +1342,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   center: {
     flex: 1,
@@ -1020,15 +1358,70 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 15,
   },
+  actionButtonsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  chatButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(22, 163, 74, 0.8)",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginLeft: 100,
+    borderRadius: 25,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(100, 116, 139, 0.8)",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 25,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  buttonLabel: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 14,
+    marginLeft: 8,
+  },
   content: {
     flex: 1,
-    padding: 10,
+    padding: 15,
   },
   infoCard: {
-    backgroundColor: "rgba(47, 53, 61, 0.8)",
-    borderRadius: 10,
-    padding: 15,
+    backgroundColor: "rgba(47, 53, 61, 0.9)",
+    borderRadius: 12,
+    padding: 20,
     marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   roomNameContainer: {
     marginBottom: 15,
@@ -1043,21 +1436,23 @@ const styles = StyleSheet.create({
   },
   roomNameText: {
     color: "white",
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
   },
   detailRow: {
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   detailLabel: {
     color: "#94a3b8",
-    fontWeight: "bold",
+    fontWeight: "600",
     minWidth: 80,
+    fontSize: 14,
   },
   detailValue: {
     color: "white",
     flex: 1,
+    fontSize: 14,
   },
   actionsContainer: {
     justifyContent: "space-around",
@@ -1133,16 +1528,24 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   postItem: {
-    backgroundColor: "rgba(30, 41, 59, 0.8)",
-    borderRadius: 10,
+    backgroundColor: "rgba(30, 41, 59, 0.9)",
+    borderRadius: 12,
     padding: 15,
     marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
+    elevation: 3,
   },
   postTitle: {
     color: "white",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 5,
+    marginBottom: 8,
   },
   postContent: {
     flex: 1,
@@ -1184,22 +1587,35 @@ const styles = StyleSheet.create({
   messageInputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
-    backgroundColor: "rgba(30, 41, 59, 0.8)",
+    padding: 15,
+    backgroundColor: "rgba(30, 41, 59, 0.95)",
     borderTopWidth: 1,
     borderTopColor: "#334155",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 5,
   },
   messageInput: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.8)",
+    backgroundColor: "rgba(15, 23, 42, 0.9)",
     color: "white",
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     marginRight: 10,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.3)",
   },
   sendButton: {
-    padding: 10,
+    padding: 12,
+    borderRadius: 25,
+    backgroundColor: "rgba(22, 163, 74, 0.2)",
   },
   copyButton: {
     marginLeft: 8,
@@ -1273,5 +1689,39 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 6,
+  },
+
+  notificationBadge: {
+    position: "absolute",
+    right: -5,
+    top: -5,
+    backgroundColor: "red",
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  badgeText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  notificationBannerText: {
+    color: "white",
+    fontWeight: "600",
+  },
+
+  notificationBanner: {
+    position: "absolute",
+    top: Platform.OS === "ios" ? 80 : 60,
+    left: 16,
+    right: 16,
+    backgroundColor: "#10B981",
+    paddingVertical: 8,
+    borderRadius: 8,
+    zIndex: 10,
+    alignItems: "center",
   },
 });

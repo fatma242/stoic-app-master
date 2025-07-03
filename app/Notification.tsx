@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import {
   View,
   Text,
@@ -8,11 +15,11 @@ import {
   ImageBackground,
   Alert,
   RefreshControl,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Client } from '@stomp/stompjs';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Client } from "@stomp/stompjs";
 
 // Type definitions
 export interface Notification {
@@ -20,7 +27,14 @@ export interface Notification {
   title?: string;
   message?: string;
   content?: string; // Backend might send 'content' instead of 'message'
-  type: 'ROOM_INVITATION' | 'USER_JOINED' | 'POST_CREATED' | 'COMMENT_ADDED' | 'SYSTEM_UPDATE' | 'REMINDER' | 'ACHIEVEMENT';
+  type:
+    | "ROOM_INVITATION"
+    | "USER_JOINED"
+    | "POST_CREATED"
+    | "COMMENT_ADDED"
+    | "SYSTEM_UPDATE"
+    | "REMINDER"
+    | "ACHIEVEMENT";
   isRead: boolean;
   read?: boolean; // Backend might send 'read' instead of 'isRead'
   createdAt: string;
@@ -44,12 +58,16 @@ export interface NotificationContextType {
 }
 
 // Notification Context
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+const NotificationContext = createContext<NotificationContextType | undefined>(
+  undefined
+);
 
 export const useNotifications = () => {
   const context = useContext(NotificationContext);
   if (!context) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
+    throw new Error(
+      "useNotifications must be used within a NotificationProvider"
+    );
   }
   return context;
 };
@@ -58,7 +76,9 @@ interface NotificationProviderProps {
   children: React.ReactNode;
 }
 
-export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
+export const NotificationProvider: React.FC<NotificationProviderProps> = ({
+  children,
+}) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [userId, setUserId] = useState<number | null>(null);
@@ -71,12 +91,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   useEffect(() => {
     const getUserId = async () => {
       try {
-        const storedUserId = await AsyncStorage.getItem('userId');
+        const storedUserId = await AsyncStorage.getItem("userId");
         if (storedUserId) {
           setUserId(parseInt(storedUserId));
         }
       } catch (error) {
-        console.error('❌ Error getting user ID:', error);
+        console.error("❌ Error getting user ID:", error);
       }
     };
     getUserId();
@@ -97,42 +117,55 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   // Real-time WebSocket connection
   const connectWebSocket = useCallback(() => {
-    if (!userId || (stompClient.current && stompClient.current.connected)) return;
+    if (!userId || (stompClient.current && stompClient.current.connected))
+      return;
 
     try {
-      console.log('🔌 Connecting to WebSocket for real-time notifications...');
+      console.log("🔌 Connecting to WebSocket for real-time notifications...");
       console.log(`WebSocket URL: ${API_BASE_URL}/ws-chat`);
 
-      const socket = new (require('sockjs-client'))(`${API_BASE_URL}/ws-chat`);
+      const socket = new (require("sockjs-client"))(`${API_BASE_URL}/ws-chat`);
       stompClient.current = new Client({
         webSocketFactory: () => socket,
         reconnectDelay: 5000,
         heartbeatIncoming: 4000,
         heartbeatOutgoing: 4000,
-        
+
         onConnect: () => {
-          console.log('🚀 WebSocket connected for real-time notifications');
+          console.log("🚀 WebSocket connected for real-time notifications");
           setIsConnected(true);
-          
+
           // Subscribe to user-specific notifications
           stompClient.current?.subscribe(
             `/topic/notifications/${userId}`,
             (message) => {
               try {
                 const newNotification: Notification = JSON.parse(message.body);
-                console.log('📢 Real-time notification received:', newNotification);
-                
+                console.log(
+                  "📢 Real-time notification received:",
+                  newNotification
+                );
+
                 // Normalize the notification data
                 const normalizedNotification = {
                   ...newNotification,
-                  title: newNotification.title || 'Notification',
-                  message: newNotification.message || newNotification.content || 'No content',
-                  isRead: newNotification.isRead !== undefined ? newNotification.isRead : newNotification.read || false,
+                  title: newNotification.title || "Notification",
+                  message:
+                    newNotification.message ||
+                    newNotification.content ||
+                    "No content",
+                  isRead:
+                    newNotification.isRead !== undefined
+                      ? newNotification.isRead
+                      : newNotification.read || false,
                 };
-                
+
                 addNotification(normalizedNotification);
               } catch (error) {
-                console.error('❌ Error parsing real-time notification:', error);
+                console.error(
+                  "❌ Error parsing real-time notification:",
+                  error
+                );
               }
             }
           );
@@ -143,10 +176,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
             (message) => {
               try {
                 const notificationId = parseInt(message.body);
-                console.log('✅ Real-time read update for notification:', notificationId);
+                console.log(
+                  "✅ Real-time read update for notification:",
+                  notificationId
+                );
                 handleRealTimeReadUpdate(notificationId);
               } catch (error) {
-                console.error('❌ Error processing read update:', error);
+                console.error("❌ Error processing read update:", error);
               }
             }
           );
@@ -155,7 +191,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
           stompClient.current?.subscribe(
             `/topic/notifications/${userId}/read-all`,
             () => {
-              console.log('✅ Real-time mark all as read received');
+              console.log("✅ Real-time mark all as read received");
               handleRealTimeMarkAllRead();
             }
           );
@@ -166,34 +202,37 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
             (message) => {
               try {
                 const notificationId = parseInt(message.body);
-                console.log('🗑️ Real-time delete for notification:', notificationId);
+                console.log(
+                  "🗑️ Real-time delete for notification:",
+                  notificationId
+                );
                 handleRealTimeDelete(notificationId);
               } catch (error) {
-                console.error('❌ Error processing delete update:', error);
+                console.error("❌ Error processing delete update:", error);
               }
             }
           );
         },
-        
+
         onStompError: (frame) => {
-          console.error('❌ WebSocket STOMP error:', frame.headers['message']);
+          console.error("❌ WebSocket STOMP error:", frame.headers["message"]);
           setIsConnected(false);
         },
-        
+
         onDisconnect: () => {
-          console.log('📴 WebSocket disconnected');
+          console.log("📴 WebSocket disconnected");
           setIsConnected(false);
         },
-        
+
         onWebSocketError: (event) => {
-          console.error('❌ WebSocket error:', event);
+          console.error("❌ WebSocket error:", event);
           setIsConnected(false);
-        }
+        },
       });
 
       stompClient.current.activate();
     } catch (error) {
-      console.error('❌ Error connecting to WebSocket:', error);
+      console.error("❌ Error connecting to WebSocket:", error);
       setIsConnected(false);
     }
   }, [userId]);
@@ -204,9 +243,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         stompClient.current.deactivate();
         stompClient.current = null;
         setIsConnected(false);
-        console.log('📴 WebSocket disconnected');
+        console.log("📴 WebSocket disconnected");
       } catch (error) {
-        console.error('❌ Error disconnecting WebSocket:', error);
+        console.error("❌ Error disconnecting WebSocket:", error);
       }
     }
   }, []);
@@ -214,51 +253,47 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   // Polling fallback for when WebSocket is not available
   const startPolling = useCallback(() => {
     if (pollingInterval.current) return;
-    
+
     pollingInterval.current = setInterval(() => {
       if (!isConnected) {
-        console.log('🔄 Polling for notifications (WebSocket not connected)');
+        console.log("🔄 Polling for notifications (WebSocket not connected)");
         fetchNotifications();
       }
     }, 30000); // Poll every 30 seconds when WebSocket is down
-    
-    console.log('⏱️ Started notification polling fallback');
+
+    console.log("⏱️ Started notification polling fallback");
   }, [isConnected]);
 
   const stopPolling = useCallback(() => {
     if (pollingInterval.current) {
       clearInterval(pollingInterval.current);
       pollingInterval.current = null;
-      console.log('⏹️ Stopped notification polling');
+      console.log("⏹️ Stopped notification polling");
     }
   }, []);
 
   // Real-time update handlers
   const handleRealTimeReadUpdate = useCallback((notificationId: number) => {
-    setNotifications(prev =>
-      prev.map(n =>
-        n.id === notificationId ? { ...n, isRead: true } : n
-      )
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
     );
-    setUnreadCount(prev => Math.max(0, prev - 1));
+    setUnreadCount((prev) => Math.max(0, prev - 1));
   }, []);
 
   const handleRealTimeMarkAllRead = useCallback(() => {
-    setNotifications(prev =>
-      prev.map(n => ({ ...n, isRead: true }))
-    );
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     setUnreadCount(0);
   }, []);
 
   const handleRealTimeDelete = useCallback((notificationId: number) => {
-    setNotifications(prev => {
-      const deletedNotification = prev.find(n => n.id === notificationId);
-      const filtered = prev.filter(n => n.id !== notificationId);
-      
+    setNotifications((prev) => {
+      const deletedNotification = prev.find((n) => n.id === notificationId);
+      const filtered = prev.filter((n) => n.id !== notificationId);
+
       if (deletedNotification && !deletedNotification.isRead) {
-        setUnreadCount(prevCount => Math.max(0, prevCount - 1));
+        setUnreadCount((prevCount) => Math.max(0, prevCount - 1));
       }
-      
+
       return filtered;
     });
   }, []);
@@ -269,37 +304,49 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
     try {
       console.log(`📬 Fetching notifications for user ${userId}...`);
-      const response = await fetch(`${API_BASE_URL}/api/notifications/${userId}`, {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/notifications/${userId}`,
+        {
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       console.log(`📬 Response status: ${response.status}`);
-      
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch notifications: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch notifications: ${response.status} ${response.statusText}`
+        );
       }
 
       const data: Notification[] = await response.json();
       console.log(`📬 Fetched ${data.length} notifications`);
-      
+
       // Normalize the notification data to handle different field names from backend
-      const normalizedData = data.map(notification => ({
+      const normalizedData = data.map((notification) => ({
         ...notification,
-        title: notification.title || 'Notification',
-        message: notification.message || notification.content || 'No content',
-        isRead: notification.isRead !== undefined ? notification.isRead : notification.read || false,
+        title: notification.title || "Notification",
+        message: notification.message || notification.content || "No content",
+        isRead:
+          notification.isRead !== undefined
+            ? notification.isRead
+            : notification.read || false,
       }));
-      
+
       setNotifications(normalizedData);
-      setUnreadCount(normalizedData.filter(n => !n.isRead).length);
-      console.log(`📬 Set ${normalizedData.length} notifications, ${normalizedData.filter(n => !n.isRead).length} unread`);
+      setUnreadCount(normalizedData.filter((n) => !n.isRead).length);
+      console.log(
+        `📬 Set ${normalizedData.length} notifications, ${
+          normalizedData.filter((n) => !n.isRead).length
+        } unread`
+      );
     } catch (error) {
-      console.error('❌ Error fetching notifications:', error);
-      
+      console.error("❌ Error fetching notifications:", error);
+
       // If WebSocket is not connected, ensure polling continues
       if (!isConnected) {
         startPolling();
@@ -309,60 +356,67 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   // Enhanced addNotification with duplicate prevention
   const addNotification = useCallback((notification: Notification) => {
-    setNotifications(prev => {
+    setNotifications((prev) => {
       // Check for duplicates based on ID or timestamp
-      const isDuplicate = prev.some(n => 
-        n.id === notification.id || 
-        (n.title === notification.title && 
-         n.message === notification.message && 
-         Math.abs(new Date(n.createdAt).getTime() - new Date(notification.createdAt).getTime()) < 5000)
+      const isDuplicate = prev.some(
+        (n) =>
+          n.id === notification.id ||
+          (n.title === notification.title &&
+            n.message === notification.message &&
+            Math.abs(
+              new Date(n.createdAt).getTime() -
+                new Date(notification.createdAt).getTime()
+            ) < 5000)
       );
-      
+
       if (isDuplicate) {
-        console.log('🔄 Duplicate notification detected, skipping');
+        console.log("🔄 Duplicate notification detected, skipping");
         return prev;
       }
-      
-      console.log('📬 Adding new notification:', notification.title);
+
+      console.log("📬 Adding new notification:", notification.title);
       return [notification, ...prev];
     });
-    
+
     if (!notification.isRead) {
-      setUnreadCount(prev => prev + 1);
+      setUnreadCount((prev) => prev + 1);
     }
   }, []);
 
   // Rest of your existing functions (markAsRead, markAllAsRead, deleteNotification)
-  const markAsRead = useCallback(async (notificationId: number) => {
-    if (!userId) return;
+  const markAsRead = useCallback(
+    async (notificationId: number) => {
+      if (!userId) return;
 
-    // Optimistic update
-    handleRealTimeReadUpdate(notificationId);
+      // Optimistic update
+      handleRealTimeReadUpdate(notificationId);
 
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/notifications/${notificationId}/read/${userId}`,
-        {
-          method: 'PUT',
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/notifications/${notificationId}/read/${userId}`,
+          {
+            method: "PUT",
+            credentials: "include",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          // Revert optimistic update on error
+          fetchNotifications();
+          throw new Error("Failed to mark notification as read");
         }
-      );
 
-      if (!response.ok) {
-        // Revert optimistic update on error
-        fetchNotifications();
-        throw new Error('Failed to mark notification as read');
+        console.log(`✅ Marked notification ${notificationId} as read`);
+      } catch (error) {
+        console.error("❌ Error marking notification as read:", error);
       }
-
-      console.log(`✅ Marked notification ${notificationId} as read`);
-    } catch (error) {
-      console.error('❌ Error marking notification as read:', error);
-    }
-  }, [userId]);
+    },
+    [userId]
+  );
 
   const markAllAsRead = useCallback(async () => {
     if (!userId) return;
@@ -374,11 +428,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       const response = await fetch(
         `${API_BASE_URL}/api/notifications/${userId}/read-all`,
         {
-          method: 'PUT',
-          credentials: 'include',
+          method: "PUT",
+          credentials: "include",
           headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
+            Accept: "application/json",
+            "Content-Type": "application/json",
           },
         }
       );
@@ -386,49 +440,52 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       if (!response.ok) {
         // Revert optimistic update on error
         fetchNotifications();
-        throw new Error('Failed to mark all notifications as read');
+        throw new Error("Failed to mark all notifications as read");
       }
 
-      console.log('✅ Marked all notifications as read');
+      console.log("✅ Marked all notifications as read");
     } catch (error) {
-      console.error('❌ Error marking all notifications as read:', error);
+      console.error("❌ Error marking all notifications as read:", error);
     }
   }, [userId]);
 
-  const deleteNotification = useCallback(async (notificationId: number) => {
-    if (!userId) return;
+  const deleteNotification = useCallback(
+    async (notificationId: number) => {
+      if (!userId) return;
 
-    // Optimistic update
-    handleRealTimeDelete(notificationId);
+      // Optimistic update
+      handleRealTimeDelete(notificationId);
 
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/notifications/${notificationId}/${userId}`,
-        {
-          method: 'DELETE',
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/notifications/${notificationId}/${userId}`,
+          {
+            method: "DELETE",
+            credentials: "include",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          // Revert optimistic update on error
+          fetchNotifications();
+          throw new Error("Failed to delete notification");
         }
-      );
 
-      if (!response.ok) {
-        // Revert optimistic update on error
-        fetchNotifications();
-        throw new Error('Failed to delete notification');
+        console.log(`🗑️ Deleted notification ${notificationId}`);
+      } catch (error) {
+        console.error("❌ Error deleting notification:", error);
       }
-
-      console.log(`🗑️ Deleted notification ${notificationId}`);
-    } catch (error) {
-      console.error('❌ Error deleting notification:', error);
-    }
-  }, [userId]);
+    },
+    [userId]
+  );
 
   // Force refresh function for manual refresh
   const forceRefresh = useCallback(async () => {
-    console.log('🔄 Force refreshing notifications...');
+    console.log("🔄 Force refreshing notifications...");
     await fetchNotifications();
   }, [fetchNotifications]);
 
@@ -459,10 +516,10 @@ interface NotificationBellProps {
   size?: number;
 }
 
-export const NotificationBell: React.FC<NotificationBellProps> = ({ 
-  onPress, 
-  color = 'white', 
-  size = 24 
+export const NotificationBell: React.FC<NotificationBellProps> = ({
+  onPress,
+  color = "white",
+  size = 24,
 }) => {
   const { unreadCount } = useNotifications();
 
@@ -472,7 +529,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       {unreadCount > 0 && (
         <View style={bellStyles.badge}>
           <Text style={bellStyles.badgeText}>
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </Text>
         </View>
       )}
@@ -482,26 +539,26 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 
 const bellStyles = StyleSheet.create({
   container: {
-    position: 'relative',
+    position: "relative",
     padding: 4,
   },
   badge: {
-    position: 'absolute',
+    position: "absolute",
     right: -2,
     top: -2,
-    backgroundColor: '#ef4444',
+    backgroundColor: "#ef4444",
     borderRadius: 10,
     minWidth: 20,
     height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: "white",
   },
   badgeText: {
-    color: 'white',
+    color: "white",
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
 
@@ -511,51 +568,51 @@ interface NotificationItemProps {
   onPress?: () => void;
 }
 
-export const NotificationItem: React.FC<NotificationItemProps> = ({ 
-  notification, 
-  onPress 
+export const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  onPress,
 }) => {
   const { markAsRead, deleteNotification } = useNotifications();
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'ROOM_INVITATION':
-        return 'people';
-      case 'USER_JOINED':
-        return 'person-add';
-      case 'POST_CREATED':
-        return 'document-text';
-      case 'COMMENT_ADDED':
-        return 'chatbubble';
-      case 'SYSTEM_UPDATE':
-        return 'settings';
-      case 'REMINDER':
-        return 'alarm';
-      case 'ACHIEVEMENT':
-        return 'trophy';
+      case "ROOM_INVITATION":
+        return "people";
+      case "USER_JOINED":
+        return "person-add";
+      case "POST_CREATED":
+        return "document-text";
+      case "COMMENT_ADDED":
+        return "chatbubble";
+      case "SYSTEM_UPDATE":
+        return "settings";
+      case "REMINDER":
+        return "alarm";
+      case "ACHIEVEMENT":
+        return "trophy";
       default:
-        return 'notifications';
+        return "notifications";
     }
   };
 
   const getIconColor = (type: string) => {
     switch (type) {
-      case 'ROOM_INVITATION':
-        return '#3b82f6';
-      case 'USER_JOINED':
-        return '#10b981';
-      case 'POST_CREATED':
-        return '#8b5cf6';
-      case 'COMMENT_ADDED':
-        return '#f59e0b';
-      case 'SYSTEM_UPDATE':
-        return '#6b7280';
-      case 'REMINDER':
-        return '#ef4444';
-      case 'ACHIEVEMENT':
-        return '#f59e0b';
+      case "ROOM_INVITATION":
+        return "#3b82f6";
+      case "USER_JOINED":
+        return "#10b981";
+      case "POST_CREATED":
+        return "#8b5cf6";
+      case "COMMENT_ADDED":
+        return "#f59e0b";
+      case "SYSTEM_UPDATE":
+        return "#6b7280";
+      case "REMINDER":
+        return "#ef4444";
+      case "ACHIEVEMENT":
+        return "#f59e0b";
       default:
-        return '#64748b';
+        return "#64748b";
     }
   };
 
@@ -573,24 +630,24 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      
+
       // Check if date is valid
       if (isNaN(date.getTime())) {
-        return 'Unknown time';
+        return "Unknown time";
       }
-      
+
       const now = new Date();
       const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
       if (diffInHours < 1) {
         const diffInMinutes = Math.floor(diffInHours * 60);
-        return diffInMinutes <= 0 ? 'Just now' : `${diffInMinutes}m ago`;
+        return diffInMinutes <= 0 ? "Just now" : `${diffInMinutes}m ago`;
       } else if (diffInHours < 24) {
         return `${Math.floor(diffInHours)}h ago`;
       } else {
         const diffInDays = Math.floor(diffInHours / 24);
         if (diffInDays === 1) {
-          return 'Yesterday';
+          return "Yesterday";
         } else if (diffInDays < 7) {
           return `${diffInDays}d ago`;
         } else {
@@ -599,8 +656,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Unknown time';
+      console.error("Error formatting date:", error);
+      return "Unknown time";
     }
   };
 
@@ -608,14 +665,18 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
     <TouchableOpacity
       style={[
         itemStyles.container,
-        notification.isRead ? itemStyles.read : itemStyles.unread
+        notification.isRead ? itemStyles.read : itemStyles.unread,
       ]}
       onPress={handleMarkAsRead}
     >
-      <View style={[
-        itemStyles.iconContainer,
-        notification.isRead ? itemStyles.readIconContainer : itemStyles.unreadIconContainer
-      ]}>
+      <View
+        style={[
+          itemStyles.iconContainer,
+          notification.isRead
+            ? itemStyles.readIconContainer
+            : itemStyles.unreadIconContainer,
+        ]}
+      >
         <Ionicons
           name={getIcon(notification.type)}
           size={24}
@@ -624,22 +685,34 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
       </View>
 
       <View style={itemStyles.content}>
-        <Text style={[
-          itemStyles.title,
-          notification.isRead ? itemStyles.readTitle : itemStyles.unreadTitle
-        ]} numberOfLines={1}>
-          {notification.title || 'Notification'}
+        <Text
+          style={[
+            itemStyles.title,
+            notification.isRead ? itemStyles.readTitle : itemStyles.unreadTitle,
+          ]}
+          numberOfLines={1}
+        >
+          {notification.title || "Notification"}
         </Text>
-        <Text style={[
-          itemStyles.message,
-          notification.isRead ? itemStyles.readMessage : itemStyles.unreadMessage
-        ]} numberOfLines={2}>
-          {notification.message || notification.content || 'No content available'}
+        <Text
+          style={[
+            itemStyles.message,
+            notification.isRead
+              ? itemStyles.readMessage
+              : itemStyles.unreadMessage,
+          ]}
+          numberOfLines={2}
+        >
+          {notification.message ||
+            notification.content ||
+            "No content available"}
         </Text>
-        <Text style={[
-          itemStyles.time,
-          notification.isRead ? itemStyles.readTime : itemStyles.unreadTime
-        ]}>
+        <Text
+          style={[
+            itemStyles.time,
+            notification.isRead ? itemStyles.readTime : itemStyles.unreadTime,
+          ]}
+        >
           {formatDate(notification.createdAt)}
         </Text>
       </View>
@@ -650,10 +723,10 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
           onPress={handleDelete}
           style={itemStyles.deleteButton}
         >
-          <Ionicons 
-            name="close" 
-            size={20} 
-            color={notification.isRead ? "#475569" : "#64748b"} 
+          <Ionicons
+            name="close"
+            size={20}
+            color={notification.isRead ? "#475569" : "#64748b"}
           />
         </TouchableOpacity>
       </View>
@@ -663,44 +736,44 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
 
 const itemStyles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: "#334155",
   },
   read: {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Darker for read notifications
+    backgroundColor: "rgba(0, 0, 0, 0.4)", // Darker for read notifications
   },
   unread: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)', // Lighter for unread notifications
+    backgroundColor: "rgba(255, 255, 255, 0.15)", // Lighter for unread notifications
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   readIconContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)', // Darker for read notifications
+    backgroundColor: "rgba(255, 255, 255, 0.05)", // Darker for read notifications
   },
   unreadIconContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)', // Brighter for unread notifications
+    backgroundColor: "rgba(255, 255, 255, 0.2)", // Brighter for unread notifications
   },
   content: {
     flex: 1,
   },
   title: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 4,
   },
   readTitle: {
-    color: '#94a3b8', // Darker color for read notifications
+    color: "#94a3b8", // Darker color for read notifications
   },
   unreadTitle: {
-    color: 'white', // Brighter color for unread notifications
+    color: "white", // Brighter color for unread notifications
   },
   message: {
     fontSize: 14,
@@ -708,32 +781,32 @@ const itemStyles = StyleSheet.create({
     marginBottom: 4,
   },
   readMessage: {
-    color: '#64748b', // Darker color for read notifications
+    color: "#64748b", // Darker color for read notifications
   },
   unreadMessage: {
-    color: '#cbd5e1', // Brighter color for unread notifications
+    color: "#cbd5e1", // Brighter color for unread notifications
   },
   time: {
     fontSize: 12,
   },
   readTime: {
-    color: '#475569', // Darker color for read notifications
+    color: "#475569", // Darker color for read notifications
   },
   unreadTime: {
-    color: '#64748b', // Slightly brighter for unread notifications
+    color: "#64748b", // Slightly brighter for unread notifications
   },
   actions: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    justifyContent: "space-between",
     marginLeft: 8,
   },
   unreadDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#16A34A', // Changed to green to match app theme
+    backgroundColor: "#16A34A", // Changed to green to match app theme
     marginBottom: 8,
-    shadowColor: '#16A34A',
+    shadowColor: "#16A34A",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 3,
@@ -746,12 +819,12 @@ const itemStyles = StyleSheet.create({
 // Main Notifications Screen
 const NotificationsScreen = () => {
   const router = useRouter();
-  const { 
-    notifications, 
-    unreadCount, 
-    markAllAsRead, 
+  const {
+    notifications,
+    unreadCount,
+    markAllAsRead,
     fetchNotifications,
-    isConnected 
+    isConnected,
   } = useNotifications();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -764,11 +837,11 @@ const NotificationsScreen = () => {
   const handleMarkAllAsRead = () => {
     if (unreadCount > 0) {
       Alert.alert(
-        'Mark All as Read',
+        "Mark All as Read",
         `Mark all ${unreadCount} notifications as read?`,
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Mark All', onPress: markAllAsRead },
+          { text: "Cancel", style: "cancel" },
+          { text: "Mark All", onPress: markAllAsRead },
         ]
       );
     }
@@ -780,12 +853,16 @@ const NotificationsScreen = () => {
 
   const renderConnectionStatus = () => (
     <View style={styles.connectionStatus}>
-      <View style={[
-        styles.connectionDot, 
-        { backgroundColor: isConnected ? '#16A34A' : '#EF4444' }
-      ]} />
+      <View
+        style={[
+          styles.connectionDot,
+          { backgroundColor: isConnected ? "#16A34A" : "#EF4444" },
+        ]}
+      />
       <Text style={styles.connectionText}>
-        {isConnected ? 'Real-time updates active' : 'Offline mode - Pull to refresh'}
+        {isConnected
+          ? "Real-time updates active"
+          : "Offline mode - Pull to refresh"}
       </Text>
     </View>
   );
@@ -802,29 +879,32 @@ const NotificationsScreen = () => {
   );
 
   return (
-    <ImageBackground 
-      source={require('../assets/background-photo.png')} 
-      style={styles.container} 
+    <ImageBackground
+      source={require("../assets/background-photo.png")}
+      style={styles.container}
       resizeMode="cover"
     >
       <View style={styles.overlay} />
-      
+
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        
+
         <Text style={styles.headerTitle}>Notifications</Text>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           onPress={handleMarkAllAsRead}
           style={styles.markAllButton}
           disabled={unreadCount === 0}
         >
-          <Ionicons 
-            name="checkmark-done" 
-            size={24} 
-            color={unreadCount > 0 ? "white" : "#64748b"} 
+          <Ionicons
+            name="checkmark-done"
+            size={24}
+            color={unreadCount > 0 ? "white" : "#64748b"}
           />
         </TouchableOpacity>
       </View>
@@ -832,13 +912,12 @@ const NotificationsScreen = () => {
       <View style={styles.content}>
         <View style={styles.statsRow}>
           <Text style={styles.totalText}>
-            {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
+            {notifications.length} notification
+            {notifications.length !== 1 ? "s" : ""}
           </Text>
           <View style={styles.statusContainer}>
             {unreadCount > 0 && (
-              <Text style={styles.unreadText}>
-                {unreadCount} unread
-              </Text>
+              <Text style={styles.unreadText}>{unreadCount} unread</Text>
             )}
             {renderConnectionStatus()}
           </View>
@@ -854,7 +933,7 @@ const NotificationsScreen = () => {
               refreshing={refreshing}
               onRefresh={handleRefresh}
               tintColor="white"
-              colors={['#16A34A']}
+              colors={["#16A34A"]}
               title="Pull to refresh notifications"
               titleColor="white"
             />
@@ -879,24 +958,24 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingTop: 50,
     paddingHorizontal: 16,
     paddingBottom: 16,
-    backgroundColor: 'rgba(11, 36, 14, 0.8)',
+    backgroundColor: "rgba(11, 36, 14, 0.8)",
   },
   backButton: {
     padding: 8,
   },
   headerTitle: {
-    color: 'white',
+    color: "white",
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   markAllButton: {
     padding: 8,
@@ -905,51 +984,51 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    backgroundColor: "rgba(30, 41, 59, 0.8)",
   },
   totalText: {
-    color: '#cbd5e1',
+    color: "#cbd5e1",
     fontSize: 14,
   },
   unreadText: {
-    color: '#3b82f6',
+    color: "#3b82f6",
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   list: {
     flex: 1,
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 32,
     paddingTop: 64,
   },
   emptyTitle: {
-    color: 'white',
+    color: "white",
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginTop: 16,
     marginBottom: 8,
   },
   emptyMessage: {
-    color: '#94a3b8',
+    color: "#94a3b8",
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 24,
   },
   connectionStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
     borderRadius: 12,
     marginTop: 8,
   },
@@ -960,12 +1039,12 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   connectionText: {
-    color: '#94a3b8',
+    color: "#94a3b8",
     fontSize: 12,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   statusContainer: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
 });
 

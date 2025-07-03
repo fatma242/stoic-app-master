@@ -14,9 +14,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @CrossOrigin(origins = {
-    "${UserIphttp}",          // Web on phone using LAN
-    "${UserIPexp}",
-    "${UserIphttp}"
+        "${UserIphttp}", // Web on phone using LAN
+        "${UserIPexp}",
+        "${UserIphttp}"
 }, allowCredentials = "true")
 @RestController
 @RequiredArgsConstructor
@@ -55,7 +55,7 @@ public class MessageController {
     // REST: between dates
     @GetMapping("/between")
     public List<Message> getBetween(@RequestParam LocalDateTime from,
-                                    @RequestParam LocalDateTime to) {
+            @RequestParam LocalDateTime to) {
         return service.getBetween(from, to);
     }
 }

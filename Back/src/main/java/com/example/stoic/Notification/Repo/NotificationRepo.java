@@ -1,6 +1,5 @@
 package com.example.stoic.Notification.Repo;
 
-
 import com.example.stoic.Notification.Model.Notification;
 
 import java.util.List;
@@ -14,7 +13,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface NotificationRepo extends JpaRepository<Notification, Integer> , JpaSpecificationExecutor<Notification> {
+public interface NotificationRepo extends JpaRepository<Notification, Integer>, JpaSpecificationExecutor<Notification> {
 
     List<Notification> findByUserUserIdOrderBySentAt(Integer userId);
 
@@ -26,6 +25,10 @@ public interface NotificationRepo extends JpaRepository<Notification, Integer> ,
 
     @Query("SELECT COUNT(n) FROM Notification n WHERE n.user.userId = :userId AND n.isRead = false")
     int countUnreadNotificationsByUserId(@Param("userId") Integer userId);
-    
+
     void deleteByUserUserId(Integer userId);
+
+    List<Notification> findByUserUserIdAndIsReadFalse(int userId);
+
+    List<Notification> findByUserUserId(int userId);
 }
