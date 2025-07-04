@@ -1,4 +1,5 @@
 import BackgroundVideo from "@/components/BackgroundVideo";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
@@ -15,9 +16,6 @@ import {
   View,
 } from "react-native";
 import i18n from "../constants/i18n";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { HeaderWithNotifications } from "../components/HeaderWithNotifications";
-import { useNotifications } from "./Notification";
 
 const getWeekNumber = (date: Date) => {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -27,15 +25,16 @@ const getWeekNumber = (date: Date) => {
   return { week: weekNo, year: d.getUTCFullYear() };
 };
 
+type AnswerScoreMap = { [answer: string]: number };
+type ScoredQuestion = { text: string; scoreMap: AnswerScoreMap };
+
 export default function WeeklyCheckIn() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [questions, setQuestions] = useState<string[]>([]);
+  const [scoredQuestions, setScoredQuestions] = useState<ScoredQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [status, setStatus] = useState<string | null>(null);
-  
-  const { addNotification } = useNotifications();
 
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
   const [key, setKey] = useState(0);
@@ -44,11 +43,48 @@ export default function WeeklyCheckIn() {
   const textAlign = isRTL ? 'right' : 'left';
   const flexDirection = isRTL ? 'row-reverse' : 'row';
 
+  const buildScoredQuestions = (status: string): ScoredQuestion[] => {
+    let rawQuestions: Record<string, string> = {};
+    switch (status) {
+      case "ANXIETY": {
+        const result = i18n.t("weeklyCheckIn.questions.anxiety", { returnObjects: true });
+        rawQuestions = typeof result === "object" && result !== null ? result as Record<string, string> : {};
+        break;
+      }
+      case "STRESS": {
+        const result = i18n.t("weeklyCheckIn.questions.stress", { returnObjects: true });
+        rawQuestions = typeof result === "object" && result !== null ? result as Record<string, string> : {};
+        break;
+      }
+      case "DEPRESSION": {
+        const result = i18n.t("weeklyCheckIn.questions.depression", { returnObjects: true });
+        rawQuestions = typeof result === "object" && result !== null ? result as Record<string, string> : {};
+        break;
+      }
+      default: {
+        const result = i18n.t("weeklyCheckIn.questions.normal", { returnObjects: true });
+        rawQuestions = typeof result === "object" && result !== null ? result as Record<string, string> : {};
+      }
+    }
+
+    const yes = i18n.t("weeklyCheckIn.answers.yes");
+    const sometimes = i18n.t("weeklyCheckIn.answers.sometimes");
+    const no = i18n.t("weeklyCheckIn.answers.no");
+
+    return Object.values(rawQuestions).map((text, index) => {
+      const isPositive = status === "NORMAL";
+      return {
+        text,
+        scoreMap: isPositive
+          ? { [yes]: 2, [sometimes]: 1, [no]: 0 }
+          : { [yes]: 0, [sometimes]: 1, [no]: 2 },
+      };
+    });
+  };
+
   useEffect(() => {
     global.reloadApp = () => setKey(prev => prev + 1);
-    return () => {
-      global.reloadApp = undefined;
-    };
+    return () => { global.reloadApp = undefined; };
   }, []);
 
   useEffect(() => {
@@ -56,15 +92,11 @@ export default function WeeklyCheckIn() {
       try {
         const userId = await AsyncStorage.getItem("userId");
         if (!userId) {
-          Alert.alert(
-            i18n.t('weeklyCheckIn.errors.userNotFound'),
-            i18n.t('weeklyCheckIn.errors.userNotFound')
-          );
+          Alert.alert(i18n.t('weeklyCheckIn.errors.userNotFound'));
           router.replace("/login");
           return;
         }
 
-        // Check if user already submitted this week's check-in
         const response = await axios.get(`${API_BASE_URL}/api/mood-logs/${userId}`);
         const logs = response.data;
         const now = new Date();
@@ -77,38 +109,18 @@ export default function WeeklyCheckIn() {
         });
 
         if (hasSubmitted) {
-          Alert.alert(
-            i18n.t('weeklyCheckIn.alerts.alreadySubmitted'),
-            i18n.t('weeklyCheckIn.alerts.alreadySubmitted')
-          );
+          Alert.alert(i18n.t('weeklyCheckIn.alerts.alreadySubmitted'));
           router.replace("/progress");
           return;
         }
 
-        // Fetch user status
         const res = await fetch(`${API_BASE_URL}/api/users/status/${userId}`);
         const data = await res.json();
         setStatus(data);
-
-        let statusQuestions: any = [];
-        if (data === "ANXIETY") {
-          statusQuestions = i18n.t("weeklyCheckIn.questions.anxiety", { returnObjects: true });
-        } else if (data === "STRESS") {
-          statusQuestions = i18n.t("weeklyCheckIn.questions.stress", { returnObjects: true });
-        } else if (data === "DEPRESSION") {
-          statusQuestions = i18n.t("weeklyCheckIn.questions.depression", { returnObjects: true });
-        } else {
-          statusQuestions = i18n.t("weeklyCheckIn.questions.normal", { returnObjects: true });
-        }
-
-        const questionTexts = Object.values(statusQuestions);
-        setQuestions(questionTexts as string[]);
+        setScoredQuestions(buildScoredQuestions(data));
       } catch (error) {
         console.error(error);
-        Alert.alert(
-          i18n.t('weeklyCheckIn.errors.fetchFailed'),
-          i18n.t('weeklyCheckIn.errors.fetchFailed')
-        );
+        Alert.alert(i18n.t('weeklyCheckIn.errors.fetchFailed'));
       } finally {
         setLoading(false);
       }
@@ -117,45 +129,8 @@ export default function WeeklyCheckIn() {
     fetchData();
   }, []);
 
-  // Function to schedule weekly check-in reminder notification
-  const scheduleWeeklyReminder = async () => {
-    try {
-      const userId = await AsyncStorage.getItem("userId");
-      if (!userId) return;
-
-      // Create a reminder notification for next week
-      const nextWeek = new Date();
-      nextWeek.setDate(nextWeek.getDate() + 7);
-      
-      addNotification({
-        id: Date.now(),
-        title: i18n.t('weeklyCheckIn.notifications.weeklyReminderTitle') || "Weekly Check-in Reminder",
-        message: i18n.t('weeklyCheckIn.notifications.weeklyReminderMessage') || "It's time for your weekly mental health check-in! Take a moment to reflect on your week.",
-        createdAt: nextWeek.toISOString(),
-        isRead: false,
-        type: "REMINDER"
-      });
-
-      // Also create a progress update reminder
-      addNotification({
-        id: Date.now() + 1,
-        title: i18n.t('weeklyCheckIn.notifications.progressReminderTitle') || "Progress Update Reminder", 
-        message: i18n.t('weeklyCheckIn.notifications.progressReminderMessage') || "Don't forget to update your daily progress tracker to maintain your wellness journey!",
-        createdAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
-        isRead: false,
-        type: "REMINDER"
-      });
-    } catch (error) {
-      console.error("Error scheduling reminders:", error);
-    }
-  };
-
-  useEffect(() => {
-    scheduleWeeklyReminder();
-  }, []);
-
   const handleSubmit = async () => {
-    if (Object.keys(answers).length !== questions.length) {
+    if (Object.keys(answers).length !== scoredQuestions.length) {
       Alert.alert(i18n.t('weeklyCheckIn.errors.incompleteAnswers'));
       return;
     }
@@ -164,164 +139,83 @@ export default function WeeklyCheckIn() {
     try {
       const userId = await AsyncStorage.getItem("userId");
       if (!userId) {
-        Alert.alert(
-          i18n.t('weeklyCheckIn.errors.userNotFound'),
-          i18n.t('weeklyCheckIn.errors.userNotFound')
-        );
+        Alert.alert(i18n.t('weeklyCheckIn.errors.userNotFound'));
         return;
       }
 
       let score = 0;
-      Object.values(answers).forEach((ans) => {
-        if (ans === i18n.t('weeklyCheckIn.answers.yes')) score += 2;
-        else if (ans === i18n.t('weeklyCheckIn.answers.sometimes')) score += 1;
+      scoredQuestions.forEach((q, i) => {
+        const ans = answers[i];
+        if (ans in q.scoreMap) score += q.scoreMap[ans];
       });
 
       await axios.post(`${API_BASE_URL}/api/mood-logs`, {
-        userId: userId,
+        userId,
         moodScore: score,
         timestamp: new Date().toISOString(),
       });
 
-      // Schedule reminder notifications for next week and progress update
-      scheduleWeeklyReminder();
-
-      // Create immediate congratulatory notification
-      addNotification({
-        id: Date.now() + 2,
-        title: i18n.t('weeklyCheckIn.notifications.completionTitle') || "Weekly Check-in Completed!",
-        message: i18n.t('weeklyCheckIn.notifications.completionMessage') || "Great job completing your weekly mental health check-in! Your wellness journey continues.",
-        createdAt: new Date().toISOString(),
-        isRead: false,
-        type: "ACHIEVEMENT"
-      });
-
-      Alert.alert(
-        i18n.t('weeklyCheckIn.alerts.success'),
-        i18n.t('weeklyCheckIn.alerts.reminderMessage'),
-        [
-          { 
-            text: i18n.t('weeklyCheckIn.alerts.updateProgress') || "Update Progress", 
-            onPress: () => router.replace("/progress") 
-          },
-          { 
-            text: i18n.t('weeklyCheckIn.navigation.later') || "Later", 
-            style: "cancel"
-          },
-        ]
-      );
+      Alert.alert(i18n.t('weeklyCheckIn.alerts.success'), '', [
+        { text: "OK", onPress: () => router.replace("/progress") },
+      ]);
     } catch (err) {
       console.error(err);
-      Alert.alert(
-        i18n.t('weeklyCheckIn.errors.submitFailed'),
-        i18n.t('weeklyCheckIn.errors.submitFailed')
-      );
+      Alert.alert(i18n.t('weeklyCheckIn.errors.submitFailed'));
     } finally {
       setSubmitting(false);
     }
   };
 
   if (loading) {
-    return (
-        <View style={styles.container}>
-          <ActivityIndicator size="large" color="#16A34A" />
-        </View>
-    );
+    return <View style={styles.container}><ActivityIndicator size="large" color="#16A34A" /></View>;
   }
 
-  const currentQuestion = questions[currentQuestionIndex];
+  const currentQuestion = scoredQuestions[currentQuestionIndex]?.text;
 
   return (
     <View style={styles.container} key={key}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={{
-        position: 'absolute',
-        top: 40,
-        right: 10,
-        zIndex: 1000,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10
-      }}>
-        <HeaderWithNotifications 
-          isRTL={isRTL}
-          style={{ backgroundColor: 'transparent' }}
-        />
+      <View style={[styles.languageContainer, { marginTop: 40, marginRight: 10 }]}>
         <LanguageSwitcher />
       </View>
       <BackgroundVideo />
       <View style={styles.overlay} />
-
       <KeyboardAvoidingView behavior="padding" style={styles.contentContainer}>
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
-            {/* Progress reminder */}
-            <TouchableOpacity 
-              style={styles.progressReminder}
-              onPress={() => router.push("/progress")}
-            >
-              <Text style={styles.progressReminderText}>
-                {i18n.t('weeklyCheckIn.alerts.progressReminder')}
-              </Text>
-            </TouchableOpacity>
-
             <View style={{ marginBottom: 20 }}>
               <Text style={[styles.questionText, { textAlign }]}>{currentQuestion}</Text>
-
               <View style={[styles.optionsContainer, { flexDirection }]}>
-                {[
-                  i18n.t('weeklyCheckIn.answers.yes'),
-                  i18n.t('weeklyCheckIn.answers.no'),
-                  i18n.t('weeklyCheckIn.answers.sometimes')
-                ].map((option) => (
+                {[i18n.t('weeklyCheckIn.answers.yes'), i18n.t('weeklyCheckIn.answers.no'), i18n.t('weeklyCheckIn.answers.sometimes')].map((option) => (
                   <TouchableOpacity
                     key={option}
                     onPress={() => {
                       setAnswers((prev) => ({ ...prev, [currentQuestionIndex]: option }));
-                      if (currentQuestionIndex < questions.length - 1) {
+                      if (currentQuestionIndex < scoredQuestions.length - 1) {
                         setCurrentQuestionIndex((prev) => prev + 1);
                       }
                     }}
-                    style={[
-                      styles.optionButton,
-                      answers[currentQuestionIndex] === option && styles.selectedOption
-                    ]}
+                    style={[styles.optionButton, answers[currentQuestionIndex] === option && styles.selectedOption]}
                   >
                     <Text style={styles.optionText}>{option}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
-
             <View style={[styles.navigationContainer, { flexDirection }]}>
               {currentQuestionIndex > 0 && (
-                <TouchableOpacity 
-                  onPress={() => setCurrentQuestionIndex(prev => prev - 1)}
-                  style={styles.previousButton}
-                >
-                  <Text style={styles.previousText}>
-                    {i18n.t('weeklyCheckIn.navigation.previous')}
-                  </Text>
+                <TouchableOpacity onPress={() => setCurrentQuestionIndex(prev => prev - 1)} style={styles.previousButton}>
+                  <Text style={styles.previousText}>{i18n.t('weeklyCheckIn.navigation.previous')}</Text>
                 </TouchableOpacity>
               )}
-
-              {currentQuestionIndex === questions.length - 1 && (
+              {currentQuestionIndex === scoredQuestions.length - 1 && (
                 <View style={styles.submitContainer}>
-                  <TouchableOpacity
-                    onPress={handleSubmit}
-                    disabled={submitting}
-                    style={styles.submitButton}
-                  >
-                    <LinearGradient 
-                      colors={["#16A34A", "#0d4215"]} 
-                      style={styles.buttonGradient}
-                    >
+                  <TouchableOpacity onPress={handleSubmit} disabled={submitting} style={styles.submitButton}>
+                    <LinearGradient colors={["#16A34A", "#0d4215"]} style={styles.buttonGradient}>
                       {submitting ? (
                         <ActivityIndicator color="white" />
                       ) : (
-                        <Text style={styles.buttonText}>
-                          {i18n.t('weeklyCheckIn.navigation.submit')}
-                        </Text>
+                        <Text style={styles.buttonText}>{i18n.t('weeklyCheckIn.navigation.submit')}</Text>
                       )}
                     </LinearGradient>
                   </TouchableOpacity>
@@ -336,121 +230,22 @@ export default function WeeklyCheckIn() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "transparent",
-  },
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.52)",
-    zIndex: -1,
-  },
-  contentContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-  },
-  languageContainer: {
-    alignSelf: "flex-end",
-    zIndex: 2,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  card: {
-    backgroundColor: "rgba(255, 255, 255, 0.13)",
-    borderRadius: 20,
-    padding: 30,
-    width: "90%",
-    maxWidth: 380,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 5,
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 24,
-    marginBottom: 20,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  questionText: {
-    color: "#fff",
-    fontSize: 18,
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  optionsContainer: {
-    justifyContent: "space-around",
-    width: '100%',
-  },
-  optionButton: {
-    padding: 12,
-    backgroundColor: "#ffffff30",
-    borderRadius: 8,
-    marginVertical: 5,
-    alignItems: 'center',
-    minWidth: 100,
-  },
-  selectedOption: {
-    backgroundColor: "#16A34A",
-  },
-  optionText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  navigationContainer: {
-    width: '100%',
-    marginTop: 20,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  previousButton: {
-    padding: 10,
-  },
-  previousText: {
-    color: '#ccc',
-    fontSize: 16,
-  },
-  submitContainer: {
-    alignItems: 'center',
-  },
-  submitButton: {
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  buttonGradient: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  progressReminder: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderLeftWidth: 3,
-    borderLeftColor: '#22C55E',
-    padding: 12,
-    marginBottom: 20,
-    borderRadius: 8,
-  },
-  progressReminderText: {
-    color: '#22C55E',
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
+  container: { flex: 1, backgroundColor: "transparent" },
+  overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.52)", zIndex: -1 },
+  contentContainer: { flex: 1, justifyContent: "center", alignItems: "center", width: "100%" },
+  languageContainer: { alignSelf: "flex-end", zIndex: 2 },
+  scrollContainer: { flexGrow: 1, justifyContent: "center", alignItems: "center" },
+  card: { backgroundColor: "rgba(255, 255, 255, 0.13)", borderRadius: 20, padding: 30, width: "90%", maxWidth: 380, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 5, alignItems: "center" },
+  questionText: { color: "#fff", fontSize: 18, marginBottom: 15, textAlign: 'center' },
+  optionsContainer: { justifyContent: "space-around", width: '100%' },
+  optionButton: { padding: 12, backgroundColor: "#ffffff30", borderRadius: 8, marginVertical: 5, alignItems: 'center', minWidth: 100 },
+  selectedOption: { backgroundColor: "#16A34A" },
+  optionText: { color: "#fff", fontSize: 16, fontWeight: '500' },
+  navigationContainer: { width: '100%', marginTop: 20, justifyContent: 'space-between', alignItems: 'center' },
+  previousButton: { padding: 10 },
+  previousText: { color: '#ccc', fontSize: 16 },
+  submitContainer: { alignItems: 'center' },
+  submitButton: { borderRadius: 10, overflow: 'hidden' },
+  buttonGradient: { paddingVertical: 12, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
+  buttonText: { fontSize: 18, fontWeight: 'bold', color: 'white' },
 });

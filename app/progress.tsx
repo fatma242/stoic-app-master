@@ -14,10 +14,10 @@ import { Video } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import moment from 'moment';
-import i18n from "../../constants/i18n";
+import i18n from "../constants/i18n";
 import BackgroundVideo from '@/components/BackgroundVideo';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { HeaderWithNotifications } from '../../components/HeaderWithNotifications';
+import { HeaderWithNotifications } from '../components/HeaderWithNotifications';
 
 const ProgressScreen = () => {
   const [moodData, setMoodData] = useState<MoodLog[]>([]);
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     textAlign: "center",
-    marginTop: 60,
+    marginTop: 120,
     marginBottom: 20,
     color: "white",
     textShadowColor: "rgba(0,0,0,0.5)",
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     padding: 20,
-    marginBottom: 30,
+    marginBottom: 20,
     marginRight: 4,
     elevation: 4,
     shadowColor: "#000",
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 5,
+    marginBottom: 15,
   },
   cardText: {
     fontSize: 14,

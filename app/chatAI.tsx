@@ -14,10 +14,10 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons, Entypo } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { HeaderWithNotifications } from '../../components/HeaderWithNotifications';
+import { HeaderWithNotifications } from '../components/HeaderWithNotifications';
 
 // Fix: Use require for local images
-const chatbotIcon = require('../../assets/chatbot.png');
+const chatbotIcon = require('../assets/chatbot.png');
 
 const apiKey = Constants.expoConfig?.extra?.chatbotApiKey;
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -355,7 +355,7 @@ Stoic AI does not curse, use obscene, racist, or trendy slang words. If the user
   }, [userStatus, userAge, userGender, messages]);
 
   return (
-    <ImageBackground source={require('../../assets/background-photo.png')} style={styles.container} resizeMode="cover">
+    <ImageBackground source={require('../assets/background-photo.png')} style={styles.container} resizeMode="cover">
       <View style={styles.header}>
         <HeaderWithNotifications 
           style={{ backgroundColor: 'transparent', flex: 0 }}

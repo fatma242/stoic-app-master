@@ -194,7 +194,7 @@ export default function Settings() {
               {i18n.t("settings.logOut")}
             </Text>
           </TouchableOpacity>
-          {/* <TouchableOpacity
+          { <TouchableOpacity
             style={[styles.dangerItem, { flexDirection }]}
             onPress={handleDeleteAccount}
           >
@@ -202,7 +202,7 @@ export default function Settings() {
             <Text style={[styles.dangerText, { textAlign }]}>
               {i18n.t('settings.deleteAccount')}
             </Text>
-          </TouchableOpacity> */}
+          </TouchableOpacity>}
         </LinearGradient>
       </ScrollView>
     </View>
