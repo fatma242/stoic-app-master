@@ -37,6 +37,7 @@ public class Comment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User author;
+    
     @ManyToMany
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinTable(name = "comment_likes", joinColumns = @JoinColumn(name = "comment_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))

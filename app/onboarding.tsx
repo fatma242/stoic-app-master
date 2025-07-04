@@ -10,6 +10,7 @@ import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, justifyContent: 'center', backgroundColor: 'transparent' },
@@ -37,6 +38,7 @@ export default function Onboarding() {
   const [key, setKey] = useState(0);
   const [history, setHistory] = useState<AnswerKey[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   useEffect(() => {
     global.reloadApp = () => setKey(prev => prev + 1);
@@ -49,7 +51,7 @@ export default function Onboarding() {
       if (!userId) throw new Error('User ID not found');
 
       const res = await axios.post(
-        'http://192.168.1.6:8100/api/users/submit-status',
+        `${API_BASE_URL}/api/users/submit-status`,
         {
           userId: parseInt(userId, 10),
           status: status.toUpperCase()
@@ -85,8 +87,6 @@ export default function Onboarding() {
     console.log('📤 Submitting user status:', status);
     await submitStatus(status);
     setHasSubmitted(true);
-
-    setTimeout(() => router.replace('/login'), 3000);
   };
 
   const handleAnswer = (answer: string) => {
@@ -137,14 +137,25 @@ export default function Onboarding() {
       return (
         <View style={{ alignItems: 'center' }}>
           <Text style={styles.resourceText}>{i18n.t(node.resourcesKey)}</Text>
+
           {currentNode === 'crisis_resources' && (
             <TouchableOpacity onPress={handleEmergencyCall}>
               <Text style={styles.emergencyText}>{i18n.t('onboarding.resources.hopeless')}</Text>
             </TouchableOpacity>
           )}
+
+          <TouchableOpacity
+            style={[styles.navButton, { marginTop: 30, paddingHorizontal: 32 }]}
+            onPress={() => router.replace('/home')}
+          >
+            <Text style={styles.navButtonText}>
+              {i18n.locale.startsWith('ar') ? 'استمرار' : 'Continue'}
+            </Text>
+          </TouchableOpacity>
         </View>
       );
     }
+
 
     return (
       <View style={{ alignItems: 'center', width: '100%' }}>

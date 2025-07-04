@@ -1,11 +1,8 @@
-import BackgroundVideo from "@/components/BackgroundVideo";
-import React from "react";
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
   BackHandler,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -24,6 +21,9 @@ import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { MaterialIcons, Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import i18n from "../constants/i18n";
+import BackgroundVideo from "@/components/BackgroundVideo";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const { width, height } = Dimensions.get("window");
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -41,6 +41,7 @@ type ErrorsType = Record<FieldName, string>;
 
 export default function SignUp() {
   const router = useRouter();
+  const [key, setKey] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<FormDataType>({
     username: "",
@@ -83,29 +84,38 @@ export default function SignUp() {
     age: new Animated.Value(0),
   }).current;
 
+  const isRTL = i18n.locale.startsWith("ar");
+
   const steps = [
     {
-      title: "Welcome to Stoic",
-      subtitle: "Begin your journey to mental wellness",
+      title: i18n.t("signup.title"),
+      subtitle: i18n.t("signup.subtitle"),
       fields: ["username", "email"],
       icon: "🌱",
       color: "#4ECDC4",
     },
     {
-      title: "Secure Your Space",
-      subtitle: "Create a safe sanctuary for your thoughts",
+      title: i18n.t("signup.passwordtitle1"),
+      subtitle: i18n.t("signup.passwordtitle2"),
       fields: ["password", "confirmPassword"],
       icon: "🔐",
       color: "#45B7A8",
     },
     {
-      title: "Personal Touch",
-      subtitle: "Help us tailor your healing experience",
+      title: i18n.t("signup.identity"),
+      subtitle: i18n.t("signup.subtitle2"),
       fields: ["gender", "age"],
       icon: "🌟",
       color: "#3DA58A",
     },
   ];
+
+  useEffect(() => {
+    global.reloadApp = () => setKey((prev) => prev + 1);
+    return () => {
+      global.reloadApp = undefined;
+    };
+  }, []);
 
   useEffect(() => {
     StatusBar.setBarStyle("light-content");
@@ -231,10 +241,10 @@ export default function SignUp() {
     currentFields.forEach((field) => {
       if (field === "username") {
         if (!formData.username.trim()) {
-          newErrors.username = "Username is required";
+          newErrors.username = i18n.t("validation.username_required");
           valid = false;
         } else if (formData.username.length < 3) {
-          newErrors.username = "Username must be at least 3 characters";
+          newErrors.username = i18n.t("validation.username_short");
           valid = false;
         } else {
           newErrors.username = "";
@@ -243,10 +253,10 @@ export default function SignUp() {
 
       if (field === "email") {
         if (!formData.email.trim()) {
-          newErrors.email = "Email is required";
+          newErrors.email = i18n.t("validation.email_required");
           valid = false;
         } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
-          newErrors.email = "Please enter a valid email";
+          newErrors.email = i18n.t("validation.email_invalid");
           valid = false;
         } else {
           newErrors.email = "";
@@ -255,10 +265,10 @@ export default function SignUp() {
 
       if (field === "password") {
         if (!formData.password) {
-          newErrors.password = "Password is required";
+          newErrors.password = i18n.t("validation.password_required");
           valid = false;
         } else if (formData.password.length < 6) {
-          newErrors.password = "Password must be at least 6 characters";
+          newErrors.password = i18n.t("validation.password_short");
           valid = false;
         } else {
           newErrors.password = "";
@@ -267,7 +277,7 @@ export default function SignUp() {
 
       if (field === "confirmPassword") {
         if (formData.password !== formData.confirmPassword) {
-          newErrors.confirmPassword = "Passwords don't match";
+          newErrors.confirmPassword = i18n.t("validation.confirm_password_mismatch");
           valid = false;
         } else {
           newErrors.confirmPassword = "";
@@ -276,7 +286,7 @@ export default function SignUp() {
 
       if (field === "gender") {
         if (!formData.gender) {
-          newErrors.gender = "Please select your gender";
+          newErrors.gender = i18n.t("validation.gender_required");
           valid = false;
         } else {
           newErrors.gender = "";
@@ -286,10 +296,10 @@ export default function SignUp() {
       if (field === "age") {
         const age = parseInt(formData.age);
         if (!formData.age) {
-          newErrors.age = "Age is required";
+          newErrors.age = i18n.t("validation.age_required");
           valid = false;
         } else if (isNaN(age) || age < 13 || age > 120) {
-          newErrors.age = "Please enter a valid age (13-120)";
+          newErrors.age = i18n.t("validation.age_invalid");
           valid = false;
         } else {
           newErrors.age = "";
@@ -371,8 +381,8 @@ export default function SignUp() {
       router.replace("/onboarding");
     } catch (error) {
       Alert.alert(
-        "Registration Error",
-        error instanceof Error ? error.message : "An error occurred"
+        i18n.t("signup.errorTitle"),
+        error instanceof Error ? error.message : i18n.t("signup.errorGeneric")
       );
     } finally {
       setLoading(false);
@@ -401,7 +411,7 @@ export default function SignUp() {
                 styles.progressStep,
                 {
                   backgroundColor:
-                    index <= currentStep ? "#4ECDC4" : "rgba(255,255,255,0.3)",
+                    index <= currentStep ? "#16A34A" : "rgba(255,255,255,0.3)",
                   transform: [
                     {
                       scale: index === currentStep ? 1.2 : 1,
@@ -413,9 +423,6 @@ export default function SignUp() {
           ))}
         </View>
       </View>
-      <Text style={styles.progressText}>
-        {currentStep + 1} of {steps.length}
-      </Text>
     </View>
   );
 
@@ -456,17 +463,17 @@ export default function SignUp() {
   );
 
   const renderGenderSelection = () => (
-    <View style={styles.genderContainer}>
+    <View style={[styles.genderContainer, isRTL && { flexDirection: "row-reverse" }]}>
       {[
         {
           key: "female",
-          label: "Female",
+          label: i18n.t("signup.female"),
           icon: "female",
           gradient: ["#FF6B9D", "#C44569"],
         },
         {
           key: "male",
-          label: "Male",
+          label: i18n.t("signup.male"),
           icon: "male",
           gradient: ["#4ECDC4", "#44A08D"],
         },
@@ -495,7 +502,7 @@ export default function SignUp() {
               <FontAwesome5
                 name={gender.icon}
                 size={28}
-                color={formData.gender === gender.key ? "#fff" : "#4ECDC4"}
+                color={formData.gender === gender.key ? "#fff" : "#16A34A"}
               />
             </View>
             <Text
@@ -527,7 +534,9 @@ export default function SignUp() {
               },
             ]}
           >
-            <Text style={styles.fieldLabel}>Choose your identity</Text>
+            <Text style={[styles.fieldLabel, isRTL && { textAlign: "right" }]}>
+              {i18n.t("signup.identity")}
+            </Text>
             {renderGenderSelection()}
             {errors.gender && (
               <Animated.Text style={styles.errorText}>
@@ -557,7 +566,7 @@ export default function SignUp() {
                 {
                   borderColor: inputAnimations.age.interpolate({
                     inputRange: [0, 1],
-                    outputRange: ["rgba(255,255,255,0.1)", "#4ECDC4"],
+                    outputRange: ["rgba(255,255,255,0.1)", "#16A34A"],
                   }),
                   borderWidth: inputAnimations.age.interpolate({
                     inputRange: [0, 1],
@@ -574,12 +583,12 @@ export default function SignUp() {
                 <MaterialIcons
                   name="cake"
                   size={24}
-                  color="#4ECDC4"
+                  color="#16A34A"
                   style={styles.icon}
                 />
                 <TextInput
-                  style={styles.input}
-                  placeholder="Your age"
+                  style={[styles.input, isRTL && { textAlign: "right" }]}
+                  placeholder={i18n.t("signup.age")}
                   placeholderTextColor="rgba(255,255,255,0.6)"
                   value={formData.age}
                   onChangeText={(text) => handleChange("age", text)}
@@ -618,7 +627,7 @@ export default function SignUp() {
                 borderColor:
                   inputAnimations[field]?.interpolate({
                     inputRange: [0, 1],
-                    outputRange: ["rgba(255,255,255,0.1)", "#4ECDC4"],
+                    outputRange: ["rgba(255,255,255,0.1)", "#16A34A"],
                   }) || "rgba(255,255,255,0.1)",
                 borderWidth:
                   inputAnimations[field]?.interpolate({
@@ -630,6 +639,7 @@ export default function SignUp() {
                     inputRange: [0, 1],
                     outputRange: [0.1, 0.3],
                   }) || 0.1,
+                shadowColor: "#16A34A",
               },
             ]}
           >
@@ -643,19 +653,19 @@ export default function SignUp() {
                     : "lock"
                 }
                 size={24}
-                color="#4ECDC4"
+                color="#16A34A"
                 style={styles.icon}
               />
               <TextInput
-                style={styles.input}
+                style={[styles.input, isRTL && { textAlign: "right" }]}
                 placeholder={
                   field === "confirmPassword"
-                    ? "Confirm your password"
+                    ? i18n.t("signup.confirmPassword")
                     : field === "username"
-                    ? "Choose a username"
+                    ? i18n.t("signup.username")
                     : field === "email"
-                    ? "Your email address"
-                    : "Create a password"
+                    ? i18n.t("signup.email")
+                    : i18n.t("signup.password")
                 }
                 placeholderTextColor="rgba(255,255,255,0.6)"
                 value={formData[field]}
@@ -714,6 +724,10 @@ export default function SignUp() {
       <View style={styles.overlay} />
       {renderFloatingElements()}
 
+      <View style={[styles.languageSwitcherContainer, {marginTop:15}]}>
+        <LanguageSwitcher />
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.contentContainer}
@@ -734,22 +748,6 @@ export default function SignUp() {
               },
             ]}
           >
-            {/* Logo with breathing animation */}
-            <Animated.View
-              style={[
-                styles.logoContainer,
-                {
-                  transform: [{ scale: breathingAnim }],
-                },
-              ]}
-            >
-              <Image
-                source={require("../assets/logo.png")}
-                style={styles.logo}
-              />
-              <View style={styles.logoGlow} />
-            </Animated.View>
-
             {/* Step indicator */}
             <Animated.View
               style={[
@@ -769,8 +767,12 @@ export default function SignUp() {
               <Text style={styles.stepEmoji}>{steps[currentStep].icon}</Text>
             </Animated.View>
 
-            <Text style={styles.title}>{steps[currentStep].title}</Text>
-            <Text style={styles.subtitle}>{steps[currentStep].subtitle}</Text>
+            <Text style={[styles.title, isRTL && { textAlign: "right" }]}>
+              {steps[currentStep].title}
+            </Text>
+            <Text style={[styles.subtitle, isRTL && { textAlign: "right" }]}>
+              {steps[currentStep].subtitle}
+            </Text>
 
             <View style={styles.formContainer}>
               {renderCurrentStepFields()}
@@ -792,7 +794,7 @@ export default function SignUp() {
                   ]}
                 >
                   <LinearGradient
-                    colors={["#4ECDC4", "#44A08D", "#358F80"]}
+                    colors={["#16A34A", "#0d4215"]}
                     style={[
                       styles.buttonGradient,
                       loading && styles.buttonDisabled,
@@ -806,11 +808,11 @@ export default function SignUp() {
                       <>
                         <Text style={styles.buttonText}>
                           {currentStep === steps.length - 1
-                            ? "Begin Your Journey"
-                            : "Continue"}
+                            ? i18n.t("signup.beginJourney")
+                            : i18n.t("signup.continue")}
                         </Text>
                         <MaterialIcons
-                          name="arrow-forward"
+                          name={isRTL ? "arrow-back" : "arrow-forward"}
                           size={20}
                           color="#fff"
                           style={styles.buttonIcon}
@@ -829,12 +831,14 @@ export default function SignUp() {
                 >
                   <BlurView intensity={20} style={styles.secondaryButtonBlur}>
                     <MaterialIcons
-                      name="arrow-back"
+                      name={isRTL ? "arrow-forward" : "arrow-back"}
                       size={20}
                       color="rgba(255,255,255,0.8)"
                       style={styles.backIcon}
                     />
-                    <Text style={styles.secondaryButtonText}>Back</Text>
+                    <Text style={styles.secondaryButtonText}>
+                      {i18n.t("signup.back")}
+                    </Text>
                   </BlurView>
                 </TouchableOpacity>
               )}
@@ -849,13 +853,13 @@ export default function SignUp() {
                   },
                 ]}
               >
-                <Text style={styles.loginText}>
-                  Already part of our community?{" "}
+                <Text style={[styles.loginText, isRTL && { textAlign: "right" }]}>
+                  {i18n.t("signup.alreadyMember")}{" "}
                   <Text
                     style={styles.loginLink}
                     onPress={() => router.replace("/login")}
                   >
-                    Welcome back
+                    {i18n.t("signup.welcomeBack")}
                   </Text>
                 </Text>
               </Animated.View>
@@ -870,353 +874,254 @@ export default function SignUp() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor: "#000
+    backgroundColor: "#000",
   },
   overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    // backgroundColor: "rgba(5, 15, 25, 0.4)", // Much lighter overlay
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.23)",
   },
   floatingElements: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
+    ...StyleSheet.absoluteFillObject,
+    zIndex: -1,
   },
   floatingElement: {
     position: "absolute",
-    zIndex: 1,
   },
   floatingEmoji: {
-    fontSize: 20,
-    opacity: 0.3,
+    fontSize: 40,
   },
   contentContainer: {
     flex: 1,
-    width: "100%",
-    zIndex: 2,
+    paddingTop: Constants.statusBarHeight + 20,
+    paddingHorizontal: 20,
   },
-  progressContainer: {
-    paddingHorizontal: 25,
-    paddingTop: Constants.statusBarHeight + 30,
-    paddingBottom: 20,
-    alignItems: "center",
-  },
-  progressTrack: {
-    width: "100%",
-    height: 6,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 10,
-    marginBottom: 15,
-    position: "relative",
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 10,
-    backgroundColor: "#4ECDC4",
-    shadowColor: "#4ECDC4",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-  },
-  progressSteps: {
+  languageSwitcherContainer: {
     position: "absolute",
-    top: -5,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 0,
-  },
-  progressStep: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  progressText: {
-    color: "rgba(255, 255, 255, 0.9)",
-    fontSize: 14,
-    fontWeight: "600",
-    letterSpacing: 1,
+    top: Constants.statusBarHeight + 10,
+    right: 20,
+    zIndex: 100,
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: "center",
-    alignItems: "center",
-    padding: 25,
+    paddingBottom: 40,
   },
   animatedContainer: {
-    width: "100%",
     alignItems: "center",
   },
+  progressContainer: {
+    marginBottom: 30,
+    width: "100%",
+  },
+  progressTrack: {
+    height: 6,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 3,
+    overflow: "hidden",
+    marginBottom: 10,
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#16A34A",
+  },
+  progressSteps: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: -12,
+  },
+  progressStep: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  progressText: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 14,
+    textAlign: "center",
+  },
   logoContainer: {
-    position: "relative",
     marginBottom: 20,
+    alignItems: "center",
   },
   logo: {
     width: 100,
     height: 100,
-    borderRadius: 50,
-    opacity: 0.95,
+    resizeMode: "contain",
   },
   logoGlow: {
-    position: "absolute",
-    top: -10,
-    left: -10,
-    right: -10,
-    bottom: -10,
-    borderRadius: 60,
-    backgroundColor: "#4ECDC4",
-    opacity: 0.1,
-    shadowColor: "#4ECDC4",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(78, 205, 196, 0.2)",
+    borderRadius: 50,
+    zIndex: -1,
   },
   stepIndicator: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "rgba(78, 205, 196, 0.2)",
-    borderWidth: 2,
-    borderColor: "#4ECDC4",
-    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
     justifyContent: "center",
+    alignItems: "center",
     marginBottom: 20,
-    shadowColor: "#4ECDC4",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 15,
   },
   stepEmoji: {
-    fontSize: 24,
+    fontSize: 30,
   },
   title: {
-    fontSize: 32,
-    fontWeight: "300",
+    fontSize: 28,
+    fontWeight: "bold",
     color: "#fff",
-    marginBottom: 8,
     textAlign: "center",
-    letterSpacing: 1,
-    textShadowColor: "rgba(0,0,0,0.3)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    color: "rgba(255, 255, 255, 0.8)",
-    marginBottom: 40,
+    color: "rgba(255,255,255,0.7)",
     textAlign: "center",
-    lineHeight: 24,
-    fontWeight: "300",
-    letterSpacing: 0.5,
+    marginBottom: 30,
+    paddingHorizontal: 20,
   },
   formContainer: {
     width: "100%",
-    alignItems: "center",
     marginBottom: 30,
   },
   fieldContainer: {
-    width: "100%",
     marginBottom: 20,
+    width: "100%",
   },
   fieldLabel: {
     color: "#fff",
+    marginBottom: 10,
     fontSize: 16,
-    marginBottom: 15,
-    textAlign: "center",
-    fontWeight: "300",
-    letterSpacing: 0.5,
+    fontWeight: "500",
   },
   inputContainer: {
-    width: "100%",
-    marginBottom: 5,
-    borderRadius: 20,
-    color: "rgba(255, 4, 4, 0.05)",
-    backgroundColor: "rgba(255, 4, 4, 0.05)",
+    borderRadius: 15,
     overflow: "hidden",
-    shadowColor: "#4ECDC4",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    shadowColor: "#16A34A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
   },
   inputBlur: {
+    padding: 15,
     flexDirection: "row",
     alignItems: "center",
-    // paddingHorizontal: 20,
-    // paddingVertical: 18,
-    // backgroundColor: "rgba(255, 255, 255, 0.05)",
-    backgroundColor: "rgba(255, 4, 4, 0.05)",
-    backdropFilter: "blur(20px)",
-  },
-  inputError: {
-    borderColor: "#ff6b6b",
-    shadowColor: "#ff6b6b",
-  },
-  icon: {
-    marginRight: 15,
-    opacity: 0.8,
   },
   input: {
     flex: 1,
-    fontSize: 16,
     color: "#fff",
-    backgroundColor: "rgba(255, 4, 4, 0.05)",
-    paddingVertical: 2,
-    fontWeight: "300",
+    fontSize: 16,
+    paddingHorizontal: 10,
+  },
+  inputError: {
+    borderColor: "#FF6B6B",
+  },
+  icon: {
+    marginRight: 10,
   },
   eyeIcon: {
-    padding: 8,
-    marginLeft: 5,
-    borderRadius: 15,
+    padding: 5,
+  },
+  errorText: {
+    color: "#FF6B6B",
+    marginTop: 5,
+    fontSize: 14,
   },
   genderContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    width: "100%",
-    // paddingHorizontal: 10,
-    // gap: 15,
+    marginTop: 10,
   },
   genderButton: {
-    flex: 1,
-    borderRadius: 20,
+    width: "48%",
+    borderRadius: 15,
     overflow: "hidden",
-    shadowColor: "#4ECDC4",
-    shadowOffset: { width: 0, height: 8 },
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    color: "rgba(255, 255, 255, 0.1)",
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-    elevation: 5,
   },
   genderButtonActive: {
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
+    shadowColor: "#fff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
   },
   genderGradient: {
+    padding: 20,
     alignItems: "center",
-    // padding: 25,
-    minHeight: 120,
     justifyContent: "center",
   },
   genderIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   genderLabel: {
-    color: "rgba(255, 255, 255, 0.7)",
-    fontSize: 14,
-    fontWeight: "500",
-    letterSpacing: 0.5,
+    color: "#16A34A",
+    fontWeight: "bold",
+    fontSize: 16,
   },
   genderLabelActive: {
     color: "#fff",
-    fontWeight: "600",
   },
   buttonContainer: {
     width: "100%",
     alignItems: "center",
-    gap: 15,
   },
   primaryButton: {
     width: "100%",
+    marginBottom: 15,
   },
   buttonContent: {
-    width: "100%",
+    borderRadius: 15,
+    overflow: "hidden",
   },
   buttonGradient: {
     paddingVertical: 18,
-    paddingHorizontal: 25,
-    borderRadius: 25,
+    paddingHorizontal: 30,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#4ECDC4",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
+    alignItems: "center",
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "white",
-    letterSpacing: 1,
-    marginRight: 8,
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 18,
+    textAlign: "center",
   },
   buttonIcon: {
-    marginLeft: 5,
+    marginLeft: 10,
   },
   secondaryButton: {
-    width: "100%",
-    borderRadius: 20,
+    width: "60%",
+    borderRadius: 15,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
   secondaryButtonBlur: {
+    paddingVertical: 12,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    alignItems: "center",
+  },
+  secondaryButtonText: {
+    color: "rgba(255,255,255,0.8)",
+    fontWeight: "500",
+    fontSize: 16,
   },
   backIcon: {
     marginRight: 8,
   },
-  secondaryButtonText: {
-    color: "rgba(255, 255, 255, 0.8)",
-    fontSize: 16,
-    fontWeight: "500",
-    letterSpacing: 0.5,
-  },
-  errorText: {
-    color: "#ff6b6b",
-    fontSize: 13,
-    marginTop: 8,
-    marginLeft: 10,
-    fontWeight: "400",
-    textShadowColor: "rgba(0,0,0,0.3)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
   loginContainer: {
-    marginTop: 30,
-    padding: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    marginTop: 20,
   },
   loginText: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.7)",
+    color: "rgba(255,255,255,0.7)",
     textAlign: "center",
-    fontWeight: "300",
-    letterSpacing: 0.5,
   },
   loginLink: {
-    color: "#4ECDC4",
-    fontWeight: "600",
-    textDecorationLine: "underline",
+    color: "#16A34A",
+    fontWeight: "500",
   },
 });

@@ -1,4 +1,4 @@
-package com.example.stoic.config;
+package com.example.stoic.Room.Service.WebSockets;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -14,7 +14,7 @@ public class WebSocketBrokerConfig implements WebSocketMessageBrokerConfigurer {
         // allow CORS from your Expo/Web ports:
         registry
             .addEndpoint("/ws-chat")
-            .setAllowedOriginPatterns("http://localhost:8081", "http://192.168.1.8:8081", "exp://192.168.1.8:8081")
+            .setAllowedOriginPatterns("${UserIphttp}", "${UserIPexp}", "${UserIphttp}")
             .withSockJS();
     }
 

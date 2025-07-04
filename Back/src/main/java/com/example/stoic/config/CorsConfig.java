@@ -1,24 +1,24 @@
-package com.example.stoic.config;
+// package com.example.stoic.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
+// import org.springframework.context.annotation.Bean;
+// import org.springframework.context.annotation.Configuration;
+// import org.springframework.web.cors.CorsConfiguration;
+// import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+// import org.springframework.web.filter.CorsFilter;
 
-@Configuration
-public class CorsConfig {
+// @Configuration
+// public class CorsConfig {
 
-    @Bean
-    public CorsFilter corsFilter() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowCredentials(true); // now credentials are allowed
-        config.addAllowedOriginPattern("*"); // allow any origin
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
+//     @Bean
+//     public CorsFilter corsFilter() {
+//         CorsConfiguration config = new CorsConfiguration();
+//         config.setAllowCredentials(true); // now credentials are allowed
+//         config.addAllowedOriginPattern("*"); // allow any origin
+//         config.addAllowedHeader("*");
+//         config.addAllowedMethod("*");
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return new CorsFilter(source);
-    }
-}
+//         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+//         source.registerCorsConfiguration("/**", config);
+//         return new CorsFilter(source);
+//     }
+// }

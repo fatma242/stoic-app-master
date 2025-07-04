@@ -11,6 +11,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Entity
 @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 @Table(name = "room")
@@ -36,6 +39,7 @@ public class Room {
     private Date createdAt;
 
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private List<Post> posts = new ArrayList<>();
 
     @Column(name = "join_code", unique = true, updatable = false, nullable = false)
@@ -51,12 +55,25 @@ public class Room {
             this.join_code = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         }
     }
-
+    public boolean checkuserinroom(User user) {
+        if (this.Users == null) return false;
+        return this.Users.contains(user);
+    }
     public void adduser(User user) {
         if (this.Users == null) this.Users = new ArrayList<>();
         Users.add(user);
     }
-
+    public void printUsers() {
+        if (this.Users != null) {
+            for (User user : this.Users) {
+                System.out.println(user.getUsername());
+            }
+        } else {
+            System.out.println("No users in this room.");
+        }
+    }
+    
+  
     public void removeUser(User user) {
         if (this.Users != null) this.Users.remove(user);
     }

@@ -3,11 +3,21 @@ package com.example.stoic.User.Model;
 import com.example.stoic.Language.Language;
 import com.example.stoic.Room.Model.Room;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.*;
 import jakarta.persistence.*;
+import lombok.Data;
+import lombok.*;
 
-import java.util.List;
+import java.util.*;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
+
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 @Table(name = "users")
@@ -43,6 +53,7 @@ public class User {
 
     @JsonIgnore
     @ManyToMany(mappedBy = "Users")
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private List<Room> rooms;
 
     // Getters and Setters
@@ -81,5 +92,6 @@ public class User {
     public OnboardingStatus getStatus() {
         return onboardingStatus;
     }
+ 
 
 }

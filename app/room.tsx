@@ -10,17 +10,21 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ImageBackground,
 } from "react-native";
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode } from "expo-av";
 
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Clipboard from "expo-clipboard";
+import { ToastAndroid } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
+import i18n from "../constants/i18n";
+import { HeaderWithNotifications } from "../components/HeaderWithNotifications";
 
 // Type definitions
 interface User {
@@ -61,8 +65,10 @@ interface Post {
 
 interface Notification {
   id: number;
-  content: string;
-  read: boolean;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
   createdAt: string;
 }
 
@@ -71,37 +77,31 @@ export default function RoomScreen() {
   const { id } = useLocalSearchParams();
   const roomId = id ? parseInt(id as string) : null;
 
+  // تحديد اتجاه النص
+  const isRTL = i18n.locale === "ar";
+  const textStyle = isRTL ? styles.rtlText : styles.ltrText;
+  const flexDirection = isRTL ? "row-reverse" : "row";
+
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<number | null>(null);
   const [username, setUsername] = useState<string>("");
   const [isOwner, setIsOwner] = useState(false);
-
-  // Chat state
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-
-  // Posts state
+  // Notifications
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
   const [isCreatingPost, setIsCreatingPost] = useState(false);
-
-  // Room management
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Notifications
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  // Users in the room
   const [roomUsers, setRoomUsers] = useState<User[]>([]);
-
-  // Add this after your existing state declarations
   const [likingPostIds, setLikingPostIds] = useState<Set<number>>(new Set());
   const [refreshCount, setRefreshCount] = useState(0);
   const [userRole, setUserRole] = useState<string>("");
@@ -114,7 +114,12 @@ export default function RoomScreen() {
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const connectWebSocket = () => {
+  const connectWebSocket = (usernameParam?: string) => {
+    const effectiveUsername = usernameParam || username;
+    if (!effectiveUsername) {
+      console.warn("⚠️ Username not set, delaying WebSocket connection");
+      return;
+    }
     const socket = new SockJS(`${API_BASE_URL}/ws-chat`);
     stompClient.current = new Client({
       webSocketFactory: () => socket,
@@ -122,29 +127,83 @@ export default function RoomScreen() {
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
-        stompClient.current.subscribe(
-          `/topic/rooms/${roomId}`,
-          (message: any) => {
-            const newMessage = JSON.parse(message.body);
-            setMessages((prev) => [...prev, newMessage]);
-            scrollToBottom();
-          }
+        console.log(
+          "✅ WebSocket connected, subscribing to notifications on /user/" +
+            effectiveUsername
         );
+        stompClient.current.subscribe(
+          `/user/${effectiveUsername}/queue/notifications`,
+          (frame: any) => {
+            console.log("📨 Raw WS frame.body:", frame.body);
+            try {
+              const notif: Notification = JSON.parse(frame.body);
+              console.log("🔔 Parsed notification:", notif);
+              console.log(
+                "🔍 Current username for comparison:",
+                effectiveUsername
+              );
+              console.log("🔍 Notification message:", notif.message);
 
-        // Subscribe to notifications
-        stompClient.current.subscribe(
-          `/user/${userId}/queue/notifications`,
-          (message: any) => {
-            const notification = JSON.parse(message.body);
-            setNotifications((prev) => [notification, ...prev]);
-            setUnreadCount((prev) => prev + 1);
+              // ► ENHANCED SELF-NOTIFICATION FILTERING
+              const isSelfNotification =
+                notif.message &&
+                typeof notif.message === "string" &&
+                effectiveUsername &&
+                notif.message.startsWith(`${effectiveUsername}:`);
+
+              console.log("🔍 Is self notification check:", {
+                username: effectiveUsername,
+                notificationmessage: notif.message,
+                messageType: typeof notif.message,
+                startsWithUsername: isSelfNotification,
+              });
+
+              if (isSelfNotification) {
+                console.log("🚫 Dropping self notification:", notif.message);
+                return;
+              }
+
+              console.log(
+                "✅ Processing notification from another user:",
+                notif.message
+              );
+
+              // ► DEDUPE + UNisRead COUNT
+              setNotifications((prev) => {
+                if (prev.some((n) => n.id === notif.id)) {
+                  console.log("🔁 Duplicate detected, skipping id:", notif.id);
+                  return prev;
+                }
+                console.log("➕ Adding notification id:", notif.id);
+                if (!notif.isRead) {
+                  setUnreadCount((c) => {
+                    const nc = c + 1;
+                    console.log("🔢 New unreadCount:", nc);
+                    return nc;
+                  });
+                }
+                return [notif, ...prev];
+              });
+
+              // ► SHOW TOAST FOR UNisRead ONLY
+              if (!notif.isRead) {
+                console.log(
+                  "🔔 Showing toast for notification:",
+                  notif.message
+                );
+                if (Platform.OS === "android") {
+                  ToastAndroid.show(notif.message, ToastAndroid.SHORT);
+                } else {
+                  Alert.alert("New Notification", notif.message);
+                }
+              }
+            } catch (err) {
+              console.error("❌ Error processing WS notification:", err);
+            }
           }
         );
       },
-      onStompError: (frame) => {
-        console.error("Broker reported error: " + frame.headers["message"]);
-        console.error("Additional details: " + frame.body);
-      },
+      onStompError: (err) => console.error("⚠️ STOMP error:", err),
     });
 
     stompClient.current.activate();
@@ -156,40 +215,14 @@ export default function RoomScreen() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to fetch room");
+      if (!response.ok) throw new Error(i18n.t("room.fetchRoomError"));
 
       const data: Room = await response.json();
-      console.log("Fetched room:", data);
       setRoom(data);
       setEditedName(data.roomName);
-
-      // Calculate owner status immediately with the current userId
       const ownerStatus = currentUserId === data.ownerId;
       setIsOwner(ownerStatus);
-      console.log(
-        "Owner check: userId",
-        currentUserId,
-        "room.ownerId",
-        data.ownerId,
-        "isOwner:",
-        ownerStatus
-      );
 
-      // Optional: Fetch owner details if needed
-      try {
-        const response2 = await fetch(
-          `${API_BASE_URL}/api/users/${data.ownerId}`,
-          {
-            credentials: "include",
-          }
-        );
-        const ownerData: User = await response2.json();
-        console.log("Fetched room owner:", ownerData.userId);
-      } catch (error) {
-        console.log("Could not fetch owner details:", error);
-      }
-
-      // Fetch user role for admin privileges
       try {
         const userResponse = await fetch(
           `${API_BASE_URL}/api/users/${currentUserId}`,
@@ -200,15 +233,129 @@ export default function RoomScreen() {
           setUserRole(userData.userRole);
         }
       } catch (error) {
-        console.log("Could not fetch user role:", error);
+        console.log(i18n.t("room.fetchRoleError"), error);
       }
     } catch (error) {
       Alert.alert(
-        "Error",
+        i18n.t("room.error"),
         error instanceof Error && error.message
           ? error.message
-          : "Could not load room"
+          : i18n.t("room.loadRoomError")
       );
+    }
+  };
+
+  const fetchNotifications = async (
+    currentUserId: number,
+    usernameParam?: string
+  ) => {
+    const effectiveUsername = usernameParam || username;
+    console.log("🔍 fetchNotifications for userId:", currentUserId);
+    console.log("🔍 Current username for filtering:", effectiveUsername);
+    console.log("🔍 Username state:", username);
+    console.log("🔍 Username parameter:", usernameParam);
+
+    try {
+      const resp = await fetch(
+        `${API_BASE_URL}/api/notifications?userId=${currentUserId}`,
+        { credentials: "include" }
+      );
+      console.log("  → HTTP status:", resp.status);
+      if (!resp.ok) throw new Error(`Status ${resp.status}`);
+
+      const data: Notification[] = await resp.json();
+      console.log("  → Raw notifications:", data);
+
+      // ► ENHANCED SELF-NOTIFICATION FILTERING
+      const filtered = data.filter((n) => {
+        // Safety check for message and effectiveUsername
+        if (!n.message || typeof n.message !== "string" || !effectiveUsername) {
+          console.log(
+            "🔍 Skipping notification with invalid message or username:",
+            {
+              id: n.id,
+              message: n.message,
+              username: effectiveUsername,
+            }
+          );
+          return true; // Keep notifications with invalid data
+        }
+
+        const isSelf = n.message.startsWith(`${effectiveUsername}:`);
+        console.log("🔍 Filtering notification:", {
+          id: n.id,
+          message: n.message,
+          username: effectiveUsername,
+          isSelf: isSelf,
+        });
+
+        if (isSelf) {
+          console.log("🚫 Filtering out self notification:", n.message);
+          return false;
+        }
+        return true;
+      });
+      console.log("  → After filtering self notifications:", filtered);
+
+      setNotifications(filtered);
+
+      // ► UPDATE UNREAD COUNT
+      const unread = filtered.filter((n) => !n.isRead).length;
+      console.log("  → Calculated unreadCount:", unread);
+      setUnreadCount(unread);
+    } catch (err) {
+      console.error("❌ fetchNotifications error:", err);
+    }
+  };
+  const loadCurrentUser = async (uid: number) => {
+    console.log("👤 Loading current user with ID:", uid);
+
+    const res = await fetch(`${API_BASE_URL}/api/users/${uid}`, {
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const currentUser: User = await res.json();
+    console.log("✅ Fetched user:", currentUser);
+    console.log("✅ Setting username to:", currentUser.username);
+
+    setUsername(currentUser.username);
+    await AsyncStorage.setItem("username", currentUser.username);
+
+    return currentUser;
+  };
+
+  // Optimized markNotificationsAsRead
+  const markNotificationsAsRead = async () => {
+    if (!userId || unreadCount === 0) return;
+
+    console.log("Marking notifications as read");
+
+    try {
+      // Optimistic update
+      const updatedNotifications = notifications.map((n) => ({
+        ...n,
+        read: true,
+      }));
+      setNotifications(updatedNotifications);
+      setUnreadCount(0);
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/notifications/mark-read?userId=${userId}`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Mark read failed: " + response.status);
+      }
+
+      console.log("Notifications marked as read successfully");
+    } catch (error) {
+      console.error("Mark read error:", error);
+      // Revert on error
+      fetchNotifications(userId);
     }
   };
 
@@ -221,16 +368,16 @@ export default function RoomScreen() {
         }
       );
 
-      if (!response.ok) throw new Error("Failed to fetch messages");
+      if (!response.ok) throw new Error(i18n.t("room.fetchMessagesError"));
 
       const data: Message[] = await response.json();
       setMessages(data);
     } catch (error) {
       Alert.alert(
-        "Error",
+        i18n.t("room.error"),
         error instanceof Error && error.message
           ? error.message
-          : "Could not load messages"
+          : i18n.t("room.loadMessagesError")
       );
     }
   };
@@ -248,7 +395,7 @@ export default function RoomScreen() {
         setPosts([]);
         return;
       }
-      if (!response.ok) throw new Error("Failed to fetch posts");
+      if (!response.ok) throw new Error(i18n.t("room.fetchPostsError"));
 
       const data: Post[] = await response.json();
       const processed: Post[] = data.map((post) => {
@@ -268,35 +415,8 @@ export default function RoomScreen() {
       setPosts(processed);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not load posts"
-      );
-    }
-  };
-
-  const fetchNotifications = async (currentUserId: number) => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/notifications?userId=${currentUserId}`,
-        {
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to fetch notifications");
-
-      const data: Notification[] = await response.json();
-      setNotifications(data);
-
-      // Count unread notifications
-      const unread = data.filter((n) => !n.read).length;
-      setUnreadCount(unread);
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        error instanceof Error && error.message
-          ? error.message
-          : "Could not load notifications"
+        i18n.t("room.error"),
+        error instanceof Error ? error.message : i18n.t("room.loadPostsError")
       );
     }
   };
@@ -304,41 +424,27 @@ export default function RoomScreen() {
   const fetchRoomUsers = async () => {
     if (!roomId) return;
     try {
-      console.log("Fetching room users for roomId:", roomId);
-
-      // Fix the API endpoint - should be room-specific
       const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
         credentials: "include",
       });
 
-      console.log("Room users response status:", response.status);
-      console.log("Room users response ok:", response.ok);
-
-      if (!response.ok) throw new Error("Failed to fetch room users");
+      if (!response.ok) throw new Error(i18n.t("room.fetchUsersError"));
 
       const data = await response.json();
-      console.log("Raw room users response:", data);
-
-      // Handle different response formats
       let users = [];
       if (Array.isArray(data)) {
-        // Direct array response
         users = data;
       } else if (data._embedded?.users) {
-        // HAL format response
         users = data._embedded.users;
       } else if (data.users) {
-        // Nested users property
         users = data.users;
       }
-
-      console.log("Processed users:", users);
       setRoomUsers(Array.isArray(users) ? users : []);
     } catch (error) {
-      console.error("Error fetching room users:", error);
+      console.error(i18n.t("room.fetchUsersError"), error);
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not load room users"
+        i18n.t("room.error"),
+        error instanceof Error ? error.message : i18n.t("room.loadUsersError")
       );
     }
   };
@@ -363,10 +469,10 @@ export default function RoomScreen() {
       setNewMessage("");
     } catch (error) {
       Alert.alert(
-        "Error",
+        i18n.t("room.error"),
         error instanceof Error && error.message
           ? error.message
-          : "Failed to send message"
+          : i18n.t("room.sendMessageError")
       );
     } finally {
       setIsSending(false);
@@ -375,7 +481,7 @@ export default function RoomScreen() {
 
   const createPost = async () => {
     if (!newPostTitle.trim() || !newPostContent.trim()) {
-      Alert.alert("Error", "Title and content are required");
+      Alert.alert(i18n.t("room.error"), i18n.t("room.postFieldsRequired"));
       return;
     }
 
@@ -398,7 +504,7 @@ export default function RoomScreen() {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Failed to create post: ${response.status} - ${errorText}`
+          `${i18n.t("room.createPostError")}: ${response.status} - ${errorText}`
         );
       }
 
@@ -406,13 +512,13 @@ export default function RoomScreen() {
       setPosts((prev) => [...prev, newPost]);
       setNewPostTitle("");
       setNewPostContent("");
-      Alert.alert("Success", "Post created successfully");
+      Alert.alert(i18n.t("room.success"), i18n.t("room.postCreatedSuccess"));
     } catch (error) {
       Alert.alert(
-        "Error",
+        i18n.t("room.error"),
         error instanceof Error && error.message
           ? error.message
-          : "Could not create post"
+          : i18n.t("room.createPostError")
       );
     } finally {
       setIsCreatingPost(false);
@@ -421,7 +527,7 @@ export default function RoomScreen() {
 
   const handleUpdateRoom = async () => {
     if (!room || !editedName.trim()) {
-      Alert.alert("Error", "Room name is required");
+      Alert.alert(i18n.t("room.error"), i18n.t("room.roomNameRequired"));
       return;
     }
 
@@ -437,18 +543,18 @@ export default function RoomScreen() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Update failed");
+      if (!response.ok) throw new Error(i18n.t("room.updateRoomError"));
 
       const updatedRoom = await response.json();
       setRoom(updatedRoom);
       setIsEditing(false);
-      Alert.alert("Success", "Room updated successfully");
+      Alert.alert(i18n.t("room.success"), i18n.t("room.roomUpdatedSuccess"));
     } catch (error) {
       Alert.alert(
-        "Error",
+        i18n.t("room.error"),
         error instanceof Error && error.message
           ? error.message
-          : "Could not update room"
+          : i18n.t("room.updateRoomError")
       );
     } finally {
       setIsUpdating(false);
@@ -459,12 +565,12 @@ export default function RoomScreen() {
     if (!room) return;
 
     Alert.alert(
-      "Confirm Delete",
-      `Are you sure you want to delete "${room.roomName}"?`,
+      i18n.t("room.confirmDeleteTitle"),
+      i18n.t("room.confirmDeleteMessage", { roomName: room.roomName }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: i18n.t("room.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: i18n.t("room.delete"),
           style: "destructive",
           onPress: async () => {
             setIsDeleting(true);
@@ -474,16 +580,19 @@ export default function RoomScreen() {
                 credentials: "include",
               });
 
-              if (!response.ok) throw new Error("Delete failed");
+              if (!response.ok) throw new Error(i18n.t("room.deleteRoomError"));
 
-              Alert.alert("Success", "Room deleted successfully");
+              Alert.alert(
+                i18n.t("room.success"),
+                i18n.t("room.roomDeletedSuccess")
+              );
               router.back();
             } catch (error) {
               Alert.alert(
-                "Error",
+                i18n.t("room.error"),
                 error instanceof Error && error.message
                   ? error.message
-                  : "Could not delete room"
+                  : i18n.t("room.deleteRoomError")
               );
             } finally {
               setIsDeleting(false);
@@ -494,22 +603,6 @@ export default function RoomScreen() {
     );
   };
 
-  const markNotificationsAsRead = async () => {
-    if (!userId) return;
-    try {
-      await fetch(
-        `${API_BASE_URL}/api/notifications/mark-read?userId=${userId}`,
-        {
-          method: "POST",
-          credentials: "include",
-        }
-      );
-      setUnreadCount(0);
-    } catch (error) {
-      console.error("Failed to mark notifications as read", error);
-    }
-  };
-
   const scrollToBottom = () => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   };
@@ -517,75 +610,112 @@ export default function RoomScreen() {
   const copyRoomCode = async () => {
     if (room?.join_code) {
       await Clipboard.setStringAsync(room.join_code);
-      Alert.alert("Copied", "Room code copied to clipboard");
+      Alert.alert(i18n.t("room.copied"), i18n.t("room.roomCodeCopied"));
+    }
+  };
+  const fetchRoomAndUser = async (uid: number, rid: number) => {
+    try {
+      console.log("🚀 Starting fetchRoomAndUser flow");
+
+      // a) load user first and wait for username to be set
+      const currentUser = await loadCurrentUser(uid);
+      console.log("✅ User loaded, username set to:", currentUser.username);
+
+      // b) now load room
+      const roomData = await loadRoom(rid);
+
+      // c) owner check
+      const isOwnerFlag = currentUser.userId === roomData.ownerId;
+      setIsOwner(isOwnerFlag);
+      console.log("👑 Owner status:", isOwnerFlag);
+
+      // d) fetch role if needed
+      const roleRes = await fetch(`${API_BASE_URL}/api/users/${uid}`, {
+        credentials: "include",
+      });
+      if (roleRes.ok) {
+        const { userRole: role } = await roleRes.json();
+        setUserRole(role);
+        console.log("🎭 User role set to:", role);
+      }
+
+      return currentUser;
+    } catch (error) {
+      console.error("❌ Error in fetchRoomAndUser:", error);
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+      throw error;
     }
   };
 
-  // Use useFocusEffect to reload data every time the screen is focused
+  const loadRoom = async (roomId: number) => {
+    const res = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error(`Failed to fetch room: ${res.status}`);
+    const data: Room = await res.json();
+    console.log("Fetched room:", data);
+    setRoom(data);
+    setEditedName(data.roomName);
+    return data;
+  };
+  // Then in your focus effect (or useEffect):
   useFocusEffect(
     useCallback(() => {
-      let isActive = true;
+      (async () => {
+        console.log("🔄 Focus effect triggered");
 
-      async function loadData() {
+        const storedUid = await AsyncStorage.getItem("userId");
+        const storedUsername = await AsyncStorage.getItem("username");
+
+        console.log("📱 Stored userId:", storedUid);
+        console.log("📱 Stored username:", storedUsername);
+
+        if (!storedUid || !roomId) {
+          console.warn("⚠️ Missing userId or roomId");
+          return;
+        }
+
+        const uid = parseInt(storedUid, 10);
+        setUserId(uid);
+
+        // If we have stored username, set it immediately
+        if (storedUsername) {
+          console.log("📱 Setting username from storage:", storedUsername);
+          setUsername(storedUsername);
+        }
+
         try {
-          setLoading(true);
+          // fetch both user and room (this will also set/update username)
+          const currentUser = await fetchRoomAndUser(uid, roomId);
 
-          // First, load user data from AsyncStorage
-          const storedUserId = await AsyncStorage.getItem("userId");
-          const storedUsername = await AsyncStorage.getItem("username");
+          // Now that username is properly set, we can safely do other operations
+          console.log("🔗 Username confirmed as:", currentUser.username);
 
-          if (!storedUserId) {
-            Alert.alert("Error", "User not found. Please log in again.");
-            return;
-          }
+          // ... now messages, posts, notifications, users, websocket…
+          await fetchMessages();
+          await fetchPosts(uid);
+          await fetchNotifications(uid, currentUser.username);
+          await fetchRoomUsers();
 
-          const parsedUserId = parseInt(storedUserId);
-          console.log("Loading user data - userId:", parsedUserId);
+          // Connect WebSocket AFTER username is set and pass username explicitly
+          console.log(
+            "🔌 Connecting WebSocket with username:",
+            currentUser.username
+          );
+          connectWebSocket(currentUser.username);
 
-          // Set user data immediately
-          setUserId(parsedUserId);
-          if (storedUsername) {
-            setUsername(storedUsername);
-          }
-
-          // Only proceed if we have a valid roomId and the component is still active
-          if (roomId && isActive) {
-            // Fetch room data with the current userId to determine ownership immediately
-            await fetchRoom(parsedUserId);
-            await fetchMessages();
-            // pass the parsedUserId here:
-            await fetchPosts(parsedUserId);
-            await fetchNotifications(parsedUserId);
-            await fetchRoomUsers();
-
-            // Connect WebSocket after all data is loaded
-            if (isActive) {
-              connectWebSocket();
-            }
-          }
+          setLoading(false);
+          console.log("✅ All data loaded successfully");
         } catch (error) {
-          console.error("Error loading data:", error);
-          Alert.alert("Error", "Failed to load room data");
-        } finally {
-          if (isActive) {
-            setLoading(false);
-          }
+          console.error("❌ Error in focus effect:", error);
+          setLoading(false);
         }
-      }
-
-      loadData();
-
-      // Cleanup function
-      return () => {
-        isActive = false;
-        if (stompClient.current) {
-          stompClient.current.deactivate();
-        }
-      };
+      })();
     }, [roomId])
   );
-
-  // Add this useEffect after your existing state declarations and before useFocusEffect
 
   useEffect(() => {
     if (userId !== null && roomId) {
@@ -602,7 +732,6 @@ export default function RoomScreen() {
 
   const handleLike = async (postId: number) => {
     if (likingPostIds.has(postId) || userId === null) return;
-    // mark this post as pending
     setLikingPostIds((prev) => new Set(prev).add(postId));
 
     try {
@@ -610,17 +739,14 @@ export default function RoomScreen() {
         method: "PUT",
         credentials: "include",
       });
-      if (!response.ok) throw new Error("Failed to toggle like");
-
-      // Trigger a refresh of all posts to get updated counts
+      if (!response.ok) throw new Error(i18n.t("room.toggleLikeError"));
       setRefreshCount((prev) => prev + 1);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not toggle like"
+        i18n.t("room.error"),
+        error instanceof Error ? error.message : i18n.t("room.toggleLikeError")
       );
     } finally {
-      // clear pending flag
       setLikingPostIds((prev) => {
         const copy = new Set(prev);
         copy.delete(postId);
@@ -633,16 +759,15 @@ export default function RoomScreen() {
     if (!roomId || !userId) return;
 
     Alert.alert(
-      "Remove User",
-      `Are you sure you want to remove ${username} from this room? `,
+      i18n.t("room.removeUserTitle"),
+      i18n.t("room.removeUserMessage", { username }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: i18n.t("room.cancel"), style: "cancel" },
         {
-          text: "Remove",
+          text: i18n.t("room.remove"),
           style: "destructive",
           onPress: async () => {
             try {
-              console.log("Attempting to remove user:", roomId);
               const response = await fetch(
                 `${API_BASE_URL}/rooms/${roomId}/remove-user/${username}`,
                 {
@@ -650,21 +775,18 @@ export default function RoomScreen() {
                   credentials: "include",
                 }
               );
-              console.log("Removing user:", username);
-              console.log("responce:" + response.status);
-
-              if (!response.ok) throw new Error("Failed to remove user");
-              else console.log("User removed successfully:", username);
-              // Refresh the room users list
+              if (!response.ok) throw new Error(i18n.t("room.removeUserError"));
               await fetchRoomUsers();
               Alert.alert(
-                "Success",
-                `${username} has been removed from the room`
+                i18n.t("room.success"),
+                i18n.t("room.userRemovedSuccess", { username })
               );
             } catch (error) {
               Alert.alert(
-                "Error",
-                error instanceof Error ? error.message : "Could not remove user"
+                i18n.t("room.error"),
+                error instanceof Error
+                  ? error.message
+                  : i18n.t("room.removeUserError")
               );
             }
           },
@@ -675,17 +797,17 @@ export default function RoomScreen() {
 
   const handleAdminDeletePost = async (postId: number, postTitle: string) => {
     if (userRole !== "ADMIN") {
-      Alert.alert("Error", "Only admins can delete posts");
+      Alert.alert(i18n.t("room.error"), i18n.t("room.adminOnlyDelete"));
       return;
     }
 
     Alert.alert(
-      "Admin Force Delete",
-      `Are you sure you want to permanently delete the post "${postTitle}"? This action cannot be undone.`,
+      i18n.t("room.adminDeleteTitle"),
+      i18n.t("room.adminDeleteMessage", { postTitle }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: i18n.t("room.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: i18n.t("room.delete"),
           style: "destructive",
           onPress: async () => {
             if (deletingPostIds.has(postId)) return;
@@ -702,16 +824,20 @@ export default function RoomScreen() {
 
               if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(errorText || "Failed to delete post");
+                throw new Error(errorText || i18n.t("room.deletePostError"));
               }
 
-              // Remove the post from the local state
               setPosts((prev) => prev.filter((post) => post.id !== postId));
-              Alert.alert("Success", "Post deleted successfully");
+              Alert.alert(
+                i18n.t("room.success"),
+                i18n.t("room.postDeletedSuccess")
+              );
             } catch (error) {
               Alert.alert(
-                "Error",
-                error instanceof Error ? error.message : "Could not delete post"
+                i18n.t("room.error"),
+                error instanceof Error
+                  ? error.message
+                  : i18n.t("room.deletePostError")
               );
             } finally {
               setDeletingPostIds((prev) => {
@@ -728,782 +854,877 @@ export default function RoomScreen() {
 
   const handleOwnerDeletePost = async (postId: number, postTitle: string) => {
     if (!userId) {
-      Alert.alert("Error", "User not authenticated");
+      Alert.alert(i18n.t("room.error"), i18n.t("room.userNotAuthenticated"));
       return;
     }
 
-    // Find the post and verify ownership
     const post = posts.find((p) => p.id === postId);
     if (!post || post.author?.userId !== userId) {
-      Alert.alert("Error", "You can only delete your own posts");
+      Alert.alert(i18n.t("room.error"), i18n.t("room.deleteOwnPostsOnly"));
       return;
     }
 
     Alert.alert(
-      "Delete Post",
-      `Are you sure you want to delete "${postTitle}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            if (deletingPostIds.has(postId)) return;
+        i18n.t("room.deletePostTitle"),
+        i18n.t("room.deletePostMessage", { postTitle }),
+        [
+          { text: i18n.t("room.cancel"), style: "cancel" },
+          {
+            text: i18n.t("room.delete"),
+            style: "destructive",
+            onPress: async () => {
+              if (deletingPostIds.has(postId)) return;
 
-            setDeletingPostIds((prev) => new Set(prev).add(postId));
-            try {
-              const response = await fetch(
-                `${API_BASE_URL}/rooms/delete/${postId}/${userId}`,
-                {
-                  method: "DELETE",
-                  credentials: "include",
+              setDeletingPostIds((prev) => new Set(prev).add(postId));
+              try {
+                const response = await fetch(
+                    `${API_BASE_URL}/rooms/delete/${postId}/${userId}`,
+                    {
+                      method: "DELETE",
+                      credentials: "include",
+                    }
+                );
+
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  throw new Error(errorText || i18n.t("room.deletePostError"));
                 }
-              );
 
-              if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || "Failed to delete post");
+                setPosts((prev) => prev.filter((post) => post.id !== postId));
+                Alert.alert(
+                    i18n.t("room.success"),
+                    i18n.t("room.postDeletedSuccess")
+                );
+              } catch (error) {
+                Alert.alert(
+                    i18n.t("room.error"),
+                    error instanceof Error
+                        ? error.message
+                        : i18n.t("room.deletePostError")
+                );
+              } finally {
+                setDeletingPostIds((prev) => {
+                  const copy = new Set(prev);
+                  copy.delete(postId);
+                  return copy;
+                });
               }
-
-              // Remove the post from the local state
-              setPosts((prev) => prev.filter((post) => post.id !== postId));
-              Alert.alert("Success", "Post deleted successfully");
-            } catch (error) {
-              Alert.alert(
-                "Error",
-                error instanceof Error ? error.message : "Could not delete post"
-              );
-            } finally {
-              setDeletingPostIds((prev) => {
-                const copy = new Set(prev);
-                copy.delete(postId);
-                return copy;
-              });
-            }
+            },
           },
-        },
-      ]
+        ]
     );
   };
 
-  // Update your posts mapping section (around line 1000) to include owner delete button
-
-  {
-    posts.map((post) => (
-      <View key={`post-${post.id}`} style={styles.postItem}>
-        <TouchableOpacity
-          onPress={() => handlePostPress(post.id)}
-          style={styles.postContent}
-        >
-          <Text style={styles.postTitle}>{post.title}</Text>
-          <Text style={styles.postContentText}>{post.content}</Text>
-          <Text style={styles.postAuthor}>
-            By: {post.author?.username || "Unknown Author"}
-          </Text>
-          <Text style={styles.postDate}>
-            {new Date(post.date).toLocaleDateString()}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Like Button, Comment Button, and Delete Buttons */}
-        <View style={styles.postActions}>
-          <TouchableOpacity
-            style={styles.likeButton}
-            onPress={() => handleLike(post.id)}
-            disabled={likingPostIds.has(post.id)}
-          >
-            {likingPostIds.has(post.id) ? (
-              <ActivityIndicator size="small" color="#ef4444" />
-            ) : (
-              <Ionicons
-                name={post.isLikedByUser ? "heart" : "heart-outline"}
-                size={20}
-                color={post.isLikedByUser ? "#ef4444" : "#94a3b8"}
-              />
-            )}
-            <Text style={styles.likeCount}>{post.likes}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.commentButton}
-            onPress={() => handlePostPress(post.id)}
-          >
-            <Ionicons name="chatbubble-outline" size={20} color="#94a3b8" />
-            <Text style={styles.commentText}>Comment</Text>
-          </TouchableOpacity>
-
-          {/* Owner Delete Button - Show if current user is the post author */}
-          {post.author?.userId === userId && (
-            <TouchableOpacity
-              style={styles.ownerDeleteButton}
-              onPress={() => handleOwnerDeletePost(post.id, post.title)}
-              disabled={deletingPostIds.has(post.id)}
-            >
-              {deletingPostIds.has(post.id) ? (
-                <ActivityIndicator size="small" color="#f59e0b" />
-              ) : (
-                <Ionicons name="trash-outline" size={20} color="#f59e0b" />
-              )}
-            </TouchableOpacity>
-          )}
-
-          {/* Admin Delete Button - Show if current user is admin */}
-          {userRole === "ADMIN" && (
-            <TouchableOpacity
-              style={styles.adminDeleteButton}
-              onPress={() => handleAdminDeletePost(post.id, post.title)}
-              disabled={deletingPostIds.has(post.id)}
-            >
-              {deletingPostIds.has(post.id) ? (
-                <ActivityIndicator size="small" color="#ef4444" />
-              ) : (
-                <Ionicons name="trash" size={20} color="#ef4444" />
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    ));
-  }
-
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#16A34A" />
-      </View>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#22c55e" />
+          <Text style={styles.loadingText}>Loading room...</Text>
+        </View>
     );
   }
 
   if (!room) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>Room not found</Text>
-      </View>
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{i18n.t("room.roomNotFound")}</Text>
+        </View>
     );
   }
-  // Replace line 605-606 with:
-  console.log(
-    "First post likes count:",
-    posts.length > 0 ? posts[0].likes || 0 : 0
-  );
 
-  console.log("Current userRole:", userRole);
-  console.log("Is userRole ADMIN?", userRole === "ADMIN");
-  console.log("Posts count:", posts.length);
-  // console.log("Number of posts with likes:", posts.filter(post => post.likes && post.likes.size > 0).length);
   return (
-      <View style={styles.container}>
-        {/* Video Background */}
-        <Video
-            source={require("../assets/background.mp4")}
-            style={styles.backgroundVideo}
-            rate={1.0}
-            volume={1.0}
-            isMuted
-            resizeMode={ResizeMode.COVER}
-            shouldPlay
-            isLooping
-        />
-        <View style={styles.overlay} />
-      <ScrollView
-        style={styles.content}
-        ref={scrollViewRef}
-        onContentSizeChange={() => scrollToBottom()}
+      <ImageBackground
+          source={require("../assets/background-photo.png")}
+          style={styles.container}
+          resizeMode="cover"
       >
-        {/* Back button and notifications at top of content */}
-        <View style={styles.topBar}>
-          <TouchableOpacity
-              onPress={() => router.push({
-                pathname: '/chat',
-                params: { roomId: roomId?.toString() }
-              })}
-              style={styles.iconButton}
-          >
-            <Ionicons name="chatbubbles" size={24} color="white" />
-          </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
+        <View style={styles.overlay} />
 
-          <TouchableOpacity onPress={markNotificationsAsRead}>
-            <Ionicons name="notifications" size={24} color="white" />
-            {unreadCount > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+        <ScrollView
+            style={styles.content}
+            ref={scrollViewRef}
+            onContentSizeChange={() => scrollToBottom()}
+            showsVerticalScrollIndicator={false}
+        >
+          {/* Modern Header */}
+          <HeaderWithNotifications isRTL={isRTL} style={styles.topBar} />
 
-        {/* Room Info */}
-        <View style={styles.infoCard}>
-          <View style={styles.roomNameContainer}>
-            {isEditing ? (
-              <TextInput
-                style={styles.roomNameInput}
-                value={editedName}
-                onChangeText={setEditedName}
-                autoFocus
-              />
-            ) : (
-              <Text style={styles.roomNameText}>{room.roomName}</Text>
-            )}
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Type:</Text>
-            <Text style={styles.detailValue}>
-              {room.type === "PUBLIC" ? "Public" : "Private"}
-            </Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Owner:</Text>
-            <Text style={styles.detailValue}>
-              {isOwner ? "You" : `User #${room.ownerId}`}
-            </Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Room Code:</Text>
-            <Text style={styles.detailValue}>{room.join_code}</Text>
-            <TouchableOpacity onPress={copyRoomCode} style={styles.copyButton}>
-              <Ionicons name="copy" size={18} color="white" />
+          {/* Floating Action Button */}
+          <View style={styles.floatingActionContainer}>
+            <TouchableOpacity
+                onPress={() =>
+                    router.push({
+                      pathname: "/chat",
+                      params: { roomId: roomId?.toString() },
+                    })
+                }
+                style={styles.floatingChatButton}
+            >
+              <Ionicons name="chatbubbles" size={24} color="white" />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Users:</Text>
-            <View style={{ flex: 1 }}>
-              {roomUsers.length === 0 ? (
-                <Text style={styles.detailValue}>No users joined yet</Text>
-              ) : (
-                roomUsers.map((user, index) => (
-                  <View
-                    key={`user-${user.userId}-${index}`}
-                    style={styles.userRow}
-                  >
-                    <Text style={styles.detailValue}>
-                      {typeof user === "object" && user !== null
-                        ? user.username || "Unknown User"
-                        : String(user)}
-                      {user.userId === userId && " (You)"}
-                      {user.userId === room?.ownerId && " (Owner)"}
-                    </Text>
-                    {/* Show remove button only if current user is owner and target user is not owner or self */}
-                    {isOwner &&
-                      user.userId !== userId &&
-                      user.userId !== room?.ownerId && (
-                        <TouchableOpacity
-                          style={styles.removeUserButton}
-                          onPress={() =>
-                            handleRemoveUser(user.username || "Unknown User")
-                          }
-                        >
-                          <Ionicons
-                            name="person-remove"
-                            size={16}
-                            color="#ef4444"
-                          />
-                        </TouchableOpacity>
-                      )}
-                  </View>
-                ))
-              )}
-            </View>
-          </View>
-
-          {/* Owner actions - will only show if isOwner is true */}
-          {isOwner && (
-            <View style={styles.actionsContainer}>
-              {isEditing ? (
-                <>
-                  <TouchableOpacity
-                    style={[styles.button, styles.cancelButton]}
-                    onPress={() => setIsEditing(false)}
-                    disabled={isUpdating}
-                  >
-                    <Text style={styles.buttonText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.button, styles.saveButton]}
-                    onPress={handleUpdateRoom}
-                    disabled={isUpdating}
-                  >
-                    {isUpdating ? (
-                      <ActivityIndicator color="white" />
-                    ) : (
-                      <Text style={styles.buttonText}>Save</Text>
-                    )}
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <>
-                  <TouchableOpacity
-                    style={[styles.button, styles.editButton]}
-                    onPress={() => setIsEditing(true)}
-                  >
-                    <Text style={styles.buttonText}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.button, styles.deleteButton]}
-                    onPress={handleDeleteRoom}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? (
-                      <ActivityIndicator color="white" />
-                    ) : (
-                      <Text style={styles.buttonText}>Delete</Text>
-                    )}
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
-          )}
-        </View>
-
-
-
-        {/* Posts Section */}
-        <Text style={styles.sectionTitle}>Posts</Text>
-        {posts.length === 0 ? (
-          <Text style={styles.emptyText}>No posts yet</Text>
-        ) : (
-          posts.map((post) => (
-            <View key={`post-${post.id}`} style={styles.postItem}>
-              <TouchableOpacity
-                onPress={() => handlePostPress(post.id)}
-                style={styles.postContent}
-              >
-                <Text style={styles.postTitle}>{post.title}</Text>
-                <Text style={styles.postContentText}>{post.content}</Text>
-                <Text style={styles.postAuthor}>
-                  By: {post.author?.username || "Unknown Author"}
-                </Text>
-                <Text style={styles.postDate}>
-                  {new Date(post.date).toLocaleDateString()}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Like Button, Comment Button, and Delete Buttons */}
-              <View style={styles.postActions}>
-                <TouchableOpacity
-                  style={styles.likeButton}
-                  onPress={() => handleLike(post.id)}
-                  disabled={likingPostIds.has(post.id)}
-                >
-                  {likingPostIds.has(post.id) ? (
-                    <ActivityIndicator size="small" color="#ef4444" />
-                  ) : (
-                    <Ionicons
-                      name={post.isLikedByUser ? "heart" : "heart-outline"}
-                      size={20}
-                      color={post.isLikedByUser ? "#ef4444" : "#94a3b8"}
+          {/* Modern Room Info Card */}
+          <View style={styles.modernInfoCard}>
+            <View style={styles.cardHeader}>
+              <View style={styles.roomNameContainer}>
+                {isEditing ? (
+                    <TextInput
+                        style={[styles.roomNameInput, textStyle]}
+                        value={editedName}
+                        onChangeText={setEditedName}
+                        autoFocus
                     />
-                  )}
-                  <Text style={styles.likeCount}>{post.likes}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.commentButton}
-                  onPress={() => handlePostPress(post.id)}
-                >
-                  <Ionicons
-                    name="chatbubble-outline"
-                    size={20}
-                    color="#94a3b8"
-                  />
-                  <Text style={styles.commentText}>Comment</Text>
-                </TouchableOpacity>
-
-                {/* Owner Delete Button - Show if current user is the post author */}
-                {post.author?.userId === userId && (
-                  <TouchableOpacity
-                    style={styles.ownerDeleteButton}
-                    onPress={() => handleOwnerDeletePost(post.id, post.title)}
-                    disabled={deletingPostIds.has(post.id)}
-                  >
-                    {deletingPostIds.has(post.id) ? (
-                      <ActivityIndicator size="small" color="#f59e0b" />
-                    ) : (
-                      <Ionicons
-                        name="trash-outline"
-                        size={20}
-                        color="#f59e0b"
-                      />
-                    )}
-                  </TouchableOpacity>
+                ) : (
+                    <Text style={[styles.roomNameText, textStyle]}>
+                      {room.roomName}
+                    </Text>
                 )}
+              </View>
+              <View style={styles.roomTypeChip}>
+                <Text style={styles.chipText}>
+                  {room.type === "PUBLIC"
+                      ? i18n.t("room.public")
+                      : i18n.t("room.private")}
+                </Text>
+              </View>
+            </View>
 
-                {/* Admin Delete Button - Show if current user is admin */}
-                {userRole === "ADMIN" && (
-                  <TouchableOpacity
-                    style={styles.adminDeleteButton}
-                    onPress={() => handleAdminDeletePost(post.id, post.title)}
-                    disabled={deletingPostIds.has(post.id)}
-                  >
-                    {deletingPostIds.has(post.id) ? (
-                      <ActivityIndicator size="small" color="#ef4444" />
-                    ) : (
-                      <Ionicons name="trash" size={20} color="#ef4444" />
-                    )}
+            <View style={styles.infoGrid}>
+              <View style={styles.infoItem}>
+                <Ionicons name="person" size={16} color="#22c55e" />
+                <Text style={styles.infoLabel}>{i18n.t("room.owner")}</Text>
+                <Text style={[styles.infoValue, textStyle]}>
+                  {isOwner
+                      ? i18n.t("room.you")
+                      : `${i18n.t("room.user")} #${room.ownerId}`}
+                </Text>
+              </View>
+
+              <View style={styles.infoItem}>
+                <Ionicons name="key" size={16} color="#22c55e" />
+                <Text style={styles.infoLabel}>{i18n.t("room.roomCode")}</Text>
+                <View style={styles.codeContainer}>
+                  <Text style={[styles.infoValue, textStyle]}>
+                    {room.join_code}
+                  </Text>
+                  <TouchableOpacity onPress={copyRoomCode} style={styles.modernCopyButton}>
+                    <Ionicons name="copy" size={16} color="#22c55e" />
                   </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Modern Users Section */}
+            <View style={styles.usersSection}>
+              <View style={styles.usersSectionHeader}>
+                <Ionicons name="people" size={18} color="#22c55e" />
+                <Text style={styles.sectionHeaderText}>
+                  {i18n.t("room.users")} ({roomUsers.length})
+                </Text>
+              </View>
+
+              <View style={styles.usersGrid}>
+                {roomUsers.length === 0 ? (
+                    <Text style={[styles.emptyText, textStyle]}>
+                      {i18n.t("room.noUsers")}
+                    </Text>
+                ) : (
+                    roomUsers.map((user, index) => (
+                        <View
+                            key={`user-${user.userId}-${index}`}
+                            style={styles.userChip}
+                        >
+                          <View style={styles.userAvatar}>
+                            <Ionicons name="person" size={14} color="white" />
+                          </View>
+                          <Text style={[styles.userName, textStyle]}>
+                            {typeof user === "object" && user !== null
+                                ? user.username || i18n.t("room.unknownUser")
+                                : String(user)}
+                          </Text>
+                          {user.userId === userId && (
+                              <View style={styles.youBadge}>
+                                <Text style={styles.youBadgeText}>You</Text>
+                              </View>
+                          )}
+                          {user.userId === room?.ownerId && (
+                              <View style={styles.ownerBadge}>
+                                <Ionicons name="star" size={12} color="#fbbf24" />
+                              </View>
+                          )}
+                          {isOwner &&
+                              user.userId !== userId &&
+                              user.userId !== room?.ownerId && (
+                                  <TouchableOpacity
+                                      style={styles.removeUserButton}
+                                      onPress={() =>
+                                          handleRemoveUser(
+                                              user.username || i18n.t("room.unknownUser")
+                                          )
+                                      }
+                                  >
+                                    <Ionicons name="close" size={14} color="#ef4444" />
+                                  </TouchableOpacity>
+                              )}
+                        </View>
+                    ))
                 )}
               </View>
             </View>
-          ))
-        )}
 
-        {/* Create Post Form */}
-        <View style={styles.postForm}>
-          <Text style={styles.sectionTitle}>Create New Post</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Post title"
-            placeholderTextColor="#94a3b8"
-            value={newPostTitle}
-            onChangeText={setNewPostTitle}
-          />
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Post content"
-            placeholderTextColor="#94a3b8"
-            value={newPostContent}
-            onChangeText={setNewPostContent}
-            multiline
-            numberOfLines={4}
-          />
-          <TouchableOpacity
-            style={[styles.button, styles.postButton]}
-            onPress={createPost}
-            disabled={isCreatingPost}
-          >
-            {isCreatingPost ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.buttonText}>Create Post</Text>
+            {/* Modern Action Buttons */}
+            {isOwner && (
+                <View style={styles.modernActionsContainer}>
+                  {isEditing ? (
+                      <>
+                        <TouchableOpacity
+                            style={[styles.modernButton, styles.cancelButton]}
+                            onPress={() => setIsEditing(false)}
+                            disabled={isUpdating}
+                        >
+                          <Ionicons name="close" size={16} color="white" />
+                          <Text style={styles.buttonText}>
+                            {i18n.t("room.cancel")}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.modernButton, styles.saveButton]}
+                            onPress={handleUpdateRoom}
+                            disabled={isUpdating}
+                        >
+                          {isUpdating ? (
+                              <ActivityIndicator color="white" size="small" />
+                          ) : (
+                              <>
+                                <Ionicons name="checkmark" size={16} color="white" />
+                                <Text style={styles.buttonText}>
+                                  {i18n.t("room.save")}
+                                </Text>
+                              </>
+                          )}
+                        </TouchableOpacity>
+                      </>
+                  ) : (
+                      <>
+                        <TouchableOpacity
+                            style={ styles.editButton}
+                            onPress={() => setIsEditing(true)}
+                        >
+                          <Ionicons name="create" size={16} color="white" />
+                          <Text style={styles.buttonText}>{i18n.t("room.edit")}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[ styles.deleteButton]}
+                            onPress={handleDeleteRoom}
+                            disabled={isDeleting}
+                        >
+                          {isDeleting ? (
+                              <ActivityIndicator color="white" size="small" />
+                          ) : (
+                              <>
+                                <Ionicons name="trash" size={16} color="white" />
+                                <Text style={styles.buttonText}>
+                                  {i18n.t("room.delete")}
+                                </Text>
+                              </>
+                          )}
+                        </TouchableOpacity>
+                      </>
+                  )}
+                </View>
             )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+          </View>
 
-      {/* Message Input */}
+          {/* Modern Posts Section */}
+          <View style={styles.postsSection}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="document-text" size={20} color="#22c55e" />
+              <Text style={[styles.sectionTitle, textStyle]}>
+                {i18n.t("room.posts")}
+              </Text>
+            </View>
 
-    </View>
+            {posts.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="document-text-outline" size={48} color="#64748b" />
+                  <Text style={[styles.emptyText, textStyle]}>
+                    {i18n.t("room.noPosts")}
+                  </Text>
+                </View>
+            ) : (
+                posts.map((post) => (
+                    <View key={`post-${post.id}`} style={styles.modernPostCard}>
+                      <TouchableOpacity
+                          onPress={() => handlePostPress(post.id)}
+                          style={styles.postContent}
+                      >
+                        <Text style={[styles.postTitle, textStyle]}>{post.title}</Text>
+                        <Text style={[styles.postContentText, textStyle]}>
+                          {post.content}
+                        </Text>
+
+                        <View style={styles.postMeta}>
+                          <View style={styles.authorInfo}>
+                            <View style={styles.authorAvatar}>
+                              <Ionicons name="person" size={12} color="white" />
+                            </View>
+                            <Text style={[styles.postAuthor, textStyle]}>
+                              {post.author?.username || i18n.t("room.unknownAuthor")}
+                            </Text>
+                          </View>
+                          <Text style={[styles.postDate, textStyle]}>
+                            {new Date(post.date).toLocaleDateString()}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+
+                      <View style={styles.postActionsBar}>
+                        <TouchableOpacity
+                            style={styles.modernLikeButton}
+                            onPress={() => handleLike(post.id)}
+                            disabled={likingPostIds.has(post.id)}
+                        >
+                          {likingPostIds.has(post.id) ? (
+                              <ActivityIndicator size="small" color="#ef4444" />
+                          ) : (
+                              <Ionicons
+                                  name={post.isLikedByUser ? "heart" : "heart-outline"}
+                                  size={18}
+                                  color={post.isLikedByUser ? "#ef4444" : "#64748b"}
+                              />
+                          )}
+                          <Text style={styles.actionText}>{post.likes}</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.modernCommentButton}
+                            onPress={() => handlePostPress(post.id)}
+                        >
+                          <Ionicons name="chatbubble-outline" size={18} color="#64748b" />
+                          <Text style={styles.actionText}>
+                            {i18n.t("room.comment")}
+                          </Text>
+                        </TouchableOpacity>
+
+                        {post.author?.userId === userId && (
+                            <TouchableOpacity
+                                style={styles.modernDeleteButton}
+                                onPress={() => handleOwnerDeletePost(post.id, post.title)}
+                                disabled={deletingPostIds.has(post.id)}
+                            >
+                              {deletingPostIds.has(post.id) ? (
+                                  <ActivityIndicator size="small" color="#f59e0b" />
+                              ) : (
+                                  <Ionicons name="trash-outline" size={18} color="#f59e0b" />
+                              )}
+                            </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                ))
+            )}
+          </View>
+
+          {/* Modern Post Creation Form */}
+          {((userRole == "ADMIN" && room.type == "PUBLIC") ||
+              room.type == "PRIVATE") && (
+              <View style={styles.modernPostForm}>
+                <View style={styles.formHeader}>
+                  <Ionicons name="create" size={20} color="#22c55e" />
+                  <Text style={[styles.sectionTitle, textStyle]}>
+                    {i18n.t("room.createPost")}
+                  </Text>
+                </View>
+
+                <View style={styles.formContent}>
+                  <TextInput
+                      style={[styles.modernInput, textStyle]}
+                      placeholder={i18n.t("room.postTitlePlaceholder")}
+                      placeholderTextColor="#64748b"
+                      value={newPostTitle}
+                      onChangeText={setNewPostTitle}
+                  />
+                  <TextInput
+                      style={[styles.modernInput, styles.modernTextArea, textStyle]}
+                      placeholder={i18n.t("room.postContentPlaceholder")}
+                      placeholderTextColor="#64748b"
+                      value={newPostContent}
+                      onChangeText={setNewPostContent}
+                      multiline
+                      numberOfLines={4}
+                  />
+                  <TouchableOpacity
+                      style={[styles.modernButton, styles.createPostButton]}
+                      onPress={createPost}
+                      disabled={isCreatingPost}
+                  >
+                    {isCreatingPost ? (
+                        <ActivityIndicator color="white" size="small" />
+                    ) : (
+                        <>
+                          <Ionicons name="send" size={16} color="white" />
+                          <Text style={styles.buttonText}>
+                            {i18n.t("room.createPostButton")}
+                          </Text>
+                        </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+          )}
+        </ScrollView>
+      </ImageBackground>
   );
 }
-
 const styles = StyleSheet.create({
-
+  container: {
+    flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(15, 23, 42, 0.7)", // Dark slate overlay instead of green
+  },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#0f172a",
+  },
+  loadingText: {
+    color: "#cbd5e1",
+    marginTop: 16,
+    fontSize: 16,
   },
   errorText: {
-    color: "#ff6b6b",
+    color: "#ef4444",
     fontSize: 18,
+    fontWeight: "500",
   },
   topBar: {
-    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 15,
+    padding: 20,
   },
   content: {
     flex: 1,
-    padding: 10,
+    paddingHorizontal: 20,
   },
-  infoCard: {
-    backgroundColor: "#1e293b",
-    borderRadius: 10,
-    padding: 15,
+
+  // Floating Action Button
+  floatingActionContainer: {
+    position: "absolute",
+    top: 30,
+    right: 130,
+    zIndex: 100,
+  },
+  floatingChatButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#22c55e",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+
+  // Modern Info Card - Muted background with subtle green accents
+  modernInfoCard: {
+    backgroundColor: "rgba(30, 41, 59, 0.9)", // Slate background instead of green
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.3)", // Subtle green border
+    backdropFilter: "blur(10px)",
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
   },
   roomNameContainer: {
-    marginBottom: 15,
+    flex: 1,
   },
   roomNameInput: {
     color: "white",
-    fontSize: 20,
-    fontWeight: "bold",
-    borderBottomWidth: 1,
-    borderBottomColor: "#16A34A",
-    paddingBottom: 5,
+    fontSize: 24,
+    fontWeight: "700",
+    borderBottomWidth: 2,
+    borderBottomColor: "#22c55e",
+    paddingBottom: 8,
   },
   roomNameText: {
     color: "white",
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 24,
+    fontWeight: "700",
   },
-  detailRow: {
+  roomTypeChip: {
+    backgroundColor: "rgba(34, 197, 94, 0.15)", // More subtle green
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.5)",
+  },
+  chipText: {
+    color: "#4ade80", // Lighter green
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+
+  // Info Grid - Using neutral grays with green accents
+  infoGrid: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  infoItem: {
     flexDirection: "row",
-    marginBottom: 8,
+    alignItems: "center",
+    backgroundColor: "rgba(51, 65, 85, 0.6)", // Slate gray background
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "rgba(71, 85, 105, 0.5)", // Subtle border
   },
-  detailLabel: {
+  infoLabel: {
     color: "#94a3b8",
-    fontWeight: "bold",
-    width: 80,
+    fontSize: 14,
+    fontWeight: "500",
+    minWidth: 60,
   },
-  detailValue: {
+  infoValue: {
     color: "white",
+    fontSize: 14,
+    fontWeight: "500",
     flex: 1,
   },
-  actionsContainer: {
+  codeContainer: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 15,
-  },
-  button: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
     alignItems: "center",
-    minWidth: 100,
+    flex: 1,
+  },
+  modernCopyButton: {
+    padding: 8,
+    backgroundColor: "rgba(34, 197, 94, 0.2)",
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+
+  // Users Section
+  usersSection: {
+    marginBottom: 24,
+  },
+  usersSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  sectionHeaderText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  usersGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  userChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(51, 65, 85, 0.7)", // Neutral gray for user chips
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "rgba(71, 85, 105, 0.6)",
+  },
+  userAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#64748b",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  userName: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  youBadge: {
+    backgroundColor: "#22c55e",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  youBadgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  ownerBadge: {
+    padding: 2,
+  },
+  removeUserButton: {
+    padding: 2,
+  },
+
+  // Modern Action Buttons - Using varied colors
+  modernActionsContainer: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  modernButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    // gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonText: {
     color: "white",
-    fontWeight: "bold",
+    fontWeight: "600",
+    fontSize: 14,
   },
   editButton: {
-    backgroundColor: "#3b82f6",
-  },
-  deleteButton: {
-    backgroundColor: "#ef4444",
-  },
+   backgroundColor: "rgba(59,130,246,0.35)", // Transparent blue
+       borderColor: "rgba(59, 130, 246, 0.3)",
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    // elevation: 3,
+}, deleteButton: {
+   backgroundColor: "rgba(239,68,68,0.37)", // Transparent red
+       borderColor: "rgba(239, 68, 68, 0.3)",
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    // elevation: 3,
+},
   cancelButton: {
-    backgroundColor: "#64748b",
+    backgroundColor: "#64748b", // Gray for cancel
   },
   saveButton: {
-    backgroundColor: "#10b981",
+    backgroundColor: "#22c55e", // Green for save
+  },
+
+  // Posts Section
+  postsSection: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
   },
   sectionTitle: {
     color: "white",
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-    marginTop: 10,
+    fontWeight: "700",
+  },
+  emptyState: {
+    alignItems: "center",
+    padding: 32,
+  },
+  emptyText: {
+    color: "#64748b",
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: 12,
   },
 
-  emptyText: {
-    color: "#94a3b8",
-    textAlign: "center",
-    marginVertical: 20,
+  // Modern Post Cards - Neutral with subtle accents
+  modernPostCard: {
+    backgroundColor: "rgba(30, 41, 59, 0.9)", // Matching the info card
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: "rgba(71, 85, 105, 0.5)", // Subtle gray border
+    backdropFilter: "blur(8px)",
   },
-  chatContainer: {
-    marginBottom: 20,
-  },
-  messageBubble: {
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    maxWidth: "80%",
-  },
-  myMessage: {
-    alignSelf: "flex-end",
-    backgroundColor: "#2563eb",
-    borderBottomRightRadius: 2,
-  },
-  otherMessage: {
-    alignSelf: "flex-start",
-    backgroundColor: "#334155",
-    borderBottomLeftRadius: 2,
-  },
-  senderName: {
-    color: "#e2e8f0",
-    fontWeight: "bold",
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  messageText: {
-    color: "white",
-    fontSize: 16,
-  },
-  messageTime: {
-    color: "#cbd5e1",
-    fontSize: 10,
-    alignSelf: "flex-end",
-    marginTop: 4,
-  },
-  postCard: {
-    backgroundColor: "#1e293b",
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-  },
-  postItem: {
-    backgroundColor: "#1e293b",
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
+  postContent: {
+    padding: 20,
   },
   postTitle: {
     color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  postContent: {
-    flex: 1,
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
   },
   postContentText: {
     color: "#cbd5e1",
-    marginBottom: 10,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  postMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  authorInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  authorAvatar: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#64748b",
+    justifyContent: "center",
+    alignItems: "center",
   },
   postAuthor: {
     color: "#94a3b8",
     fontSize: 12,
-    fontStyle: "italic",
+    fontWeight: "500",
   },
   postDate: {
-    color: "#94a3b8",
+    color: "#64748b",
     fontSize: 12,
-    marginTop: 5,
   },
-  postForm: {
-    marginTop: 20,
-    marginBottom: 50,
+
+  // Post Actions Bar
+  postActionsBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(71, 85, 105, 0.4)", // Subtle gray border
+    gap: 20,
   },
-  input: {
-    backgroundColor: "#1e293b",
+  modernLikeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  modernCommentButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  modernDeleteButton: {
+    marginLeft: "auto",
+    padding: 4,
+  },
+  actionText: {
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+
+  // Modern Post Form
+  modernPostForm: {
+    backgroundColor: "rgba(30, 41, 59, 0.9)", // Matching other cards
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 40,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.3)", // Subtle green accent
+    backdropFilter: "blur(10px)",
+  },
+  formHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 20,
+  },
+  formContent: {
+    gap: 16,
+  },
+  modernInput: {
+    backgroundColor: "rgba(51, 65, 85, 0.6)", // Neutral input background
     color: "white",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 15,
+    padding: 16,
+    borderRadius: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "rgba(71, 85, 105, 0.5)",
   },
-  textArea: {
+  modernTextArea: {
     minHeight: 100,
     textAlignVertical: "top",
   },
-  postButton: {
-    backgroundColor: "#16A34A",
-    padding: 15,
-    borderRadius: 8,
-  },
-  messageInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    backgroundColor: "#1e293b",
-    borderTopWidth: 1,
-    borderTopColor: "#334155",
-  },
-  messageInput: {
-    flex: 1,
-    backgroundColor: "#0f172a",
-    color: "white",
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginRight: 10,
-  },
-  sendButton: {
-    padding: 10,
-  },
-  notificationBadge: {
-    position: "absolute",
-    right: -5,
-    top: -5,
-    backgroundColor: "red",
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  badgeText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  copyButton: {
-    marginLeft: 8,
-    padding: 4,
-    backgroundColor: "#334155",
-    borderRadius: 4,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  postActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#334155",
-    flexWrap: "wrap", // Allow wrapping if too many buttons
-  },
-  likeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 5,
-  },
-  likeCount: {
-    color: "#94a3b8",
-    marginLeft: 5,
-    fontSize: 14,
-  },
-  commentButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 5,
-  },
-  commentText: {
-    color: "#94a3b8",
-    marginLeft: 5,
-    fontSize: 14,
-  },
-  userRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
+  createPostButton: {
+    backgroundColor: "#22c55e", // Green for create action
+    alignSelf: "stretch",
   },
 
-  removeUserButton: {
-    padding: 4,
-    marginLeft: 8,
+  // RTL Support
+  rtlText: {
+    textAlign: "right",
   },
-  adminDeleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 5,
-    backgroundColor: "#1e293b",
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#ef4444", // Red color for admin delete
-  },
-  ownerDeleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 5,
-    backgroundColor: "#1e293b",
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#f59e0b", // Orange color for owner delete
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  backgroundVideo: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  iconButton: {
-    padding: 6,
+  ltrText: {
+    textAlign: "left",
   },
 });
+
+
+
+// //////backgroundColor: "rgba(245, 158, 11, 0.05)",
+// editButton: {
+//   backgroundColor: "rgba(59, 130, 246, 0.08)", // Transparent blue
+//       borderColor: "rgba(59, 130, 246, 0.3)",
+// },
+// editButton: {
+//   backgroundColor: "rgba(59, 130, 246, 0.08)",
+//       borderColor: "rgba(59, 130, 246, 0.3)",
+// },
+// deleteButton: {
+//   backgroundColor: "rgba(239, 68, 68, 0.08)", // Transparent red
+//       borderColor: "rgba(239, 68, 68, 0.3)",
+// },

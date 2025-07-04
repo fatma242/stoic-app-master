@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stoic-back
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stoic-back
+  template:
+    metadata:
+      labels:
+        app: stoic-back
+    spec:
+      containers:
+        - name: stoic-back
+          image: image-registry.openshift-image-registry.svc:5000/a-t-awad-dev/stoic-backend:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8100
+          env:
+            - name: DB_HOST
+              value: stoic-db
+            - name: DB_USER
+              value: root
+            - name: DB_PASSWORD
+              value: Adelra122@122
+            - name: DB_NAME
+              value: stoic

@@ -2,6 +2,7 @@ package com.example.stoic.User.Service;
 
 import com.example.stoic.User.Model.OnboardingStatus;
 import com.example.stoic.User.Model.User;
+import com.example.stoic.User.Model.UserRole;
 import com.example.stoic.User.Repo.UserRepo;
 
 import jakarta.transaction.Transactional;
@@ -102,5 +103,23 @@ public class UserServiceImpl implements UserService {
         return userRepo.findByUsername(username)
                 .orElseThrow(() -> new NoSuchElementException("User with username " +
                         username + " not found"));
+    }
+
+    @Override
+    public int getAge(int userId) {
+        User user = findById(userId);
+        return user.getAge();
+    }
+
+    @Override
+    public String getGender(int userId) {
+        User user = findById(userId);
+        return user.getGender();
+    }
+
+    @Override
+    public UserRole getUserRole(int userId) {
+        User user = findById(userId);
+        return user.getUserRole();
     }
 }

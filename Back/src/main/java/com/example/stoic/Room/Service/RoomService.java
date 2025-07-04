@@ -28,7 +28,7 @@ public interface RoomService {
 
     List<RoomDTO> findAllPublicRoomsWithUsers();
 
-    Void joinRoom(User user, String join_code);
+    int joinRoom(User user, String join_code);
 
     List<User> findUsersByRoomId(int id);
 

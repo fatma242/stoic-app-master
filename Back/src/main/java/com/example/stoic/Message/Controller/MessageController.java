@@ -3,6 +3,8 @@ package com.example.stoic.Message.Controller;
 import com.example.stoic.Message.Model.Message;
 import com.example.stoic.Message.Service.MessageService;
 import com.example.stoic.Room.dto.ChatMessageDto;
+import com.google.cloud.storage.Acl.User;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -12,9 +14,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @CrossOrigin(origins = {
-        "http://localhost:8081",             // for web dev
-        "exp://192.168.1.8:8081",            // Expo Go mobile
-        "http://192.168.1.8:8081"            // Web on phone using LAN
+        "${UserIphttp}", // Web on phone using LAN
+        "${UserIPexp}",
+        "${UserIphttp}"
 }, allowCredentials = "true")
 @RestController
 @RequiredArgsConstructor
@@ -53,7 +55,7 @@ public class MessageController {
     // REST: between dates
     @GetMapping("/between")
     public List<Message> getBetween(@RequestParam LocalDateTime from,
-                                    @RequestParam LocalDateTime to) {
+            @RequestParam LocalDateTime to) {
         return service.getBetween(from, to);
     }
 }

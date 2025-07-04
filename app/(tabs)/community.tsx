@@ -1,7 +1,4 @@
 import BackgroundVideo from "@/components/BackgroundVideo";
-// import { Ionicons } from "@expo/vector-icons";
-// import AsyncStorage from "@react-native-async-storage/async-storage";
-// import { useRouter } from "expo-router";
 import React from "react";
 import { useEffect, useState } from "react";
 import {
@@ -15,6 +12,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
+  Dimensions,
+  StatusBar,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -23,6 +23,11 @@ import { Video, ResizeMode } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { useFocusEffect } from "@react-navigation/native";
+import i18n from "../../constants/i18n";
+import { HeaderWithNotifications } from "../../components/HeaderWithNotifications";
+import { BlurView } from "expo-blur";
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Type definitions
 type RoomType = "PUBLIC" | "PRIVATE";
@@ -34,8 +39,13 @@ interface RoomDTO {
   roomName: string;
   type: RoomType;
   createdAt: string;
-  // Assuming backend returns join_code as joinCode
   joinCode?: string;
+}
+
+interface RoomCardProps {
+  room: RoomDTO;
+  isOwner: boolean;
+  showPublicBadge?: boolean;
 }
 
 export default function Community() {
@@ -49,50 +59,82 @@ export default function Community() {
   const [showModal, setShowModal] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-
-  // New state for join code
   const [joinCode, setJoinCode] = useState("");
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(50));
 
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
-  console.log("API_BASE_URL:", API_BASE_URL);
-  // Replace the existing useEffect with useFocusEffect to refresh data when screen is focused
+
+  const isRTL = i18n.locale.startsWith("ar");
+  const textStyle = {
+    textAlign: isRTL ? ("right" as "right") : ("left" as "left"),
+  };
+  const flexDirection = isRTL ? "row-reverse" : "row";
+
+  // Animation effect
+  useEffect(() => {
+    if (!loading) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [loading]);
+
   useFocusEffect(
-    React.useCallback(() => {
-      const loadUserData = async () => {
-        try {
-          console.log("useFocusEffect running");
-          const storedUserId = await AsyncStorage.getItem("userId");
-          if (!storedUserId) {
-            router.replace("/login");
-            return;
-          }
-          setUserId(parseInt(storedUserId));
-
-          // Fetch user role from API
-          const response = await fetch(
-            `${API_BASE_URL}/api/users/${storedUserId}`,
-            {
-              credentials: "include",
+      React.useCallback(() => {
+        const loadUserData = async () => {
+          try {
+            const storedUserId = await AsyncStorage.getItem("userId");
+            if (!storedUserId) {
+              router.replace("/login");
+              return;
             }
-          );
-          const userData = await response.json();
-          setUserRole(userData.userRole);
+            setUserId(parseInt(storedUserId));
+            console.log("Stored user ID:", storedUserId);
+            // Fetch user role from API
+            const response = await fetch(
+                `${API_BASE_URL}/api/users/${storedUserId}`,
+                {
+                  credentials: "include",
+                }
+            );
+            if (!response.ok) {
+              console.error("Failed to fetch user data:", response.status);
+              throw new Error("Failed to fetch user data");
+            }
+            const userData = await response.json();
+            setUserRole(userData.userRole);
 
-          // Fetch both owner and non-owner rooms
-          await fetchOwnerRooms();
-          await fetchNonOwnerRooms();
-          if (userData.userRole !== "ADMIN") {
-            await fetchPublicRooms();
+            await fetchOwnerRooms();
+            await fetchNonOwnerRooms();
+            if (userData.userRole !== "ADMIN") {
+              await fetchPublicRooms();
+            }
+          } catch (error) {
+            console.error("Error loading user data:", error);
+            Alert.alert("Error", "Failed to load user data");
+            Alert.alert(
+                i18n.t("common.error"),
+                i18n.t("community.errorFetching")
+            );
+          } finally {
+            setLoading(false);
           }
-        } catch (error) {
-          Alert.alert("Error", "Failed to load user data");
-        } finally {
-          setLoading(false);
-        }
-      };
+        };
 
-      loadUserData();
-    }, [])
+        loadUserData();
+        [];
+      }, [])
   );
 
   const fetchPublicRooms = async () => {
@@ -100,21 +142,24 @@ export default function Community() {
       const response = await fetch(`${API_BASE_URL}/rooms/getPub`, {
         credentials: "include",
       });
-      if (!response.ok) throw new Error("Failed to fetch public rooms");
+      if (!response.ok) throw new Error(i18n.t("community.errorFetching"));
       const data = await response.json();
       setPublicRooms(data);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not load public rooms"
+          i18n.t("common.error"),
+          error instanceof Error
+              ? error.message
+              : i18n.t("community.errorFetching")
       );
     }
   };
+
   const filteredPublicRooms = publicRooms.filter(
-    (room) =>
-      room.ownerId !== userId &&
-      !nonOwnerRooms.some((r) => r.roomId === room.roomId) &&
-      !ownerRooms.some((r) => r.roomId === room.roomId)
+      (room) =>
+          room.ownerId !== userId &&
+          !nonOwnerRooms.some((r) => r.roomId === room.roomId) &&
+          !ownerRooms.some((r) => r.roomId === room.roomId)
   );
 
   const fetchOwnerRooms = async () => {
@@ -123,15 +168,16 @@ export default function Community() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to fetch owner rooms");
+      if (!response.ok) throw new Error(i18n.t("community.errorFetching"));
 
       const data = await response.json();
-      console.log("Owner rooms:", data);
       setOwnerRooms(data);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not load owner rooms"
+          i18n.t("common.error"),
+          error instanceof Error
+              ? error.message
+              : i18n.t("community.errorFetching")
       );
     }
   };
@@ -142,33 +188,33 @@ export default function Community() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to fetch rooms");
+      if (!response.ok) throw new Error(i18n.t("community.errorFetching"));
 
       const data = await response.json();
-      console.log("Non-owner rooms:", data);
       setNonOwnerRooms(data);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not load rooms"
+          i18n.t("common.error"),
+          error instanceof Error
+              ? error.message
+              : i18n.t("community.errorFetching")
       );
     }
   };
 
   const createRoom = async () => {
     if (!roomName.trim()) {
-      Alert.alert("Error", "Room name is required");
+      Alert.alert(i18n.t("common.error"), i18n.t("community.roomNameRequired"));
       return;
     }
 
     setIsCreating(true);
     try {
       const endpoint =
-        userRole === "ADMIN"
-          ? `${API_BASE_URL}/rooms`
-          : `${API_BASE_URL}/rooms/createPR/${userId}`;
+          userRole === "ADMIN"
+              ? `${API_BASE_URL}/rooms`
+              : `${API_BASE_URL}/rooms/createPR/${userId}`;
 
-      // Create a complete room object
       const roomData = {
         roomName,
         ownerId: userId,
@@ -179,59 +225,119 @@ export default function Community() {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(roomData), // Send full object
+        body: JSON.stringify(roomData),
         credentials: "include",
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Room creation failed: ${response.status} ${errorText}`
+            `${i18n.t("community.errorCreating")}: ${
+                response.status
+            } ${errorText}`
         );
       }
 
       const newRoom = await response.json();
-      // Add to owner rooms since the user created it
       setOwnerRooms((prev) => [...prev, newRoom]);
       setShowModal(false);
       setRoomName("");
+      Alert.alert(i18n.t("community.successCreate"));
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Could not create room"
+          i18n.t("community.errorCreating"),
+          error instanceof Error
+              ? error.message
+              : i18n.t("community.errorCreating")
       );
     } finally {
       setIsCreating(false);
     }
   };
 
-  // New join room function that uses the /rooms/joinPR endpoint
   const joinRoom = async () => {
     if (!joinCode.trim()) {
-      Alert.alert("Error", "Join code is required");
+      Alert.alert(
+          i18n.t("community.errorJoining"),
+          i18n.t("community.joinCodeRequired")
+      );
       return;
     }
     try {
       const response = await fetch(
-        `${API_BASE_URL}/rooms/joinPR?joinCode=${joinCode}`,
-        {
-          method: "POST",
-          credentials: "include",
-        }
+          `${API_BASE_URL}/rooms/joinPR?joinCode=${joinCode}`,
+          {
+            method: "POST",
+            credentials: "include",
+          }
       );
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to join room: ${response.status} ${errorText}`);
+        throw new Error(
+            `${i18n.t("community.errorJoining")}: ${response.status} ${errorText}`
+        );
       }
-      Alert.alert("Success", "Joined room successfully!");
-      // Refresh both room lists
+      Alert.alert(i18n.t("community.successJoin"));
       await fetchOwnerRooms();
       await fetchNonOwnerRooms();
       setJoinCode("");
+      setShowJoinModal(false);
     } catch (error) {
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Error joining room"
+          i18n.t("common.error"),
+          error instanceof Error
+              ? error.message
+              : i18n.t("community.errorJoining")
+      );
+    }
+  };
+
+  const deleteRoom = async (roomId: number) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(i18n.t("community.errorDeleting"));
+      }
+
+      setOwnerRooms(ownerRooms.filter((room) => room.roomId !== roomId));
+      Alert.alert(i18n.t("community.successDelete"));
+    } catch (error) {
+      Alert.alert(
+          error instanceof Error
+              ? error.message
+              : i18n.t("community.errorDeleting")
+      );
+    }
+  };
+
+  const leaveRoom = async (roomId: number) => {
+    try {
+      const response = await fetch(
+          `${API_BASE_URL}/rooms/leave-room/${roomId}`,
+          {
+            method: "DELETE",
+            credentials: "include",
+          }
+      );
+      console.log("Leaving room:", roomId, response);
+      if (!response.ok) {
+        throw new Error(i18n.t("community.errorLeaving"));
+      }
+
+      // Remove room from both owner and non-owner rooms
+      setOwnerRooms(ownerRooms.filter((room) => room.roomId !== roomId));
+      setNonOwnerRooms(nonOwnerRooms.filter((room) => room.roomId !== roomId));
+      Alert.alert(i18n.t("community.successLeave"));
+    } catch (error) {
+      Alert.alert(
+          i18n.t("common.error"),
+          error instanceof Error
+              ? error.message
+              : i18n.t("community.errorLeaving")
       );
     }
   };
@@ -243,404 +349,758 @@ export default function Community() {
     });
   };
 
+  const confirmDelete = (roomId: number) => {
+    Alert.alert(
+        i18n.t("community.deleteRoomTitle"),
+        i18n.t("community.deleteRoomMessage"),
+        [
+          {
+            text: i18n.t("community.cancel"),
+            style: "cancel",
+          },
+          {
+            text: i18n.t("community.delete"),
+            onPress: () => deleteRoom(roomId),
+            style: "destructive",
+          },
+        ]
+    );
+  };
+
+  const showRoomOptions = (roomId: number, isOwner: boolean) => {
+    if (isOwner) {
+      // Owner can either delete or leave
+      Alert.alert(
+          i18n.t("community.roomOptionsTitle"),
+          i18n.t("community.roomOptionsMessage"),
+          [
+            {
+              text: i18n.t("community.cancel"),
+              style: "cancel",
+            },
+
+            {
+              text: i18n.t("community.delete"),
+              onPress: () => confirmDelete(roomId),
+              style: "destructive",
+            },
+          ]
+      );
+    } else {
+      // Non-owner can only leave
+      confirmLeaveRoom(roomId);
+    }
+  };
+
+  const confirmLeaveRoom = (roomId: number) => {
+    Alert.alert(
+        i18n.t("community.leaveRoomTitle"),
+        i18n.t("community.leaveRoomMessage"),
+        [
+          {
+            text: i18n.t("community.cancel"),
+            style: "cancel",
+          },
+          {
+            text: i18n.t("community.leave"),
+            onPress: () => leaveRoom(roomId),
+            style: "destructive",
+          },
+        ]
+    );
+  };
+
+  const RoomCard: React.FC<RoomCardProps> = ({ room, isOwner, showPublicBadge = false }) => (
+      <Animated.View
+          style={[
+            styles.roomCard,
+            {
+              transform: [{ translateY: slideAnim }],
+              opacity: fadeAnim,
+            },
+          ]}
+      >
+        <TouchableOpacity
+            style={[styles.roomCardContent, { flexDirection }]}
+            onPress={() => handleRoomPress(room.roomId)}
+            onLongPress={() => showRoomOptions(room.roomId, isOwner)}
+            activeOpacity={0.7}
+        >
+          <View style={styles.roomIcon}>
+            <Ionicons
+                name={room.type === "PUBLIC" ? "globe-outline" : "lock-closed-outline"}
+                size={24}
+                color="#6366F1"
+            />
+          </View>
+
+          <View style={styles.roomInfo}>
+            <Text style={[styles.roomName, textStyle]} numberOfLines={1}>
+              {room.roomName}
+            </Text>
+            <View style={[styles.roomMeta, { flexDirection }]}>
+              {showPublicBadge && (
+                  <View style={styles.publicBadge}>
+                    <Text style={styles.publicBadgeText}>Public</Text>
+                  </View>
+              )}
+              <Text style={[styles.roomDate, textStyle]}>
+                {new Date(room.createdAt).toLocaleDateString()}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.roomActions}>
+            <Ionicons
+                name={isRTL ? "chevron-back" : "chevron-forward"}
+                size={20}
+                color="#9CA3AF"
+            />
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+  );
+
   if (loading) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#16A34A" />
-      </View>
+        <View style={[styles.container, styles.center]}>
+          <BackgroundVideo />
+          <LinearGradient
+              colors={["rgba(0,0,0,0.9)", "rgba(0,0,0,0.7)"]}
+              style={styles.gradient}
+          />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6366F1" />
+            <Text style={styles.loadingText}>Loading Community...</Text>
+          </View>
+        </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <BackgroundVideo />
-      <View style={styles.overlay} />
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <BackgroundVideo />
 
-      <ScrollView style={styles.content}>
-        <View style={styles.header}>
-          <Image
-            source={require("../../assets/logo.png")}
-            style={styles.logo}
-          />
-          <Text style={styles.greeting}>
-            {userRole === "ADMIN" ? "Admin Community" : "Your Community"}
-          </Text>
+        {/* Modern gradient overlay */}
+        <LinearGradient
+            colors={[
+              "rgba(0,0,0,0.9)",
+              "rgba(0,0,0,0.7)",
+              "rgba(0,0,0,0.5)",
+              "rgba(0,0,0,0.8)"
+            ]}
+            locations={[0, 0.3, 0.7, 1]}
+            style={styles.gradient}
+        />
 
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={() => setShowModal(true)}
+        {/* Header */}
+        <View>
+          <HeaderWithNotifications isRTL={isRTL} style={styles.header} />
+          <Animated.View
+              style={[
+                styles.titleContainer,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
           >
-            <Ionicons name="add" size={24} color="white" />
-            <Text style={styles.createButtonText}>
+            <Text style={[styles.headerTitle, textStyle]}>
               {userRole === "ADMIN"
-                ? "Create Public Room"
-                : "Create Private Room"}
+                  ? i18n.t("community.titleAdmin")
+                  : i18n.t("community.titleUser")}
             </Text>
-          </TouchableOpacity>
-
-          {/* New Join Room Section */}
-          {userRole === "REG" && (
-            <View style={styles.joinRoomContainer}>
-              <TextInput
-                style={styles.joinRoomInput}
-                placeholder="Enter room join code"
-                placeholderTextColor="#888"
-                value={joinCode}
-                onChangeText={setJoinCode}
-              />
-              <TouchableOpacity
-                style={styles.joinRoomButton}
-                onPress={joinRoom}
-              >
-                <Text style={styles.joinRoomButtonText}>Join Room</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+            <Text style={[styles.headerSubtitle, textStyle]}>
+              Connect, create, and collaborate
+            </Text>
+          </Animated.View>
         </View>
 
-        {userRole !== "ADMIN" && (
-          <>
+        <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}
+        >
+          {/* Action Cards */}
+          <Animated.View
+              style={[
+                styles.actionCardsContainer,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+          >
+            <TouchableOpacity
+                style={[styles.actionCard, styles.createCard]}
+                onPress={() => setShowModal(true)}
+                activeOpacity={0.8}
+            >
+              <LinearGradient
+                  colors={["#6366F1", "#8B5CF6"]}
+                  style={styles.actionCardGradient}
+              >
+                <View style={styles.actionCardIcon}>
+                  <Ionicons name="add-circle-outline" size={28} color="white" />
+                </View>
+                <Text style={styles.actionCardTitle}>
+                  {userRole === "ADMIN"
+                      ? i18n.t("community.createPublicRoom")
+                      : i18n.t("community.createPrivateRoom")}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+                style={[styles.actionCard, styles.joinCard]}
+                onPress={() => setShowJoinModal(true)}
+                activeOpacity={0.8}
+            >
+              <LinearGradient
+                  colors={["#10B981", "#059669"]}
+                  style={styles.actionCardGradient}
+              >
+                <View style={styles.actionCardIcon}>
+                  <Ionicons name="log-in-outline" size={28} color="white" />
+                </View>
+                <Text style={styles.actionCardTitle}>
+                  {i18n.t("community.joinRoomButton")}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Rooms Sections */}
+          <Animated.View
+              style={[
+                styles.roomsContainer,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+          >
             {/* Rooms You Own */}
-            <View style={styles.roomsSection}>
-              <Text style={styles.sectionTitle}>Rooms You Own</Text>
+            <View style={styles.sectionContainer}>
+              <View style={[styles.sectionHeader, { flexDirection }]}>
+                <Text style={[styles.sectionTitle, textStyle]}>
+                  {i18n.t("community.roomsOwned")}
+                </Text>
+                <View style={styles.sectionBadge}>
+                  <Text style={styles.sectionBadgeText}>{ownerRooms.length}</Text>
+                </View>
+              </View>
+
               {ownerRooms.length === 0 ? (
-                <Text style={styles.emptyText}>No rooms owned yet</Text>
-              ) : (
-                ownerRooms.map((room) => (
-                  <View
-                    key={room.roomId}
-                    style={[
-                      styles.roomItem,
-                      styles.ownerRoomItem,
-                      {
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      },
-                    ]}
-                  >
-                    <TouchableOpacity
-                      style={{ flex: 1 }}
-                      onPress={() => handleRoomPress(room.roomId)}
-                    >
-                      <View style={styles.roomHeader}>
-                        <Text style={styles.roomName}>{room.roomName}</Text>
-                        <Ionicons name="star" size={16} color="#FFD700" />
-                      </View>
-                      <Text style={styles.roomDetails}>
-                        {room.type === "PUBLIC" ? "Public" : "Private"} • Owner
-                        {room.joinCode && ` • Code: ${room.joinCode}`}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        Alert.alert(
-                          "Delete Room",
-                          "Are you sure you want to delete this room? This will delete all posts in the room.",
-                          [
-                            { text: "Cancel", style: "cancel" },
-                            {
-                              text: "Delete",
-                              style: "destructive",
-                              onPress: async () => {
-                                try {
-                                  const response = await fetch(
-                                    `${API_BASE_URL}/rooms/${room.roomId}`,
-                                    {
-                                      method: "DELETE",
-                                      credentials: "include",
-                                    }
-                                  );
-                                  if (!response.ok)
-                                    throw new Error("Failed to delete room");
-                                  setOwnerRooms((prev) =>
-                                    prev.filter((r) => r.roomId !== room.roomId)
-                                  );
-                                  Alert.alert("Success", "Room deleted!");
-                                } catch (error) {
-                                  Alert.alert(
-                                    "Error",
-                                    error instanceof Error
-                                      ? error.message
-                                      : "Could not delete room"
-                                  );
-                                }
-                              },
-                            },
-                          ]
-                        );
-                      }}
-                      style={{ marginLeft: 10, padding: 8 }}
-                    >
-                      <Ionicons name="trash" size={22} color="#ef4444" />
-                    </TouchableOpacity>
+                  <View style={styles.emptyState}>
+                    <Ionicons name="home-outline" size={48} color="#6B7280" />
+                    <Text style={[styles.emptyText, textStyle]}>
+                      {i18n.t("community.noRoomsOwned")}
+                    </Text>
+                    <Text style={[styles.emptySubtext, textStyle]}>
+                      Create your first room to get started
+                    </Text>
                   </View>
-                ))
+              ) : (
+                  ownerRooms.map((room) => (
+                      <RoomCard key={room.roomId} room={room} isOwner={true} />
+                  ))
               )}
             </View>
 
             {/* Joined Rooms */}
-            <View style={styles.roomsSection}>
-              <Text style={styles.sectionTitle}>Joined Rooms</Text>
+            <View style={styles.sectionContainer}>
+              <View style={[styles.sectionHeader, { flexDirection }]}>
+                <Text style={[styles.sectionTitle, textStyle]}>
+                  {i18n.t("community.joinedRooms")}
+                </Text>
+                <View style={styles.sectionBadge}>
+                  <Text style={styles.sectionBadgeText}>{nonOwnerRooms.length}</Text>
+                </View>
+              </View>
+
               {nonOwnerRooms.length === 0 ? (
-                <Text style={styles.emptyText}>No joined rooms yet</Text>
-              ) : (
-                nonOwnerRooms.map((room) => (
-                  <TouchableOpacity
-                    key={room.roomId}
-                    style={styles.roomItem}
-                    onPress={() => handleRoomPress(room.roomId)}
-                  >
-                    <Text style={styles.roomName}>{room.roomName}</Text>
-                    <Text style={styles.roomDetails}>
-                      {room.type === "PUBLIC" ? "Public" : "Private"} • Owner:{" "}
-                      {room.ownerId}
+                  <View style={styles.emptyState}>
+                    <Ionicons name="people-outline" size={48} color="#6B7280" />
+                    <Text style={[styles.emptyText, textStyle]}>
+                      {i18n.t("community.noJoinedRooms")}
                     </Text>
-                  </TouchableOpacity>
-                ))
+                    <Text style={[styles.emptySubtext, textStyle]}>
+                      Join rooms to connect with others
+                    </Text>
+                  </View>
+              ) : (
+                  nonOwnerRooms.map((room) => (
+                      <RoomCard key={room.roomId} room={room} isOwner={false} />
+                  ))
               )}
             </View>
 
-            {/* Public Rooms */}
-            <View style={styles.roomsSection}>
-              <Text style={styles.sectionTitle}>Public Rooms</Text>
-              {filteredPublicRooms.length === 0 ? (
-                <Text style={styles.emptyText}>No public rooms available</Text>
-              ) : (
-                filteredPublicRooms.map((room) => (
-                  <TouchableOpacity
-                    key={room.roomId}
-                    style={styles.roomItem}
-                    onPress={() => handleRoomPress(room.roomId)}
-                  >
-                    <Text style={styles.roomName}>{room.roomName}</Text>
-                    <Text style={styles.roomDetails}>
-                      Public • Owner: {room.ownerId}
+            {/* Public Rooms (for non-admin users) */}
+            {userRole !== "ADMIN" && (
+                <View style={styles.sectionContainer}>
+                  <View style={[styles.sectionHeader, { flexDirection }]}>
+                    <Text style={[styles.sectionTitle, textStyle]}>
+                      {i18n.t("community.publicRooms")}
                     </Text>
-                  </TouchableOpacity>
-                ))
-              )}
-            </View>
-          </>
-        )}
-      </ScrollView>
+                    <View style={styles.sectionBadge}>
+                      <Text style={styles.sectionBadgeText}>{filteredPublicRooms.length}</Text>
+                    </View>
+                  </View>
 
-      {/* Create Room Modal */}
-      <Modal
-        visible={showModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {userRole === "ADMIN"
-                ? "Create Public Room"
-                : "Create Private Room"}
-            </Text>
+                  {filteredPublicRooms.length === 0 ? (
+                      <View style={styles.emptyState}>
+                        <Ionicons name="globe-outline" size={48} color="#6B7280" />
+                        <Text style={[styles.emptyText, textStyle]}>
+                          {i18n.t("community.noPublicRooms")}
+                        </Text>
+                        <Text style={[styles.emptySubtext, textStyle]}>
+                          No public rooms available right now
+                        </Text>
+                      </View>
+                  ) : (
+                      filteredPublicRooms.map((room) => (
+                          <RoomCard key={room.roomId} room={room} isOwner={false} showPublicBadge={true} />
+                      ))
+                  )}
+                </View>
+            )}
+          </Animated.View>
+        </ScrollView>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Room name"
-              value={roomName}
-              onChangeText={setRoomName}
-              placeholderTextColor="#888"
-            />
+        {/* Modern Create Room Modal */}
+        <Modal
+            visible={showModal}
+            animationType="fade"
+            transparent={true}
+            onRequestClose={() => setShowModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <BlurView intensity={100} style={styles.modalBlur}>
+              <View style={styles.modalContainer}>
+                <View style={styles.modernModal}>
+                  <View style={styles.modalHeader}>
+                    <Text style={[styles.modalTitle, textStyle]}>
+                      {userRole === "ADMIN"
+                          ? i18n.t("community.createPublicRoom")
+                          : i18n.t("community.createPrivateRoom")}
+                    </Text>
+                    <TouchableOpacity
+                        style={styles.closeButton}
+                        onPress={() => setShowModal(false)}
+                    >
+                      <Ionicons name="close" size={24} color="#6B7280" />
+                    </TouchableOpacity>
+                  </View>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowModal(false)}
-              >
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
+                  <View style={styles.modalBody}>
+                    <Text style={[styles.inputLabel, textStyle]}>Room Name</Text>
+                    <TextInput
+                        style={[styles.modernInput, textStyle]}
+                        placeholder={i18n.t("community.roomNamePlaceholder")}
+                        placeholderTextColor="#6B7280"
+                        value={roomName}
+                        onChangeText={setRoomName}
+                    />
+                  </View>
 
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalCreateButton]}
-                onPress={createRoom}
-                disabled={isCreating}
-              >
-                {isCreating ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={styles.buttonText}>Create</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+                  <View style={[styles.modalActions, { flexDirection }]}>
+                    <TouchableOpacity
+                        style={styles.modalCancelButton}
+                        onPress={() => setShowModal(false)}
+                    >
+                      <Text style={styles.modalCancelText}>
+                        {i18n.t("community.cancel")}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.modalCreateButton}
+                        onPress={createRoom}
+                        disabled={isCreating}
+                    >
+                      <LinearGradient
+                          colors={["#6366F1", "#8B5CF6"]}
+                          style={styles.modalCreateGradient}
+                      >
+                        {isCreating ? (
+                            <ActivityIndicator color="white" size="small" />
+                        ) : (
+                            <Text style={styles.modalCreateText}>
+                              {i18n.t("community.create")}
+                            </Text>
+                        )}
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </BlurView>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+
+        {/* Modern Join Room Modal */}
+        <Modal
+            visible={showJoinModal}
+            animationType="fade"
+            transparent={true}
+            onRequestClose={() => setShowJoinModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <BlurView intensity={100} style={styles.modalBlur}>
+              <View style={styles.modalContainer}>
+                <View style={styles.modernModal}>
+                  <View style={styles.modalHeader}>
+                    <Text style={[styles.modalTitle, textStyle]}>
+                      {i18n.t("community.joinRoomButton")}
+                    </Text>
+                    <TouchableOpacity
+                        style={styles.closeButton}
+                        onPress={() => setShowJoinModal(false)}
+                    >
+                      <Ionicons name="close" size={24} color="#6B7280" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.modalBody}>
+                    <Text style={[styles.inputLabel, textStyle]}>Join Code</Text>
+                    <TextInput
+                        style={[styles.modernInput, textStyle]}
+                        placeholder={i18n.t("community.joinRoomPlaceholder")}
+                        placeholderTextColor="#6B7280"
+                        value={joinCode}
+                        onChangeText={setJoinCode}
+                    />
+                  </View>
+
+                  <View style={[styles.modalActions, { flexDirection }]}>
+                    <TouchableOpacity
+                        style={styles.modalCancelButton}
+                        onPress={() => setShowJoinModal(false)}
+                    >
+                      <Text style={styles.modalCancelText}>
+                        {i18n.t("community.cancel")}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.modalCreateButton}
+                        onPress={joinRoom}
+                    >
+                      <LinearGradient
+                          colors={["#10B981", "#059669"]}
+                          style={styles.modalCreateGradient}
+                      >
+                        <Text style={styles.modalCreateText}>
+                          {i18n.t("community.joinRoomButton")}
+                        </Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </BlurView>
+          </View>
+        </Modal>
+      </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  gradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: "100%",
+  },
   center: {
     justifyContent: "center",
     alignItems: "center",
   },
-  backgroundVideo: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  content: {
-    padding: 20,
-    paddingTop: 50,
-  },
-  header: {
+  loadingContainer: {
     alignItems: "center",
-    marginBottom: 30,
+    justifyContent: "center",
   },
-  logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 15,
-  },
-  greeting: {
-    fontSize: 24,
-    color: "#fff",
-    fontWeight: "600",
-  },
-  createButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#16A34A",
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 15,
-  },
-  createButtonText: {
-    color: "#fff",
-    marginLeft: 8,
-    fontWeight: "600",
+  loadingText: {
+    color: "#FFFFFF",
     fontSize: 16,
-  },
-  joinRoomContainer: {
-    marginTop: 15,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  joinRoomInput: {
-    flex: 1,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    color: "white",
-    padding: 12,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  joinRoomButton: {
-    backgroundColor: "#334155",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  joinRoomButtonText: {
-    color: "white",
-    fontWeight: "600",
-  },
-  roomsSection: {
-    borderRadius: 15,
-    padding: 15,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    color: "#fff",
-    fontWeight: "600",
-    marginBottom: 15,
-  },
-  roomItem: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  ownerRoomItem: {
-    backgroundColor: "rgba(255,215,0,0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.3)",
-  },
-  roomHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 5,
-  },
-  roomName: {
-    color: "#fff",
-    fontSize: 18,
+    marginTop: 16,
     fontWeight: "500",
-    flex: 1,
   },
-  roomDetails: {
-    color: "#ffffffaa",
-    fontSize: 14,
+
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+
   },
-  emptyText: {
-    color: "#ffffff88",
-    textAlign: "center",
+  titleContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  headerTitle: {
+    color: "#FFFFFF",
+    fontSize: 32,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    color: "#9CA3AF",
     fontSize: 16,
-    marginVertical: 20,
+    fontWeight: "400",
+    marginTop: 4,
   },
-  modalContainer: {
+  scrollContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  actionCardsContainer: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 32,
+  },
+  actionCard: {
+    flex: 1,
+    height: 120,
+    borderRadius: 20,
+    overflow: "hidden",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  createCard: {
+    // Additional styles for create card if needed
+  },
+  joinCard: {
+    // Additional styles for join card if needed
+  },
+  actionCardGradient: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.7)",
+    padding: 16,
   },
-  modalContent: {
-    width: "80%",
-    backgroundColor: "#1e293b",
-    borderRadius: 15,
-    padding: 20,
+  actionCardIcon: {
+    marginBottom: 8,
   },
-  modalTitle: {
-    fontSize: 20,
-    color: "white",
-    fontWeight: "bold",
-    marginBottom: 20,
+
+  actionCardTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
     textAlign: "center",
   },
-  input: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    color: "white",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
+  roomsContainer: {
+    gap: 24,
   },
-  modalButtons: {
+  sectionContainer: {
+    marginBottom: 8,
+  },
+  sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-  },
-  modalButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
     alignItems: "center",
-    marginHorizontal: 5,
+    marginBottom: 16,
   },
-  cancelButton: {
-    backgroundColor: "#64748b",
+  sectionTitle: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  sectionBadge: {
+    backgroundColor: "rgba(99, 102, 241, 0.2)",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "rgba(99, 102, 241, 0.3)",
+  },
+  sectionBadgeText: {
+    color: "#6366F1",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    color: "#9CA3AF",
+    fontSize: 16,
+    fontWeight: "500",
+    textAlign: "center",
+    marginTop: 12,
+  },
+  emptySubtext: {
+    color: "#6B7280",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 4,
+  },
+  roomCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    overflow: "hidden",
+  },
+  roomCardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+  },
+  roomIcon: {
+    width: 48,
+    height: 48,
+    backgroundColor: "rgba(99, 102, 241, 0.1)",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  roomInfo: {
+    flex: 1,
+  },
+  roomName: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  roomMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  roomDate: {
+    color: "#9CA3AF",
+    fontSize: 12,
+    fontWeight: "400",
+  },
+  publicBadge: {
+    backgroundColor: "rgba(16, 185, 129, 0.2)",
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.3)",
+  },
+  publicBadgeText: {
+    color: "#10B981",
+    fontSize: 10,
+    fontWeight: "500",
+  },
+  roomActions: {
+    marginLeft: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBlur: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    width: SCREEN_WIDTH - 40,
+    maxWidth: 400,
+  },
+  modernModal: {
+    backgroundColor: "rgba(30, 30, 30, 0.95)",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    overflow: "hidden",
+    elevation: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+  },
+  modalTitle: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBody: {
+    padding: 24,
+  },
+  inputLabel: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "500",
+    marginBottom: 8,
+  },
+  modernInput: {
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+    padding: 24,
+    paddingTop: 0,
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 12,
+    padding: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalCancelText: {
+    color: "#9CA3AF",
+    fontSize: 16,
+    fontWeight: "500",
   },
   modalCreateButton: {
-    backgroundColor: "#16A34A",
+    flex: 1,
+    borderRadius: 12,
+    overflow: "hidden",
   },
-  buttonText: {
-    color: "white",
-    fontWeight: "bold",
+  modalCreateGradient: {
+    padding: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalCreateText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
