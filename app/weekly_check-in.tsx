@@ -16,6 +16,8 @@ import {
 } from "react-native";
 import i18n from "../constants/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { HeaderWithNotifications } from "../components/HeaderWithNotifications";
+import { useNotifications } from "./Notification";
 
 const getWeekNumber = (date: Date) => {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -32,6 +34,8 @@ export default function WeeklyCheckIn() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [status, setStatus] = useState<string | null>(null);
+  
+  const { addNotification } = useNotifications();
 
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
   const [key, setKey] = useState(0);
@@ -113,6 +117,43 @@ export default function WeeklyCheckIn() {
     fetchData();
   }, []);
 
+  // Function to schedule weekly check-in reminder notification
+  const scheduleWeeklyReminder = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      if (!userId) return;
+
+      // Create a reminder notification for next week
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      
+      addNotification({
+        id: Date.now(),
+        title: i18n.t('weeklyCheckIn.notifications.weeklyReminderTitle') || "Weekly Check-in Reminder",
+        message: i18n.t('weeklyCheckIn.notifications.weeklyReminderMessage') || "It's time for your weekly mental health check-in! Take a moment to reflect on your week.",
+        createdAt: nextWeek.toISOString(),
+        isRead: false,
+        type: "REMINDER"
+      });
+
+      // Also create a progress update reminder
+      addNotification({
+        id: Date.now() + 1,
+        title: i18n.t('weeklyCheckIn.notifications.progressReminderTitle') || "Progress Update Reminder", 
+        message: i18n.t('weeklyCheckIn.notifications.progressReminderMessage') || "Don't forget to update your daily progress tracker to maintain your wellness journey!",
+        createdAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+        isRead: false,
+        type: "REMINDER"
+      });
+    } catch (error) {
+      console.error("Error scheduling reminders:", error);
+    }
+  };
+
+  useEffect(() => {
+    scheduleWeeklyReminder();
+  }, []);
+
   const handleSubmit = async () => {
     if (Object.keys(answers).length !== questions.length) {
       Alert.alert(i18n.t('weeklyCheckIn.errors.incompleteAnswers'));
@@ -142,11 +183,31 @@ export default function WeeklyCheckIn() {
         timestamp: new Date().toISOString(),
       });
 
+      // Schedule reminder notifications for next week and progress update
+      scheduleWeeklyReminder();
+
+      // Create immediate congratulatory notification
+      addNotification({
+        id: Date.now() + 2,
+        title: i18n.t('weeklyCheckIn.notifications.completionTitle') || "Weekly Check-in Completed!",
+        message: i18n.t('weeklyCheckIn.notifications.completionMessage') || "Great job completing your weekly mental health check-in! Your wellness journey continues.",
+        createdAt: new Date().toISOString(),
+        isRead: false,
+        type: "ACHIEVEMENT"
+      });
+
       Alert.alert(
         i18n.t('weeklyCheckIn.alerts.success'),
-        i18n.t('weeklyCheckIn.alerts.success'),
+        i18n.t('weeklyCheckIn.alerts.reminderMessage'),
         [
-          { text: "OK", onPress: () => router.replace("/progress") },
+          { 
+            text: i18n.t('weeklyCheckIn.alerts.updateProgress') || "Update Progress", 
+            onPress: () => router.replace("/progress") 
+          },
+          { 
+            text: i18n.t('weeklyCheckIn.navigation.later') || "Later", 
+            style: "cancel"
+          },
         ]
       );
     } catch (err) {
@@ -162,9 +223,9 @@ export default function WeeklyCheckIn() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#16A34A" />
-      </View>
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color="#16A34A" />
+        </View>
     );
   }
 
@@ -173,7 +234,19 @@ export default function WeeklyCheckIn() {
   return (
     <View style={styles.container} key={key}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.languageContainer, { marginTop: 40, marginRight: 10 }]}>
+      <View style={{
+        position: 'absolute',
+        top: 40,
+        right: 10,
+        zIndex: 1000,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10
+      }}>
+        <HeaderWithNotifications 
+          isRTL={isRTL}
+          style={{ backgroundColor: 'transparent' }}
+        />
         <LanguageSwitcher />
       </View>
       <BackgroundVideo />
@@ -182,6 +255,15 @@ export default function WeeklyCheckIn() {
       <KeyboardAvoidingView behavior="padding" style={styles.contentContainer}>
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
+            {/* Progress reminder */}
+            <TouchableOpacity 
+              style={styles.progressReminder}
+              onPress={() => router.push("/progress")}
+            >
+              <Text style={styles.progressReminderText}>
+                {i18n.t('weeklyCheckIn.alerts.progressReminder')}
+              </Text>
+            </TouchableOpacity>
 
             <View style={{ marginBottom: 20 }}>
               <Text style={[styles.questionText, { textAlign }]}>{currentQuestion}</Text>
@@ -357,5 +439,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: 'white',
+  },
+  progressReminder: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#22C55E',
+    padding: 12,
+    marginBottom: 20,
+    borderRadius: 8,
+  },
+  progressReminderText: {
+    color: '#22C55E',
+    fontSize: 14,
+    fontStyle: 'italic',
   },
 });

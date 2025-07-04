@@ -17,6 +17,7 @@ import moment from 'moment';
 import i18n from "../../constants/i18n";
 import BackgroundVideo from '@/components/BackgroundVideo';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { HeaderWithNotifications } from '../../components/HeaderWithNotifications';
 
 const ProgressScreen = () => {
   const [moodData, setMoodData] = useState<MoodLog[]>([]);
@@ -42,7 +43,7 @@ const ProgressScreen = () => {
         if (!userId) throw new Error(i18n.t('progress.errors.userNotFound'));
 
         const response = await axios.get(
-          `${process.env.EXPO_PUBLIC_API_BASE_URL}/api/mood-logs/${userId}`
+            `${process.env.EXPO_PUBLIC_API_BASE_URL}/api/mood-logs/${userId}`
         );
         setMoodData(response.data);
         setLoading(false);
@@ -67,10 +68,10 @@ const ProgressScreen = () => {
       const previousDate = index > 0 ? new Date(logs[index - 1].timestamp) : null;
       
       if (
-        previousDate &&
-        currentDate.getDate() === previousDate.getDate() &&
-        currentDate.getMonth() === previousDate.getMonth() &&
-        currentDate.getFullYear() === previousDate.getFullYear()
+          previousDate &&
+          currentDate.getDate() === previousDate.getDate() &&
+          currentDate.getMonth() === previousDate.getMonth() &&
+          currentDate.getFullYear() === previousDate.getFullYear()
       ) {
         formattedLabels.push(moment(log.timestamp).format("HH:mm"));
       } else {
@@ -114,12 +115,12 @@ const ProgressScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <VideoBackground videoRef={videoRef} />
-        <View style={styles.overlay}>
-          <ActivityIndicator size="large" color="#16A34A" />
+        <View style={styles.container}>
+          <VideoBackground videoRef={videoRef} />
+          <View style={styles.overlay}>
+            <ActivityIndicator size="large" color="#16A34A" />
+          </View>
         </View>
-      </View>
     );
   }
 
@@ -136,7 +137,20 @@ const ProgressScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.languageContainer, { marginTop: 40, marginRight: 10 }]}>
+      <View style={{
+        position: 'absolute',
+        top: 40,
+        right: 10,
+        zIndex: 1000,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10
+      }}>
+        <HeaderWithNotifications 
+          showBackButton={false}
+          isRTL={isRTL}
+          style={{ backgroundColor: 'transparent' }}
+        />
         <LanguageSwitcher />
       </View>
       <VideoBackground videoRef={videoRef} />

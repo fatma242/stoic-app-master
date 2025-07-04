@@ -14,6 +14,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import i18n from "../../constants/i18n";
+import { HeaderWithNotifications } from '../../components/HeaderWithNotifications';
 
 export default function Home() {
   const [key, setKey] = useState(0);
@@ -59,7 +60,20 @@ export default function Home() {
 
   return (
     <View style={styles.container} key={key}>
-      <View style={{ marginTop: 30 , marginRight: 10, alignSelf: "flex-end" }}>
+      <View style={{
+        position: 'absolute',
+        top: 40,
+        right: 10,
+        zIndex: 1000,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10
+      }}>
+        <HeaderWithNotifications 
+          showBackButton={false}
+          isRTL={isRTL}
+          style={{ backgroundColor: 'transparent' }}
+        />
         <LanguageSwitcher />
       </View>
       

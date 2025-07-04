@@ -12,8 +12,9 @@ import java.util.List;
 
 
 @CrossOrigin(origins = {
-       " ${UserIphttp}",
-        "${UserIPexp}"
+        "${UserIphttp}",
+        "${UserIPexp}",
+        "${UserIphttp}"
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/chat")

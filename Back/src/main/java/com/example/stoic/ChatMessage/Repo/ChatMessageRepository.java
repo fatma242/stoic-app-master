@@ -7,8 +7,9 @@ import com.example.stoic.ChatMessage.Model.ChatMessage;
 
 import java.util.List;
 
-public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
-    List<ChatMessage> findByUserIdOrderByTimestampAsc(Long userId);
-    void deleteByUserId(Long userId);
+public interface ChatMessageRepository extends JpaRepository<ChatMessage, Integer> {
+    List<ChatMessage> findByUserIdOrderByTimestampAsc(long userId);
+    void deleteByUserId(long userId);
+    void deleteById(Long id);
 }
 

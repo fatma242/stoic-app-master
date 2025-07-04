@@ -14,14 +14,14 @@ import lombok.Data;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
 @CrossOrigin(origins = {
-        " ${UserIphttp}",
-        "${UserIPexp}",
-        " ${UserIphttp}",
+        "${UserIphttp}", "${UserIPexp}", "${UserIphttp}",
 }, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/users")
@@ -39,10 +39,16 @@ public class UserController {
         return new ResponseEntity<>(users, HttpStatus.OK);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable int id) {
-        User user = userService.findById(id);
-        return new ResponseEntity<>(user, HttpStatus.OK);
+ @GetMapping("/{id}")
+public ResponseEntity<User> getUserById(@PathVariable int id) {
+    User user = userService.findById(id);
+    return new ResponseEntity<>(user, HttpStatus.OK);
+}
+
+    @GetMapping("/test")
+    public void test() {
+        System.out.println("Test endpoint hit!");
+        // You can add more logic here if needed
     }
 
     @DeleteMapping("/{id}")

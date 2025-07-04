@@ -14,7 +14,7 @@ public class WebSocketBrokerConfig implements WebSocketMessageBrokerConfigurer {
         // allow CORS from your Expo/Web ports:
         registry
             .addEndpoint("/ws-chat")
-            .setAllowedOriginPatterns("http://localhost:8081", "http://192.168.1.8:8081", "exp://192.168.1.8:8081", "exp://192.168.1.6:8081", "http://192.168.1.6:8081")
+            .setAllowedOriginPatterns("${UserIphttp}", "${UserIPexp}", "${UserIphttp}")
             .withSockJS();
     }
 

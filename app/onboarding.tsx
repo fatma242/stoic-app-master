@@ -10,6 +10,7 @@ import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, justifyContent: 'center', backgroundColor: 'transparent' },

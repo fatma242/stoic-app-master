@@ -17,7 +17,7 @@ function connect() {
   }
   
   // Use the correct WebSocket URL (using the server.port from application.properties)
-  ws = new WebSocket(`ws://192.168.1.19:8100/hello`);
+  ws = new WebSocket(`ws://:${EXPO_PUBLIC_API_BASE_URL}/hello`);
 
   // Connection opened
   ws.onopen = function() {

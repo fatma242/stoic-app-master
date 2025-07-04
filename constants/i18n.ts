@@ -126,11 +126,23 @@ const translations = {
       },
       alerts: {
         alreadySubmitted: "You've already completed your weekly check-in.",
-        success: "Your check-in has been recorded!"
+        success: "Your check-in has been recorded!",
+        updateProgress: "Update Progress",
+        reminderMessage: "Great work completing your weekly check-in! Would you like to update your progress tracker now?",
+        progressReminder: "💡 Don't forget to track your daily progress after this check-in!"
       },
       navigation: {
         previous: "Previous",
-        submit: "Submit"
+        submit: "Submit",
+        later: "Later"
+      },
+      notifications: {
+        weeklyReminderTitle: "Weekly Check-in Reminder",
+        weeklyReminderMessage: "It's time for your weekly mental health check-in! Take a moment to reflect on your week.",
+        progressReminderTitle: "Progress Update Reminder",
+        progressReminderMessage: "Don't forget to update your daily progress tracker to maintain your wellness journey!",
+        completionTitle: "Weekly Check-in Completed!",
+        completionMessage: "Great job completing your weekly mental health check-in! Your wellness journey continues."
       }
     },
     landing: {
@@ -280,13 +292,23 @@ const translations = {
       deleteRoomTitle: "Delete Room",
       deleteRoomMessage: "Are you sure you want to delete this room? This will delete all posts in the room.",
       delete: "Delete",
+      roomOptionsTitle: "Room Options",
+      roomOptionsMessage: "What would you like to do with this room?",
+      leaveRoomTitle: "Leave Room",
+      leaveRoomMessage: "Are you sure you want to leave this room?",
+      leave: "Leave",
+      leaveRoom: "Leave Room",
       successCreate: "Room created successfully!",
       successJoin: "Joined room successfully!",
       successDelete: "Room deleted!",
+      successLeave: "Left room successfully!",
       errorJoining: "Error joining room",
       errorCreating: "Could not create room",
       errorDeleting: "Could not delete room",
+      errorLeaving: "Could not leave room",
       errorFetching: "Could not load rooms",
+      roomNameRequired: "Room name is required",
+      joinCodeRequired: "Join code is required",
     },
     room: {
       websocketError: "Broker reported error: ",
@@ -346,6 +368,7 @@ const translations = {
       noUsers: "No users joined yet",
       unknownUser: "Unknown User",
       chat: "Chat",
+      back: "Back",
       noMessages: "No messages yet",
       posts: "Posts",
       noPosts: "No posts yet",
@@ -520,11 +543,23 @@ const translations = {
       },
       alerts: {
         alreadySubmitted: "لقد أكملت فحصك الأسبوعي بالفعل.",
-        success: "تم تسجيل فحصك بنجاح!"
+        success: "تم تسجيل فحصك بنجاح!",
+        updateProgress: "تحديث التقدم",
+        reminderMessage: "عمل رائع في إكمال فحصك الأسبوعي! هل تريد تحديث متتبع التقدم الآن؟",
+        progressReminder: "💡 لا تنس تتبع تقدمك اليومي بعد هذا الفحص!"
       },
       navigation: {
         previous: "السابق",
-        submit: "إرسال"
+        submit: "إرسال",
+        later: "لاحقاً"
+      },
+      notifications: {
+        weeklyReminderTitle: "تذكير الفحص الأسبوعي",
+        weeklyReminderMessage: "حان وقت فحصك الأسبوعي للصحة النفسية! خذ لحظة للتفكير في أسبوعك.",
+        progressReminderTitle: "تذكير تحديث التقدم",
+        progressReminderMessage: "لا تنس تحديث متتبع التقدم اليومي للحفاظ على رحلة العافية الخاصة بك!",
+        completionTitle: "تم إكمال الفحص الأسبوعي!",
+        completionMessage: "عمل رائع في إكمال فحصك الأسبوعي للصحة النفسية! رحلة العافية الخاصة بك مستمرة."
       }
     },
     landing: {
@@ -674,13 +709,23 @@ const translations = {
       deleteRoomTitle: "حذف الغرفة",
       deleteRoomMessage: "هل أنت متأكد من حذف هذه الغرفة؟ سيتم حذف جميع المشاركات داخلها.",
       delete: "حذف",
+      roomOptionsTitle: "خيارات الغرفة",
+      roomOptionsMessage: "ماذا تريد أن تفعل مع هذه الغرفة؟",
+      leaveRoomTitle: "مغادرة الغرفة",
+      leaveRoomMessage: "هل أنت متأكد من مغادرة هذه الغرفة؟",
+      leave: "مغادرة",
+      leaveRoom: "مغادرة الغرفة",
       successCreate: "تم إنشاء الغرفة بنجاح!",
       successJoin: "تم الانضمام إلى الغرفة بنجاح!",
       successDelete: "تم حذف الغرفة!",
+      successLeave: "تم مغادرة الغرفة بنجاح!",
       errorJoining: "فشل في الانضمام إلى الغرفة",
       errorCreating: "فشل في إنشاء الغرفة",
       errorDeleting: "فشل في حذف الغرفة",
+      errorLeaving: "فشل في مغادرة الغرفة",
       errorFetching: "تعذر تحميل الغرف",
+      roomNameRequired: "اسم الغرفة مطلوب",
+      joinCodeRequired: "كود الانضمام مطلوب",
     },
     room: {
       websocketError: "الوسيط أبلغ عن خطأ: ",
@@ -740,6 +785,7 @@ const translations = {
       noUsers: "لا يوجد مستخدمون بعد",
       unknownUser: "مستخدم غير معروف",
       chat: "الدردشة",
+      back: "رجوع",
       noMessages: "لا توجد رسائل بعد",
       posts: "المنشورات",
       noPosts: "لا توجد منشورات بعد",

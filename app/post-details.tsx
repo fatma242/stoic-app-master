@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import i18n from "../constants/i18n";
+import { HeaderWithNotifications } from "../components/HeaderWithNotifications";
 
 const { width, height } = Dimensions.get("window");
 
@@ -534,17 +535,10 @@ export default function PostDetailsScreen() {
           colors={["rgba(15, 23, 42, 0.95)", "rgba(30, 41, 59, 0.95)"]}
           style={styles.headerGradient}
         >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <Ionicons 
-              name={isRTL ? "arrow-forward" : "arrow-back"} 
-              size={24} 
-              color="#10b981" 
-            />
-          </TouchableOpacity>
+          <HeaderWithNotifications 
+            isRTL={isRTL}
+            style={{ backgroundColor: 'transparent', padding: 0 }}
+          />
           <Text style={[styles.headerTitle, textStyle]}>
             {i18n.t("postDetails.therapySession")}
           </Text>

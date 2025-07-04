@@ -2,6 +2,9 @@ package com.example.stoic.Message.Controller;
 
 import com.example.stoic.Message.Model.Message;
 import com.example.stoic.Message.Service.MessageService;
+import com.example.stoic.Room.dto.ChatMessageDto;
+import com.google.cloud.storage.Acl.User;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -11,8 +14,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @CrossOrigin(origins = {
-        " ${UserIphttp}",
-        "${UserIPexp}"
+        "${UserIphttp}", // Web on phone using LAN
+        "${UserIPexp}",
+        "${UserIphttp}"
 }, allowCredentials = "true")
 @RestController
 @RequiredArgsConstructor
@@ -34,10 +38,12 @@ public class MessageController {
         return service.save(message);
     }
 
-    // REST: room history
+    // ✅ REST: room history with senderName and sentAt
     @GetMapping("/rooms/{roomId}/history")
-    public List<Message> getRoomHistory(@PathVariable int roomId) {
-        return service.getRoomHistory(roomId);
+    public List<ChatMessageDto> getRoomHistory(@PathVariable int roomId) {
+        return service.getRoomHistory(roomId).stream()
+                .map(ChatMessageDto::fromEntity)
+                .toList();
     }
 
     // REST: by sender
