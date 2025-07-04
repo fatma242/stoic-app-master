@@ -33,7 +33,7 @@ public class NotificationController {
     }
 
     @GetMapping("/{userId}/unread")
-    public ResponseEntity<List<Notification>> getUnreadNotifications(@PathVariable int userId) {
+    public ResponseEntity<List<Notification>> getUnreadNotifications(@PathVariable int userId ) {
         try {
             List<Notification> notifications = notificationService.getUnreadNotifications(userId);
             return ResponseEntity.ok(notifications);
