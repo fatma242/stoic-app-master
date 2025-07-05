@@ -29,6 +29,6 @@ public interface NotificationRepo extends JpaRepository<Notification, Integer>, 
     void deleteByUserUserId(Integer userId);
 
     List<Notification> findByUserUserIdAndIsReadFalse(int userId);
-
+    
     List<Notification> findByUserUserId(int userId);
 }

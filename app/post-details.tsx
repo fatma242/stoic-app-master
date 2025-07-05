@@ -356,16 +356,10 @@ export default function PostDetailsScreen() {
                 setReportedComments((prev) => new Set(prev).add(commentId));
 
                 if (responseText.includes("deleted")) {
-                  Alert.alert(
-                      i18n.t("postDetails.success"),
-                      i18n.t("postDetails.commentRemoved")
-                  );
+                
                   fetchComments();
                 } else {
-                  Alert.alert(
-                      i18n.t("postDetails.success"),
-                      i18n.t("postDetails.commentReported")
-                  );
+                  
                 }
               } catch (error) {
                 console.error(i18n.t("postDetails.reportError"), error);
@@ -424,10 +418,7 @@ export default function PostDetailsScreen() {
       setComments((prevComments) => [newCommentData, ...prevComments]);
       setNewComment("");
 
-      Alert.alert(
-          i18n.t("postDetails.success"),
-          i18n.t("postDetails.commentAdded")
-      );
+      
     } catch (error) {
       console.error(i18n.t("postDetails.commentError"), error);
       Alert.alert(
@@ -932,7 +923,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(20, 184, 128, 0.1)",
     overflow: "hidden",
-    elevation: 4,
+    
     shadowColor: "#10B981",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -1079,7 +1070,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(20, 184, 128, 0.1)",
     overflow: "hidden",
-    elevation: 2,
+    
     shadowColor: "#10B981",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

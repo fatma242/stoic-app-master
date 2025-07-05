@@ -14,6 +14,7 @@ export default function Landing() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   // const sound = useRef(new Audio.Sound()); // Sound ref commented out
   const [key, setKey] = useState(0);
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
   
   useEffect(() => {
     global.reloadApp = () => setKey(prev => prev + 1);
@@ -21,6 +22,28 @@ export default function Landing() {
       global.reloadApp = undefined;
     };
   }, []);
+
+  // Add function to create admin user
+  const createAdminUser = async () => {
+    try {
+      console.log('🔧 Creating admin user...');
+      const response = await fetch(`${API_BASE_URL}/api/users/Admin`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        console.log('✅ Admin user creation endpoint called successfully');
+      } else {
+        console.log('ℹ️ Admin user creation response:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Error creating admin user:', error);
+    }
+  };
 
   useEffect(() => {
     // Commented out sound functionality
@@ -40,17 +63,26 @@ export default function Landing() {
     // };
   }, []);
 
-    useEffect(() => {
-    const checkLoggedIn = async () => {
-      const userId = await AsyncStorage.getItem("userId");
-      if (userId) {
-        router.replace("/home");
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // First, create admin user
+        await createAdminUser();
+        
+        // Then check if user is already logged in
+        const userId = await AsyncStorage.getItem("userId");
+        if (userId) {
+          router.replace("/home");
+        }
+      } catch (error) {
+        console.error('❌ Error initializing app:', error);
       }
     };
-    checkLoggedIn();
+
+    initializeApp();
   }, []);
 
-useEffect(() => {
+  useEffect(() => {
     const onBackPress = () => {
       // Prevent going back to login
       return true;
@@ -98,6 +130,7 @@ useEffect(() => {
       </View></>
   );
 }
+
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
   backgroundVideo: { position: "absolute", top: 0, left: 0, bottom: 0, right: 0 },

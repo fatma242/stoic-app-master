@@ -206,6 +206,115 @@ const translations = {
       alreadyMember: "Already part of our community?",
       welcomeBack: "Welcome back",
     },
+   chatAI: {
+  title: "AI Chat",
+  subtitle: "Your AI Mental Health Companion",
+  botName: "Stoic",
+  botDescription: "Your friendly AI companion for mental wellness and personal growth. Here to listen, support, and guide you on your journey.",
+  startChat: "Start Chatting",
+  placeholder: "Share your thoughts with me...",
+  send: "Send",
+  loading: "Thinking...",
+  typing: "Stoic is typing...",
+  
+  // Welcome Messages
+  welcomeMessage: "Hello! I'm Stoic, your AI companion. Here to support your mental wellness and personal growth journey. How can I assist you today?",
+  
+  welcomeMessages: {
+    normal: "Hello! I'm here to support your mental wellness journey. How are you feeling today?",
+    stressed: "I understand you've been feeling overwhelmed lately. I'm here to listen and help you work through these feelings. What's on your mind?",
+    anxious: "I notice you've been experiencing some anxiety. That takes courage to acknowledge. I'm here to support you. Would you like to talk about what's been worrying you?",
+    depressed: "I see you've been going through a difficult time. I want you to know that your feelings are valid, and I'm here to listen without judgment. How can I support you today?",
+    default: "I'm here to listen and support you. Please feel free to share what's on your mind.",
+    crisis: "I'm concerned about how you've been feeling. Please know that you're not alone, and there are people who want to help. While I'm here to listen, I also want to make sure you have access to immediate professional support if needed."
+  },
+  
+  // Error Messages
+  errors: {
+    general: "I'm having trouble connecting right now. Please try again in a moment.",
+    noResponse: "I couldn't generate a response. Could you please rephrase your message?",
+    networkError: "Network connection issue. Please check your internet and try again.",
+    rateLimited: "I need a moment to process. Please wait a few seconds before sending another message.",
+    invalidInput: "I didn't quite understand that. Could you please share more details?",
+    serverError: "I'm experiencing technical difficulties. Please try again later.",
+    longMessage: "Your message is quite long. Could you break it into smaller parts so I can better help you?",
+    emptyMessage: "Please share your thoughts or questions with me.",
+    inappropriateContent: "I'm here to support your mental wellness. Let's keep our conversation focused on helpful topics."
+  },
+  
+  // Status Messages
+  status: {
+    connecting: "Connecting to Stoic...",
+    reconnecting: "Reconnecting...",
+    connected: "Connected",
+    disconnected: "Connection lost. Tap to reconnect.",
+    offline: "You're offline. Messages will be sent when connection is restored."
+  },
+  
+  // Input Validation
+  validation: {
+    tooShort: "Please share a bit more so I can better understand and help you.",
+    tooLong: "That's quite a lot to process. Could you break it into smaller parts?",
+    inappropriate: "Let's keep our conversation supportive and appropriate.",
+    spam: "I notice you're sending messages very quickly. Take a moment to breathe.",
+    profanity: "I'm here to provide a safe, supportive space. Let's keep our language respectful."
+  },
+  
+  // Suggestions
+  suggestions: {
+    title: "How can I help you today?",
+    options: [
+      "I'm feeling stressed",
+      "I need someone to talk to",
+      "Help me with anxiety",
+      "I'm having trouble sleeping",
+      "I want to improve my mood",
+      "Share coping strategies"
+    ]
+  },
+  
+  // Quick Responses
+  quickResponses: {
+    thankYou: "You're welcome! I'm always here when you need support.",
+    goodbye: "Take care of yourself. Remember, I'm here whenever you need to talk.",
+    emergency: "If you're in immediate danger, please contact emergency services or a crisis hotline right away.",
+    professional: "For serious mental health concerns, I encourage you to speak with a licensed professional.",
+    support: "Remember, seeking help is a sign of strength, not weakness."
+  },
+  
+  // Session Management
+  session: {
+    welcome: "Welcome back! How are you feeling since we last talked?",
+    firstTime: "This is our first conversation. I'm excited to get to know you and support your journey.",
+    continuing: "I'm glad you're back. What would you like to talk about today?",
+    ended: "Our conversation has ended. Feel free to start a new one anytime.",
+    timeout: "It seems you've been away for a while. I'm still here when you're ready to continue."
+  },
+  
+  // Help and Information
+  help: {
+    title: "How to Chat with Stoic",
+    description: "I'm here to listen, support, and provide guidance for your mental wellness journey.",
+    tips: [
+      "Share your thoughts and feelings openly",
+      "Ask questions about mental health and wellness",
+      "Request coping strategies and techniques",
+      "Talk about your daily experiences and challenges"
+    ],
+    limitations: "Remember: I'm an AI assistant, not a replacement for professional therapy or medical care.",
+    crisis: "In emergencies, please contact: Emergency Services (911) or Crisis Hotline (988)"
+  },
+  
+  // Features
+  features: {
+    available: "Available features:",
+    moodTracking: "Mood tracking and insights",
+    copingStrategies: "Personalized coping strategies",
+    mindfulness: "Mindfulness and breathing exercises",
+    journaling: "Guided journaling prompts",
+    resources: "Mental health resources and tips"
+  }
+},
     home: {
       welcomeBack: "Welcome Back!",
       weeklyCheckin: "Weekly Check-in",
@@ -311,6 +420,10 @@ const translations = {
       joinCodeRequired: "Join code is required",
     },
     room: {
+         removedFromRoom: "Removed from Room",
+    youHaveBeenRemoved: "You have been removed from this room",
+    youHaveBeenRemovedMessage: "You no longer have access to this room and cannot perform any actions here.",
+    backToRooms: "Back to Rooms",
       websocketError: "Broker reported error: ",
       details: "Additional details: ",
       fetchRoomError: "Failed to fetch room",
@@ -344,10 +457,10 @@ const translations = {
       userNotFound: "User not found. Please log in again.",
       toggleLikeError: "Failed to toggle like",
       removeUserTitle: "Remove User",
-      removeUserMessage: "Are you sure you want to remove {username} from this room?",
+      removeUserMessage: "Are you sure you want to remove this user from this room?",
       remove: "Remove",
       removeUserError: "Could not remove user",
-      userRemovedSuccess: "{username} has been removed from the room",
+      userRemovedSuccess: "User has been removed from the room",
       adminOnlyDelete: "Only admins can delete posts",
       adminDeleteTitle: "Admin Force Delete",
       adminDeleteMessage: "Are you sure you want to permanently delete the post \"{postTitle}\"? This action cannot be undone.",
@@ -420,6 +533,32 @@ const translations = {
       "success": "Success",
       "error": "Error"
     }
+    ,"time": {
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{count}}d ago",
+    "unknown":"Unknown"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "noNotifications": "No Notifications",
+    "caughtUp": "You're all caught up! New notifications will appear here automatically.",
+    "realTimeActive": "Real-time updates active",
+    "offlineMode": "Offline mode - Pull to refresh",
+    "notification": "notification",
+    "notifications": "notifications",
+    "unread": "unread",
+    "markAll": "Mark All",
+    "markAllTitle": "Mark All as Read",
+    "markAllMessage": "Mark all {{count}} notifications as read?",
+    "refreshTitle": "Pull to refresh notifications"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel"
+  }
   },
   ar: {
     onboarding: {
@@ -727,7 +866,122 @@ const translations = {
       roomNameRequired: "اسم الغرفة مطلوب",
       joinCodeRequired: "كود الانضمام مطلوب",
     },
+    
+  chatAI: {
+  title: "دردشة الذكاء الاصطناعي",
+  subtitle: "رفيقك الذكي للصحة النفسية",
+  botName: "ستويك",
+  botDescription: "رفيقك الودود للذكاء الاصطناعي للعافية النفسية والنمو الشخصي. هنا للاستماع والدعم وإرشادك في رحلتك.",
+  startChat: "بدء المحادثة",
+  placeholder: "شاركني أفكارك...",
+  send: "إرسال",
+  loading: "أفكر...",
+  typing: "ستويك يكتب...",
+  
+  // Welcome Messages
+  welcomeMessage: "مرحباً! أنا ستويك، رفيقك الذكي. هنا لدعم رحلتك نحو العافية النفسية والنمو الشخصي. كيف يمكنني مساعدتك اليوم؟",
+  
+  welcomeMessages: {
+    normal: "مرحباً! أنا هنا لدعم رحلتك نحو العافية النفسية. كيف تشعر اليوم؟",
+    stressed: "أفهم أنك تشعر بالإرهاق مؤخراً. أنا هنا للاستماع ومساعدتك في التعامل مع هذه المشاعر. ما الذي يشغل بالك؟",
+    anxious: "ألاحظ أنك تعاني من بعض القلق. يتطلب الأمر شجاعة للاعتراف بذلك. أنا هنا لدعمك. هل تريد التحدث عما يقلقك؟",
+    depressed: "أرى أنك تمر بوقت صعب. أريدك أن تعلم أن مشاعرك مبررة، وأنا هنا للاستماع دون إصدار أحكام. كيف يمكنني دعمك اليوم؟",
+    default: "مرحباً! أنا ستويك، رفيقك الذكي. هنا لدعم رحلتك نحو العافية النفسية والنمو الشخصي. كيف يمكنني مساعدتك اليوم؟",
+    crisis: "أنا قلق بشأن ما تشعر به. اعلم أنك لست وحدك، وهناك أشخاص يريدون المساعدة. بينما أنا هنا للاستماع، أريد أيضاً التأكد من وصولك للدعم المهني الفوري إذا لزم الأمر."
+  },
+  
+  // Error Messages
+  errors: {
+    general: "أواجه مشكلة في الاتصال الآن. يرجى المحاولة مرة أخرى بعد لحظة.",
+    noResponse: "لم أتمكن من توليد رد. هل يمكنك إعادة صياغة رسالتك؟",
+    networkError: "مشكلة في الاتصال بالشبكة. يرجى التحقق من الإنترنت والمحاولة مرة أخرى.",
+    rateLimited: "أحتاج لحظة للمعالجة. يرجى الانتظار بضع ثوان قبل إرسال رسالة أخرى.",
+    invalidInput: "لم أفهم ذلك تماماً. هل يمكنك مشاركة المزيد من التفاصيل؟",
+    serverError: "أواجه صعوبات تقنية. يرجى المحاولة مرة أخرى لاحقاً.",
+    longMessage: "رسالتك طويلة جداً. هل يمكنك تقسيمها إلى أجزاء أصغر لأتمكن من مساعدتك بشكل أفضل؟",
+    emptyMessage: "يرجى مشاركة أفكارك أو أسئلتك معي.",
+    inappropriateContent: "أنا هنا لدعم عافيتك النفسية. دعنا نحافظ على محادثتنا مركزة على المواضيع المفيدة."
+  },
+  
+  // Status Messages
+  status: {
+    connecting: "الاتصال بستويك...",
+    reconnecting: "إعادة الاتصال...",
+    connected: "متصل",
+    disconnected: "انقطع الاتصال. اضغط لإعادة الاتصال.",
+    offline: "أنت غير متصل. سيتم إرسال الرسائل عند استعادة الاتصال."
+  },
+  
+  // Input Validation
+  validation: {
+    tooShort: "يرجى مشاركة المزيد حتى أتمكن من فهمك ومساعدتك بشكل أفضل.",
+    tooLong: "هذا كثير للمعالجة. هل يمكنك تقسيمه إلى أجزاء أصغر؟",
+    inappropriate: "دعنا نحافظ على محادثتنا داعمة ومناسبة.",
+    spam: "ألاحظ أنك ترسل رسائل بسرعة كبيرة. خذ لحظة للتنفس.",
+    profanity: "أنا هنا لتوفير مساحة آمنة وداعمة. دعنا نحافظ على لغتنا محترمة."
+  },
+  
+  // Suggestions
+  suggestions: {
+    title: "كيف يمكنني مساعدتك اليوم؟",
+    options: [
+      "أشعر بالتوتر",
+      "أحتاج شخصاً للحديث معه",
+      "ساعدني مع القلق",
+      "أواجه مشكلة في النوم",
+      "أريد تحسين مزاجي",
+      "شارك استراتيجيات التأقلم"
+    ]
+  },
+  
+  // Quick Responses
+  quickResponses: {
+    thankYou: "عفواً! أنا هنا دائماً عندما تحتاج للدعم.",
+    goodbye: "اعتن بنفسك. تذكر، أنا هنا كلما احتجت للحديث.",
+    emergency: "إذا كنت في خطر فوري، يرجى الاتصال بخدمات الطوارئ أو خط الأزمات فوراً.",
+    professional: "للمخاوف الجدية حول الصحة النفسية، أشجعك على التحدث مع مختص مرخص.",
+    support: "تذكر، طلب المساعدة علامة قوة وليس ضعف."
+  },
+  
+  // Session Management
+  session: {
+    welcome: "مرحباً بعودتك! كيف تشعر منذ آخر محادثة لنا؟",
+    firstTime: "هذه محادثتنا الأولى. أنا متحمس للتعرف عليك ودعم رحلتك.",
+    continuing: "أنا سعيد بعودتك. عن ماذا تريد أن نتحدث اليوم؟",
+    ended: "انتهت محادثتنا. لا تتردد في بدء محادثة جديدة في أي وقت.",
+    timeout: "يبدو أنك كنت بعيداً لفترة. أنا ما زلت هنا عندما تكون مستعداً للمتابعة."
+  },
+  
+  // Help and Information
+  help: {
+    title: "كيفية الدردشة مع ستويك",
+    description: "أنا هنا للاستماع والدعم وتقديم الإرشاد لرحلتك نحو العافية النفسية.",
+    tips: [
+      "شارك أفكارك ومشاعرك بصراحة",
+      "اسأل أسئلة حول الصحة النفسية والعافية",
+      "اطلب استراتيجيات وتقنيات التأقلم",
+      "تحدث عن تجاربك وتحدياتك اليومية"
+    ],
+    limitations: "تذكر: أنا مساعد ذكي، وليس بديلاً عن العلاج المهني أو الرعاية الطبية.",
+    crisis: "في حالات الطوارئ، يرجى الاتصال: خدمات الطوارئ (911) أو خط الأزمات (988)"
+  },
+  
+  // Features
+  features: {
+    available: "الميزات المتاحة:",
+    moodTracking: "تتبع المزاج والرؤى",
+    copingStrategies: "استراتيجيات التأقلم المخصصة",
+    mindfulness: "تمارين اليقظة الذهنية والتنفس",
+    journaling: "مطالبات الكتابة الموجهة",
+    resources: "موارد ونصائح الصحة النفسية"
+  }
+},
+    
     room: {
+      removedFromRoom: "تم إزالتك من الغرفة",
+    youHaveBeenRemoved: "تم إزالتك من هذه الغرفة",
+    youHaveBeenRemovedMessage: "لم تعد تملك صلاحية الوصول إلى هذه الغرفة ولا يمكنك تنفيذ أي إجراءات هنا.",
+    backToRooms: "العودة للغرف",
       websocketError: "الوسيط أبلغ عن خطأ: ",
       details: "تفاصيل إضافية: ",
       fetchRoomError: "فشل جلب معلومات الغرفة",
@@ -764,7 +1018,7 @@ const translations = {
       removeUserMessage: "هل أنت متأكد أنك تريد إزالة من هذه الغرفة؟",
       remove: "إزالة",
       removeUserError: "تعذر إزالة المستخدم",
-      userRemovedSuccess: "تم إزالة {username} من الغرفة",
+      userRemovedSuccess: "تم إزالة المستخدم من الغرفة",
       adminOnlyDelete: "فقط المديرون يمكنهم حذف المنشورات",
       adminDeleteTitle: "حذف إداري قسري",
       adminDeleteMessage: "هل أنت متأكد أنك تريد حذف المنشور نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.",
@@ -837,6 +1091,32 @@ const translations = {
       "success": "نجاح",
       "error": "خطأ"
     }
+    ,"time": {
+    "justNow": "الآن",
+    "minutesAgo": "منذ {{count}} دقيقة",
+    "hoursAgo": "منذ {{count}} ساعة",
+    "yesterday": "أمس",
+    "daysAgo": "منذ {{count}} يوم",
+    "unknown":"غير معروف"
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "noNotifications": "لا توجد إشعارات",
+    "caughtUp": "لقد شاهدت كل شيء! ستظهر الإشعارات الجديدة هنا تلقائيًا.",
+    "realTimeActive": "التحديثات الفورية نشطة",
+    "offlineMode": "وضع عدم الاتصال - اسحب للتحديث",
+    "notification": "إشعار",
+    "notifications": "إشعارات",
+    "unread": "غير مقروء",
+    "markAll": "تعليم الكل كمقروء",
+    "markAllTitle": "تعليم الكل كمقروء",
+    "markAllMessage": "هل تريد تعليم {{count}} إشعار كمقروء؟",
+    "refreshTitle": "اسحب لتحديث الإشعارات"
+  },
+  "common": {
+    "ok": "موافق",
+    "cancel": "إلغاء"
+  }
   }
 };
 
@@ -856,5 +1136,6 @@ setLocale(Localization.locale);
 export const changeLanguage = (locale: 'en' | 'ar') => {
   i18n.locale = locale;
 };
-
 export default i18n;
+
+  // "time": {  jusNw"الآن",mnusAgoمنذ {{count}} دقيقةhurAgoمنذ{{count}}ساةyeserdayأم",dysgo": "منذ {{oun}}يوم  "offlineMode": "وضع عدم الا  "إشعارnoficaionsuredغيرمقوءmrkAllعمككمروءmakAllتعملككمقروءrereshT}};sti18n = new I18n(trans//Simplifylocale handlini18n.defaultLocale = //Stiiil caleco}setLocale(Localization.locale);xthis userThe user export default i18n;

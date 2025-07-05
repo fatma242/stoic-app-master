@@ -5,12 +5,17 @@ import com.example.stoic.User.Model.User;
 import com.example.stoic.User.DTO.LoginRequest;
 import com.example.stoic.User.DTO.LoginResponse;
 import com.example.stoic.User.Model.UserRole;
+import com.example.stoic.User.Repo.UserRepo;
 import com.example.stoic.User.Service.UserServiceImpl;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.Data;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,11 +31,12 @@ import java.util.NoSuchElementException;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
-
+    UserRepo userRepo;
     private final UserServiceImpl userService;
 
-    public UserController(UserServiceImpl userService) {
+    public UserController(UserServiceImpl userService, UserRepo userRepo) {
         this.userService = userService;
+        this.userRepo = userRepo;
     }
 
     @GetMapping
@@ -39,11 +45,11 @@ public class UserController {
         return new ResponseEntity<>(users, HttpStatus.OK);
     }
 
- @GetMapping("/{id}")
-public ResponseEntity<User> getUserById(@PathVariable int id) {
-    User user = userService.findById(id);
-    return new ResponseEntity<>(user, HttpStatus.OK);
-}
+    @GetMapping("/{id}")
+    public ResponseEntity<User> getUserById(@PathVariable int id) {
+        User user = userService.findById(id);
+        return new ResponseEntity<>(user, HttpStatus.OK);
+    }
 
     @GetMapping("/test")
     public void test() {
@@ -99,6 +105,33 @@ public ResponseEntity<User> getUserById(@PathVariable int id) {
 
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @PostMapping("Admin")
+    public void postMethodName() {
+        try {
+            // Check if default user already exists
+            if (userRepo.findByEmail("admin@stoic.com").isEmpty()) {
+                User defaultUser = new User();
+                defaultUser.setUsername("Admin");
+                defaultUser.setEmail("admin@stoic.com");
+                defaultUser.setPassword("admin123"); // Plain text password (not recommended for production)
+                defaultUser.setAge(22);
+                defaultUser.setGender("Male");
+                defaultUser.setUserRole(UserRole.ADMIN);
+                // Set any other required fields based on your User model
+
+                userRepo.save(defaultUser);
+                System.out.println("✅ Default user created successfully!");
+                System.out.println("📧 Email: admin@stoic.com");
+                System.out.println("🔑 Password: admin123");
+            } else {
+                System.out.println("ℹ️ Default user already exists in database");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error creating default user: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -208,7 +241,7 @@ public ResponseEntity<User> getUserById(@PathVariable int id) {
             return ResponseEntity.ok(gender);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }   
+        }
 
     }
 

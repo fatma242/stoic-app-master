@@ -8,6 +8,7 @@ public class StoicApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(StoicApplication.class, args);
+        
     }
 
 }

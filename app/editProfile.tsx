@@ -184,17 +184,13 @@ export default function EditProfile() {
 
   return (
     <View style={styles.container}>
-      <HeaderWithNotifications 
-        isRTL={isRTL}
-        style={{ 
-          position: 'absolute', 
-          top: Constants.statusBarHeight, 
-          left: 0, 
-          right: 0, 
-          zIndex: 1000,
-          backgroundColor: 'transparent'
-        }}
-      />
+     <HeaderWithNotifications 
+          showBackButton={false}
+          isRTL={isRTL}
+          style={{ backgroundColor: 'transparent',
+        right: 280,
+        bottom:35}}
+        />
       <View style={[styles.languageContainer, { marginTop: 40, marginRight: 10 }]}>
         <LanguageSwitcher />
       </View>

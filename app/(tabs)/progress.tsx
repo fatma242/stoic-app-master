@@ -146,10 +146,12 @@ const ProgressScreen = () => {
         alignItems: 'center',
         gap: 10
       }}>
-        <HeaderWithNotifications 
+       <HeaderWithNotifications 
           showBackButton={false}
           isRTL={isRTL}
-          style={{ backgroundColor: 'transparent' }}
+          style={{ backgroundColor: 'transparent',
+        right: 280,
+        bottom:35}}
         />
         <LanguageSwitcher />
       </View>

@@ -407,7 +407,6 @@ public class RoomController {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body("Failed to leave room: " + e.getMessage());
             }
-
         }
 
         @DeleteMapping("/{roomId}/remove-user/{username}")

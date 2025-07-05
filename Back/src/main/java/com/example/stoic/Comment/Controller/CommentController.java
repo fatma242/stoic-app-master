@@ -28,8 +28,8 @@ import com.example.stoic.User.Model.UserRole;
 import com.example.stoic.User.Service.UserServiceImpl;
 
 @CrossOrigin(origins = {
-       " ${UserIphttp}",
-       
+        " ${UserIphttp}",
+
         "${UserIPexp}"
 }, allowCredentials = "true")
 @RestController
@@ -41,11 +41,11 @@ public class CommentController {
     private final NotificationService notificationService;
 
     public CommentController(commentserviceimpl commentserviceimpl, PostServiceImpl PostServiceImpl,
-            CommentRepo commentRepo,NotificationService notificationService) {
+            CommentRepo commentRepo, NotificationService notificationService) {
         this.commentserviceimpl = commentserviceimpl;
         this.PostServiceImpl = PostServiceImpl;
         this.commentRepo = commentRepo;
-        this.notificationService=notificationService;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("/comments/{id}")
@@ -75,24 +75,24 @@ public class CommentController {
                 commentRepo.deleteLike(id, user.getUserId());
                 // comment.getLikes().removeIf(u -> u.getUserId() == user.getUserId());
                 // notificationService.createNotification(
-                //             comment.getAuthor(),
-                //             "Your comment is getting recognized! ",
-                //             user.getUsername()+ " Liked your comment",
-                //             NotificationType.COMMENT_LIKED);
+                // comment.getAuthor(),
+                // "Your comment is getting recognized! ",
+                // user.getUsername()+ " Liked your comment",
+                // NotificationType.COMMENT_LIKED);
 
             } else {
                 System.out.println("User " + user.getUsername() + " is liking post with ID: " + id);
                 // Like the post
                 comment.getLikes().add(user);
-                
-            notificationService.createNotification(
-                            comment.getAuthor(),
-                            "Your comment is getting recognized! ",
-                            user.getUsername()+ " Liked your comment",
-                            NotificationType.COMMENT_LIKED);
+
+                notificationService.createNotification(
+                        comment.getAuthor(),
+                        "Your comment is getting recognized! ",
+                        user.getUsername() + " Liked your comment",
+                        NotificationType.COMMENT_LIKED);
             }
             Comment savedcomment = commentRepo.save(comment);
-            
+
             // Return the updated post data
             return savedcomment.getLikes().size(); // Return the number of likes
         } catch (Exception e) {
@@ -120,13 +120,12 @@ public class CommentController {
             comment.setContent(content);
             comment.setReport(0);
             Comment savedComment = commentserviceimpl.CreateComment(comment);
-            User temp=savedComment.getAuthor();
+            User temp = post.getAuthor();
             notificationService.createNotification(
-                            temp,
-                            "Your comment is getting recognized! ",
-                            user.getUsername()+ " Liked your post",
-                            NotificationType.COMMENT_ADDED);
-                
+                    temp,
+                    "Your comment is getting recognized! ",
+                    user.getUsername() + " commented on your post",
+                    NotificationType.COMMENT_ADDED);
             return new ResponseEntity<>(savedComment, HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>("Internal server error: " + e.getMessage(),

@@ -298,7 +298,7 @@ export default function SignUp() {
         if (!formData.age) {
           newErrors.age = i18n.t("validation.age_required");
           valid = false;
-        } else if (isNaN(age) || age < 13 || age > 120) {
+        } else if (isNaN(age) || age < 13 || age > 99) {
           newErrors.age = i18n.t("validation.age_invalid");
           valid = false;
         } else {

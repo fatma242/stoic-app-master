@@ -108,6 +108,8 @@ export default function RoomScreen() {
   const [deletingPostIds, setDeletingPostIds] = useState<Set<number>>(
     new Set()
   );
+  const [isUserRemoved, setIsUserRemoved] = useState(false);
+  const [userRemovedMessage, setUserRemovedMessage] = useState("");
 
   const stompClient = useRef<any>(null);
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -512,7 +514,7 @@ export default function RoomScreen() {
       setPosts((prev) => [...prev, newPost]);
       setNewPostTitle("");
       setNewPostContent("");
-      Alert.alert(i18n.t("room.success"), i18n.t("room.postCreatedSuccess"));
+      
     } catch (error) {
       Alert.alert(
         i18n.t("room.error"),
@@ -915,6 +917,50 @@ export default function RoomScreen() {
     );
   };
 
+  useEffect(() => {
+    if (!userId || !roomId) return;
+
+    // Check if user is still in the room periodically
+    const checkUserStatus = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/rooms/users?roomId=${roomId}`, {
+          credentials: "include",
+        });
+        
+        if (response.ok) {
+          const roomUsers = await response.json();
+          const isStillMember = roomUsers.some((user: any) => user.userId === userId);
+          
+          if (!isStillMember && !isUserRemoved) {
+            setIsUserRemoved(true);
+            setUserRemovedMessage(i18n.t("room.youHaveBeenRemoved"));
+            
+            // Show alert and redirect
+            Alert.alert(
+              i18n.t("room.removedFromRoom"),
+              i18n.t("room.youHaveBeenRemovedMessage"),
+              [
+                {
+                  text: i18n.t("common.ok"),
+                  onPress: () => router.back(),
+                },
+              ],
+              { cancelable: false }
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error checking user status:", error);
+      }
+    };
+
+    // Check immediately and then every 10 seconds
+    checkUserStatus();
+    const interval = setInterval(checkUserStatus, 10000);
+
+    return () => clearInterval(interval);
+  }, [userId, roomId, isUserRemoved]);
+
   if (loading) {
     return (
         <View style={styles.center}>
@@ -929,6 +975,28 @@ export default function RoomScreen() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{i18n.t("room.roomNotFound")}</Text>
         </View>
+    );
+  }
+
+  if (isUserRemoved) {
+    return (
+      <ImageBackground
+        source={require("../assets/background-photo.png")}
+        style={styles.container}
+      >
+        <View style={styles.center}>
+          <Ionicons name="remove-circle-outline" size={64} color="#ef4444" />
+          <Text style={[styles.errorText, { marginTop: 16 }]}>
+            {userRemovedMessage}
+          </Text>
+          <TouchableOpacity
+            style={styles.backToRoomsButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.buttonText}>{i18n.t("room.backToRooms")}</Text>
+          </TouchableOpacity>
+        </View>
+      </ImageBackground>
     );
   }
 
@@ -1280,6 +1348,20 @@ export default function RoomScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  backToRoomsButton: {
+    marginTop: 24,
+    backgroundColor: "#22c55e",
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

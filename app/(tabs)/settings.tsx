@@ -16,12 +16,14 @@ import BackgroundVideo from "@/components/BackgroundVideo";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import i18n from "../../constants/i18n";
 import { HeaderWithNotifications } from "../../components/HeaderWithNotifications";
+import { useNotifications } from '../Notification'; // Add this import
 
 export default function Settings() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [key, setKey] = useState(0);
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+  const { clearNotifications } = useNotifications(); // Add this
 
   useEffect(() => {
     global.reloadApp = () => setKey((prev) => prev + 1);
@@ -50,14 +52,18 @@ export default function Settings() {
         method: "POST",
         credentials: "include",
       });
-      await AsyncStorage.removeItem("userId");
-      await AsyncStorage.removeItem("userEmail");
+      
+      // Clear notifications before clearing AsyncStorage
+      clearNotifications();
+      
+      await AsyncStorage.clear();
       router.replace("/login");
     } catch (error) {
-      Alert.alert(
-        i18n.t("settings.logoutError"),
-        i18n.t("settings.logoutFailed")
-      );
+      console.error("Logout error:", error);
+      // Clear anyway on error
+      clearNotifications();
+      await AsyncStorage.clear();
+      router.replace("/login");
     }
   };
 
@@ -112,10 +118,12 @@ export default function Settings() {
           gap: 10,
         }}
       >
-        <HeaderWithNotifications
+        <HeaderWithNotifications 
           showBackButton={false}
           isRTL={isRTL}
-          style={{ backgroundColor: "transparent" }}
+          style={{ backgroundColor: 'transparent',
+        right: 280,
+        bottom:35}}
         />
         <LanguageSwitcher />
       </View>

@@ -380,19 +380,8 @@ export default function ChatScreen() {
               </View>
           )}
 
-          {/* Typing Indicator */}
-          {isTyping && (
-              <Animated.View
-                  style={[
-                    styles.typingContainer,
-                    { opacity: typingIndicator },
-                  ]}
-              >
-                <BlurView intensity={40} tint="light" style={styles.typingBubble}>
-                  <Text style={styles.typingText}>You are typing...</Text>
-                </BlurView>
-              </Animated.View>
-          )}
+         
+          
         </ScrollView>
 
         {/* Modern Input */}
