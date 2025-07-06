@@ -556,6 +556,7 @@ const translations = {
     "refreshTitle": "Pull to refresh notifications"
   },
   "common": {
+    "error":"Error",
     "ok": "OK",
     "cancel": "Cancel"
   }
@@ -1114,6 +1115,7 @@ const translations = {
     "refreshTitle": "اسحب لتحديث الإشعارات"
   },
   "common": {
+    "error":"خطأ",
     "ok": "موافق",
     "cancel": "إلغاء"
   }

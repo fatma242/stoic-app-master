@@ -40,7 +40,8 @@
       "typedRoutes": true
     },
     "extra": {
-      "chatbotApiKey": "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",
+      "chatbotApiKey": "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",
+      
       "apiBaseUrl": "http://${EXPO_PUBLIC_API_BASE_URL}"
     }
   }
