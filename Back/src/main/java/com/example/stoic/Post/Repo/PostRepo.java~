@@ -1,0 +1,4 @@
+package com.example.stoic.Post.Repo;
+
+public class PostRepo {
+}
